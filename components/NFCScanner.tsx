@@ -1,0 +1,245 @@
+import React, { useState, useEffect } from "react";
+import { Text, View, Platform, Alert, TouchableOpacity } from "react-native";
+import NfcManager, { NfcTech, Ndef } from "react-native-nfc-manager";
+
+interface NFCScannerProps {
+    onScan: (email: string) => void;
+    isActive: boolean;
+}
+
+export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
+    const [isNfcSupported, setIsNfcSupported] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+    const [message, setMessage] = useState("Ready to scan");
+
+    useEffect(() => {
+        const checkNfcSupport = async () => {
+            if (Platform.OS === "web") {
+                setIsNfcSupported(false);
+                setMessage("NFC not supported on web");
+                return;
+            }
+
+            try {
+                const supported = await NfcManager.isSupported();
+                setIsNfcSupported(supported);
+
+                if (supported) {
+                    await NfcManager.start();
+                    setMessage("NFC is ready");
+                } else {
+                    setMessage("NFC not supported on this device");
+                }
+            } catch (error) {
+                console.error("NFC check error:", error);
+                setIsNfcSupported(false);
+                setMessage("Error initializing NFC");
+            }
+        };
+
+        checkNfcSupport();
+
+        return () => {
+            if (Platform.OS !== "web" && isNfcSupported) {
+                try {
+                    NfcManager.cancelTechnologyRequest().catch(() => {});
+                } catch (error) {
+                    // Ignore cleanup errors
+                }
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isActive && isNfcSupported && !isScanning) {
+            startNfcScan();
+        } else if (!isActive && isScanning) {
+            stopNfcScan();
+        }
+
+        return () => {
+            stopNfcScan();
+        };
+    }, [isActive, isNfcSupported]);
+
+    const startNfcScan = async () => {
+        if (Platform.OS === "web" || !isNfcSupported) return;
+
+        try {
+            setIsScanning(true);
+            setMessage("Hold your NFC card near the device...");
+
+            await NfcManager.requestTechnology(NfcTech.Ndef);
+
+            const tag = await NfcManager.getTag();
+
+            if (tag) {
+                let email = "";
+
+                // Try to read NDEF message
+                if (tag.ndefMessage && tag.ndefMessage.length > 0) {
+                    const ndefRecord = tag.ndefMessage[0];
+                    const payload = ndefRecord.payload;
+
+                    // Decode NDEF payload (skip first byte for text records)
+                    const textDecoder = new TextDecoder("utf-8");
+                    const text = textDecoder.decode(
+                        new Uint8Array(payload.slice(1))
+                    );
+                    email = text;
+                } else if (tag.id) {
+                    // If no NDEF message, use tag ID or serial number
+                    // You may need to map tag IDs to emails in your system
+                    const idBytes = Array.isArray(tag.id) ? tag.id : [tag.id];
+                    const tagId = idBytes
+                        .map((byte) =>
+                            Number(byte).toString(16).padStart(2, "0")
+                        )
+                        .join("");
+                    email = tagId; // Or lookup email from tagId
+                }
+
+                if (email) {
+                    setMessage("Card scanned successfully!");
+                    onScan(email);
+
+                    // Wait a bit before allowing next scan
+                    setTimeout(() => {
+                        setMessage("Ready for next scan");
+                    }, 2000);
+                }
+            }
+
+            await NfcManager.cancelTechnologyRequest();
+
+            // Restart scanning after a delay
+            if (isActive) {
+                setTimeout(() => {
+                    startNfcScan();
+                }, 1000);
+            } else {
+                setIsScanning(false);
+            }
+        } catch (error: any) {
+            console.error("NFC scan error:", error);
+
+            if (error.toString().includes("cancelled")) {
+                setMessage("Scan cancelled");
+            } else {
+                setMessage("Error scanning NFC card");
+            }
+
+            await NfcManager.cancelTechnologyRequest();
+            setIsScanning(false);
+
+            // Retry if still active
+            if (isActive) {
+                setTimeout(() => {
+                    startNfcScan();
+                }, 1000);
+            }
+        }
+    };
+
+    const stopNfcScan = async () => {
+        if (Platform.OS === "web" || !isNfcSupported) return;
+
+        try {
+            await NfcManager.cancelTechnologyRequest();
+            setIsScanning(false);
+            setMessage("Scanning stopped");
+        } catch (error) {
+            console.error("Error stopping NFC scan:", error);
+        }
+    };
+
+    const handleManualScan = () => {
+        if (isActive && isNfcSupported) {
+            startNfcScan();
+        }
+    };
+
+    if (Platform.OS === "web") {
+        return (
+            <View className="flex-1 items-center justify-center bg-epitech-gray px-4">
+                <View className="w-24 h-24 bg-gray-300 rounded-full items-center justify-center mb-4">
+                    <Text className="text-5xl">📱</Text>
+                </View>
+                <Text className="text-epitech-navy text-xl font-bold mb-2">
+                    NFC Not Available
+                </Text>
+                <Text className="text-epitech-gray-dark text-center">
+                    NFC scanning is only available on mobile devices.{"\n"}
+                    Please use QR code scanning instead.
+                </Text>
+            </View>
+        );
+    }
+
+    if (!isNfcSupported) {
+        return (
+            <View className="flex-1 items-center justify-center bg-epitech-gray px-4">
+                <View className="w-24 h-24 bg-red-100 rounded-full items-center justify-center mb-4">
+                    <Text className="text-5xl">⚠️</Text>
+                </View>
+                <Text className="text-red-600 text-xl font-bold mb-2">
+                    NFC Not Supported
+                </Text>
+                <Text className="text-epitech-gray-dark text-center mb-2">
+                    {message}
+                </Text>
+                <Text className="text-gray-500 text-center text-sm">
+                    Please use QR code scanning or try on a different device.
+                </Text>
+            </View>
+        );
+    }
+
+    return (
+        <View className="flex-1 items-center justify-center bg-epitech-navy px-6">
+            <View className="bg-white rounded-3xl p-8 items-center max-w-sm w-full">
+                {/* NFC Icon */}
+                <View className="w-32 h-32 bg-epitech-blue rounded-full items-center justify-center mb-6">
+                    <Text className="text-white text-7xl">📱</Text>
+                </View>
+
+                <Text className="text-2xl font-bold text-epitech-navy mb-3 text-center">
+                    NFC Scanner Ready
+                </Text>
+
+                {/* Status Message */}
+                <View className="bg-epitech-gray rounded-xl px-4 py-3 mb-6 w-full">
+                    <Text className="text-epitech-navy text-center font-medium">
+                        {message}
+                    </Text>
+                </View>
+
+                {/* Scanning Animation */}
+                {isScanning && (
+                    <View className="mb-4">
+                        <View className="w-16 h-16 border-4 border-epitech-blue border-t-transparent rounded-full" />
+                    </View>
+                )}
+
+                {/* Manual Scan Button */}
+                {!isScanning && isActive && (
+                    <TouchableOpacity
+                        onPress={handleManualScan}
+                        className="bg-epitech-blue px-8 py-4 rounded-xl w-full"
+                    >
+                        <Text className="text-white font-bold text-center text-base uppercase tracking-wide">
+                            Start Scanning
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            {/* Instructions */}
+            <View className="mt-8 bg-white/10 px-6 py-3 rounded-full">
+                <Text className="text-white text-sm text-center font-medium">
+                    Hold the student card close to your device
+                </Text>
+            </View>
+        </View>
+    );
+}
