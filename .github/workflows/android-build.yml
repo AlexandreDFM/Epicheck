@@ -77,10 +77,11 @@ jobs:
           sudo chown $USER:$USER $ANDROID_SDK_ROOT
           cd $ANDROID_SDK_ROOT
           curl -o cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip cmdline-tools.zip -d cmdline-tools-temp
+          unzip cmdline-tools.zip
           mkdir -p cmdline-tools/latest
-          mv cmdline-tools-temp/* cmdline-tools/latest/
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
+          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+          rm -rf cmdline-tools/latest/latest
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
           $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Cache Gradle
