@@ -1,4 +1,30 @@
-import React, { useState } from "react";
+/**
+ * File Name: LoginScreen.tsx
+ * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Creation Date: 29/10/2025
+ * Description: This is the LoginScreen.tsx
+ * Copyright (c) 2025 Epitech
+ * Version: 1.0.0
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
 import {
     View,
     Text,
@@ -7,15 +33,23 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
+    Modal,
 } from "react-native";
+
+// import epitechApi from "../services/epitechApi";
+// import office365Auth from "../services/office365Auth";
+
+import { useState } from "react";
+import intraApi from "../services/intraApi";
+import intraAuth from "../services/intraAuth";
+import IntraWebViewAuth from "./IntraWebViewAuth";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import office365Auth from "../services/office365Auth";
-import epitechApi from "../services/epitechApi";
 
 type RootStackParamList = {
     Login: undefined;
-    Presence: undefined;
+    Activities: undefined;
+    Presence: { event?: any };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -23,57 +57,49 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function LoginScreen() {
     const navigation = useNavigation<NavigationProp>();
     const [isLoading, setIsLoading] = useState(false);
+    const [showWebView, setShowWebView] = useState(false);
 
-    const handleOffice365Login = async () => {
+    const handleIntranetLogin = () => {
+        // Show WebView modal for authentication
+        setShowWebView(true);
+    };
+
+    const handleAuthSuccess = async (cookie: string) => {
+        setShowWebView(false);
         setIsLoading(true);
 
         try {
-            console.log("Starting Office 365 login...");
-            const userInfo = await office365Auth.login();
-            console.log("Login successful, user info:", userInfo);
+            console.log("Cookie received, setting it...");
 
-            // Verify it's an Epitech email
-            if (
-                !userInfo.mail?.endsWith("@epitech.eu") &&
-                !userInfo.userPrincipalName?.endsWith("@epitech.eu")
-            ) {
-                console.log(
-                    "Invalid email domain:",
-                    userInfo.mail || userInfo.userPrincipalName
-                );
-                Alert.alert(
-                    "Invalid Account",
-                    "Please use your Epitech Office 365 account (@epitech.eu)"
-                );
-                await office365Auth.logout();
-                setIsLoading(false);
-                return;
-            }
+            // Set the cookie
+            await intraAuth.setIntraCookie(cookie);
 
-            console.log("Email validated, setting token and navigating...");
+            // Get user info to verify login
+            const userInfo = await intraApi.getCurrentUser();
+            console.log("User info:", userInfo);
 
-            // Set token for API calls
-            const accessToken = await office365Auth.getAccessToken();
-            if (accessToken) {
-                epitechApi.setOffice365Token(accessToken);
-            }
-
-            // Navigate to Presence screen after a brief delay to ensure context is ready
+            // Navigate to Activities screen
+            setIsLoading(false);
             setTimeout(() => {
-                navigation.replace("Presence");
+                navigation.replace("Activities");
                 // Show success after navigation
                 setTimeout(() => {
-                    Alert.alert("Success", `Welcome ${userInfo.displayName}!`);
+                    Alert.alert("Success", `Welcome ${userInfo.title || userInfo.login}!`);
                 }, 100);
             }, 100);
         } catch (error: any) {
             console.error("Login error:", error);
+            setIsLoading(false);
             Alert.alert(
                 "Login Failed",
-                error.message || "Failed to authenticate with Office 365"
+                error.message || "Failed to authenticate with Epitech Intranet"
             );
-            setIsLoading(false);
         }
+    };
+
+    const handleAuthCancel = () => {
+        setShowWebView(false);
+        Alert.alert("Cancelled", "Authentication was cancelled");
     };
 
     return (
@@ -81,6 +107,18 @@ export default function LoginScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             className="flex-1 bg-white"
         >
+            {/* WebView Authentication Modal */}
+            <Modal
+                visible={showWebView}
+                animationType="slide"
+                presentationStyle="fullScreen"
+            >
+                <IntraWebViewAuth
+                    onSuccess={handleAuthSuccess}
+                    onCancel={handleAuthCancel}
+                />
+            </Modal>
+
             <View className="flex-1 justify-center px-8">
                 {/* Logo Section */}
                 <View className="items-center mb-12">
@@ -99,23 +137,23 @@ export default function LoginScreen() {
                     {/* Info Section */}
                     <View className="mb-6">
                         <Text className="text-epitech-navy font-bold text-lg mb-2 text-center">
-                            Sign in with Office 365
+                            Sign in with Intranet
                         </Text>
                         <Text className="text-epitech-gray-dark text-center text-sm">
-                            Use your Epitech Office 365 account to continue
+                            Use your Epitech account to continue
                         </Text>
                     </View>
 
-                    {/* Microsoft Logo Icon */}
+                    {/* Epitech Logo Icon */}
                     <View className="items-center mb-6">
-                        <View className="w-16 h-16 bg-white border-2 border-gray-200 rounded-2xl items-center justify-center">
-                            <Text className="text-4xl">🏢</Text>
+                        <View className="w-16 h-16 bg-epitech-blue border-2 border-epitech-blue rounded-2xl items-center justify-center">
+                            <Text className="text-4xl">�</Text>
                         </View>
                     </View>
 
-                    {/* Office 365 Login Button */}
+                    {/* Intranet Login Button */}
                     <TouchableOpacity
-                        onPress={handleOffice365Login}
+                        onPress={handleIntranetLogin}
                         disabled={isLoading}
                         className={`rounded-lg py-4 items-center flex-row justify-center ${
                             isLoading ? "bg-gray-400" : "bg-epitech-blue"
@@ -127,7 +165,7 @@ export default function LoginScreen() {
                             <>
                                 <Text className="text-2xl mr-3">🔐</Text>
                                 <Text className="text-white font-bold text-base uppercase tracking-wide">
-                                    Sign in with Microsoft
+                                    Sign in with Epitech
                                 </Text>
                             </>
                         )}
@@ -136,19 +174,19 @@ export default function LoginScreen() {
                     {/* Security Note */}
                     <View className="mt-6 bg-blue-50 p-3 rounded-lg">
                         <Text className="text-epitech-navy text-xs text-center font-medium">
-                            🔒 Secure authentication via Microsoft Azure AD
+                            🔒 Secure authentication via Epitech Intranet
                         </Text>
                     </View>
 
                     {/* Footer */}
                     <Text className="text-gray-500 text-center mt-4 text-xs">
-                        Only Epitech email addresses (@epitech.eu) are accepted
+                        Uses your Epitech Office365 credentials
                     </Text>
                 </View>
 
                 {/* Bottom Info */}
                 <Text className="text-gray-400 text-center mt-8 text-xs">
-                    Powered by Epitech • Secure Authentication
+                    Powered by Epitech Intranet • Secure Authentication
                 </Text>
             </View>
         </KeyboardAvoidingView>
