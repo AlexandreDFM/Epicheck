@@ -149,7 +149,7 @@ This client is configured in the old Epitech infrastructure and handles the OAut
 ```typescript
 CLIENT_ID: "985e002b-598c-41a8-81a0-0c1d482f0bfb";
 TENANT: "organizations";
-REDIRECT_URI: "epiccheck://auth";
+REDIRECT_URI: "epicheck://auth";
 ```
 
 This client is for the Office365 authentication in the new app.

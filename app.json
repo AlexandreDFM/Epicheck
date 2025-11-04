@@ -13,7 +13,7 @@
         },
         "ios": {
             "supportsTablet": true,
-            "bundleIdentifier": "com.epiccheck.app",
+            "bundleIdentifier": "com.epicheck.app",
             "infoPlist": {
                 "NFCReaderUsageDescription": "This app requires NFC to scan student cards for presence checking.",
                 "NSCameraUsageDescription": "This app requires camera access to scan QR codes for presence checking."
@@ -27,7 +27,7 @@
                 "foregroundImage": "./assets/adaptive-icon.png",
                 "backgroundColor": "#ffffff"
             },
-            "package": "com.epiccheck.app",
+            "package": "com.epicheck.app",
             "versionCode": 1,
             "permissions": [
                 "android.permission.CAMERA",
@@ -54,7 +54,7 @@
                 }
             ]
         ],
-        "scheme": "epiccheck",
+        "scheme": "epicheck",
         "extra": {
             "eas": {
                 "projectId": "your-project-id"

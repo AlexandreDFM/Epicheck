@@ -25,8 +25,8 @@ This happens because your Azure AD app is registered as a **Web Application** in
 3. Click **Add a platform** button
 4. Select **Single-page application**
 5. Add your redirect URIs:
-    - For Expo: `epiccheck://auth`
-    - For Web development: `https://auth.expo.io/@your-username/epiccheck`
+    - For Expo: `epicheck://auth`
+    - For Web development: `https://auth.expo.io/@your-username/epicheck`
     - For local testing: `http://localhost:19006/auth` (if needed)
 6. Click **Configure**
 
@@ -80,7 +80,7 @@ After making these changes, try authenticating again. The error should be resolv
 
 ### For Mobile Testing
 
-- The `epiccheck://auth` redirect URI works for both iOS and Android
+- The `epicheck://auth` redirect URI works for both iOS and Android
 - Make sure your `app.json` has the correct scheme configured
 
 ### Troubleshooting
@@ -97,4 +97,4 @@ If you still encounter issues:
 - **Client ID**: `985e002b-598c-41a8-81a0-0c1d482f0bfb`
 - **Tenant**: `organizations` (multi-tenant)
 - **Auth Method**: Authorization Code with PKCE
-- **Redirect URI**: `epiccheck://auth`
+- **Redirect URI**: `epicheck://auth`

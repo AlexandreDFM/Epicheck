@@ -31,7 +31,7 @@ expo run:android --variant debug
 **Output location:** `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ```bash
-cp android/app/build/outputs/apk/debug/app-debug.apk ./epiccheck-debug.apk
+cp android/app/build/outputs/apk/debug/app-debug.apk ./epicheck-debug.apk
 ```
 
 ### 2. Release APK (Production Build)
@@ -51,7 +51,7 @@ npm run build:android:release
 **Output location:** `android/app/build/outputs/apk/release/app-release.apk`
 
 ```bash
-cp android/app/build/outputs/apk/release/app-release.apk ./epiccheck-release-unsigned.apk
+cp android/app/build/outputs/apk/release/app-release.apk ./epicheck-release-unsigned.apk
 ```
 
 ## First Time Setup
@@ -71,7 +71,7 @@ For production releases, you need to sign your APK. Create a keystore:
 ### Step 1: Generate a Keystore
 
 ```bash
-keytool -genkeypair -v -storetype PKCS12 -keystore epiccheck-release-key.keystore -alias epiccheck -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkeypair -v -storetype PKCS12 -keystore epicheck-release-key.keystore -alias epicheck -keyalg RSA -keysize 2048 -validity 10000
 ```
 
 You'll be asked for:
@@ -85,10 +85,10 @@ You'll be asked for:
 Create `android/gradle.properties`:
 
 ```properties
-EPICCHECK_UPLOAD_STORE_FILE=epiccheck-release-key.keystore
-EPICCHECK_UPLOAD_KEY_ALIAS=epiccheck
-EPICCHECK_UPLOAD_STORE_PASSWORD=your_keystore_password
-EPICCHECK_UPLOAD_KEY_PASSWORD=your_key_password
+epicheck_UPLOAD_STORE_FILE=epicheck-release-key.keystore
+epicheck_UPLOAD_KEY_ALIAS=epicheck
+epicheck_UPLOAD_STORE_PASSWORD=your_keystore_password
+epicheck_UPLOAD_KEY_PASSWORD=your_key_password
 ```
 
 ### Step 3: Update Build Configuration
@@ -100,11 +100,11 @@ android {
     ...
     signingConfigs {
         release {
-            if (project.hasProperty('EPICCHECK_UPLOAD_STORE_FILE')) {
-                storeFile file(EPICCHECK_UPLOAD_STORE_FILE)
-                storePassword EPICCHECK_UPLOAD_STORE_PASSWORD
-                keyAlias EPICCHECK_UPLOAD_KEY_ALIAS
-                keyPassword EPICCHECK_UPLOAD_KEY_PASSWORD
+            if (project.hasProperty('epicheck_UPLOAD_STORE_FILE')) {
+                storeFile file(epicheck_UPLOAD_STORE_FILE)
+                storePassword epicheck_UPLOAD_STORE_PASSWORD
+                keyAlias epicheck_UPLOAD_KEY_ALIAS
+                keyPassword epicheck_UPLOAD_KEY_PASSWORD
             }
         }
     }

@@ -84,7 +84,7 @@ In the Metro bundler terminal, you should see:
 **Solution**:
 
 - Check Azure AD redirect URI matches exactly
-- Ensure `epiccheck://auth` is registered
+- Ensure `epicheck://auth` is registered
 - Try adding your current IP: `exp://[your-ip]:8081/auth`
 
 ### Problem 2: Login succeeds but screen doesn't change
@@ -123,7 +123,7 @@ In the Metro bundler terminal, you should see:
 **Current redirect URI in code**:
 
 ```
-epiccheck://auth
+epicheck://auth
 ```
 
 **What to do**:

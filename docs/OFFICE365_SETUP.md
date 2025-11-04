@@ -34,7 +34,7 @@ Before the app can work, you **MUST** register the app in Azure AD and configure
 - Add these redirect URIs:
     ```
     exp://localhost:8081/auth
-    epiccheck://auth
+    epicheck://auth
     ```
 - For production, also add:
     ```
@@ -89,7 +89,7 @@ const AZURE_AD_CONFIG = {
     scopes: ["openid", "profile", "email", "User.Read", "offline_access"],
 
     redirectUri: AuthSession.makeRedirectUri({
-        scheme: "epiccheck",
+        scheme: "epicheck",
         path: "auth",
     }),
 };
@@ -223,7 +223,7 @@ The app automatically validates that users sign in with `@epitech.eu` emails. No
 1. Get the redirect URI by running:
     ```typescript
     console.log(
-        AuthSession.makeRedirectUri({ scheme: "epiccheck", path: "auth" }),
+        AuthSession.makeRedirectUri({ scheme: "epicheck", path: "auth" }),
     );
     ```
 2. Add this exact URI to Azure AD **Authentication** → **Redirect URIs**
@@ -271,7 +271,7 @@ The app automatically validates that users sign in with `@epitech.eu` emails. No
 ```json
 {
     "expo": {
-        "scheme": "epiccheck",
+        "scheme": "epicheck",
         "extra": {
             "azureClientId": "your-client-id"
         }
@@ -282,7 +282,7 @@ The app automatically validates that users sign in with `@epitech.eu` emails. No
 2. Add production redirect URI in Azure AD:
 
 ```
-epiccheck://auth
+epicheck://auth
 https://your-production-url/auth
 ```
 
@@ -297,8 +297,8 @@ eas build --platform ios
 
 Ensure redirect URIs include:
 
-- iOS: `epiccheck://auth`
-- Android: `epiccheck://auth`
+- iOS: `epicheck://auth`
+- Android: `epicheck://auth`
 - Web: `https://your-domain/auth`
 
 ---

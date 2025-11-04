@@ -60,7 +60,7 @@ npx expo run:ios --device
 
 ### "Signing requires a development team"
 
-1. Open Xcode: `open ios/epiccheck.xcworkspace`
+1. Open Xcode: `open ios/epicheck.xcworkspace`
 2. Select the project in the left sidebar
 3. Go to "Signing & Capabilities" tab
 4. Under "Team", select your Apple ID
@@ -139,7 +139,7 @@ eas submit --platform ios
 npx expo run:ios --configuration Release
 
 # Archive in Xcode
-open ios/epiccheck.xcworkspace
+open ios/epicheck.xcworkspace
 
 # In Xcode: Product → Archive
 # Then upload to App Store Connect
@@ -169,9 +169,9 @@ cd ios && pod install && cd ..
 
 ## File Locations
 
-**iOS Project**: `ios/epiccheck.xcworkspace`
+**iOS Project**: `ios/epicheck.xcworkspace`
 **Build Output**: `ios/build/`
-**App Bundle**: `ios/build/Build/Products/Debug-iphoneos/epiccheck.app`
+**App Bundle**: `ios/build/Build/Products/Debug-iphoneos/epicheck.app`
 
 ## Common Issues
 
@@ -242,7 +242,7 @@ The app requires these iOS capabilities:
 - ✅ Network (API calls)
 - ✅ Background audio (Silent mode sounds)
 
-These are automatically configured in `ios/epiccheck/Info.plist`.
+These are automatically configured in `ios/epicheck/Info.plist`.
 
 ## Notes
 
