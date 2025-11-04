@@ -58,6 +58,7 @@ type RootStackParamList = {
     Login: undefined;
     Activities: undefined;
     Presence: { event?: IIntraEvent };
+    ManualAttendance: { event?: IIntraEvent };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -254,6 +255,18 @@ export default function PresenceScreen() {
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Manual Attendance Button */}
+                <TouchableOpacity
+                    onPress={() =>
+                        navigation.navigate("ManualAttendance", { event })
+                    }
+                    className="mt-3 rounded-lg border-2 border-white/40 bg-white/10 py-3"
+                >
+                    <Text className="text-center text-sm font-bold text-white">
+                        ✍️ MANUAL ATTENDANCE
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             {/* Scanner */}
