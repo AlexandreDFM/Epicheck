@@ -28,7 +28,7 @@
 import "./global.css";
 import { StatusBar } from "expo-status-bar";
 import LoginScreen from "./screens/LoginScreen";
-import type { IntraEvent } from "./services/intraApi";
+import type { IIntraEvent } from "./services/intraApi";
 import PresenceScreen from "./screens/PresenceScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import ActivitiesScreen from "./screens/ActivitiesScreen";
@@ -39,7 +39,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 type RootStackParamList = {
     Login: undefined;
     Activities: undefined;
-    Presence: { event?: IntraEvent };
+    Presence: { event?: IIntraEvent };
     Settings: undefined;
 };
 

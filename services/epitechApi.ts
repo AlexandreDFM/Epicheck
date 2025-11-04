@@ -25,29 +25,13 @@
  * THE SOFTWARE.
  */
 
-import axios, { AxiosInstance } from "axios";
 import intraApi from "./intraApi";
-import type { IntraEvent } from "./intraApi";
+import axios, { AxiosInstance } from "axios";
+import { IIntraEvent } from "../types/IIntraEvent";
+import type { IUserInfo } from "../types/IUserInfo";
+import type { IAuthCredentials } from "../types/IAuthCredentials";
 
 const API_BASE_URL = "https://my.epitech.eu/api";
-
-export interface AuthCredentials {
-    email: string;
-    password: string;
-}
-
-export interface UserInfo {
-    email: string;
-    login: string;
-    title: string;
-    picture: string;
-}
-
-export interface PresenceData {
-    studentEmail: string;
-    timestamp: string;
-    location?: string;
-}
 
 class EpitechApiService {
     private api: AxiosInstance;
@@ -76,7 +60,7 @@ class EpitechApiService {
     /**
      * Authenticate user with Epitech credentials (Legacy - kept for backwards compatibility)
      */
-    async login(credentials: AuthCredentials): Promise<UserInfo> {
+    async login(credentials: IAuthCredentials): Promise<IUserInfo> {
         try {
             const response = await this.api.post("/auth/login", credentials);
 
@@ -105,7 +89,7 @@ class EpitechApiService {
     } /**
      * Get current user information
      */
-    async getUserInfo(): Promise<UserInfo> {
+    async getIUserInfo(): Promise<IUserInfo> {
         try {
             const response = await this.api.get("/user");
             return response.data;
@@ -122,7 +106,7 @@ class EpitechApiService {
      * Mark student presence using Intranet API
      * Requires an event context to mark presence
      */
-    async markPresence(studentEmail: string, event?: IntraEvent): Promise<any> {
+    async markPresence(studentEmail: string, event?: IIntraEvent): Promise<any> {
         try {
             console.log('Marking presence for:', studentEmail);
             console.log('Event:', event ? event.acti_title : 'No event');
@@ -290,7 +274,7 @@ class EpitechApiService {
     /**
      * Get today's activities from Intra
      */
-    async getTodayActivities(): Promise<IntraEvent[]> {
+    async getTodayActivities(): Promise<IIntraEvent[]> {
         try {
             // Get current user to get location
             const user = await intraApi.getCurrentUser();
@@ -336,7 +320,7 @@ class EpitechApiService {
     /**
      * Get registered students for an event
      */
-    async getEventStudents(event: IntraEvent): Promise<any[]> {
+    async getEventStudents(event: IIntraEvent): Promise<any[]> {
         try {
             return await intraApi.getRegisteredStudents(event);
         } catch (error: any) {
@@ -351,7 +335,7 @@ class EpitechApiService {
     /**
      * Get current user from Intra
      */
-    async getIntraUser(): Promise<UserInfo> {
+    async getIIntraUser(): Promise<IUserInfo> {
         try {
             const user = await intraApi.getCurrentUser();
             return {

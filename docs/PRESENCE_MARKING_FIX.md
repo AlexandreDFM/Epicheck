@@ -26,7 +26,7 @@ async markPresence(studentEmail: string): Promise<any> {
 
 **After:**
 ```typescript
-async markPresence(studentEmail: string, event?: IntraEvent): Promise<any> {
+async markPresence(studentEmail: string, event?: IIntraEvent): Promise<any> {
   // Requires event context
   if (!event) {
     throw new Error("Event context required to mark presence");

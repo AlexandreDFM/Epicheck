@@ -1,8 +1,8 @@
 /**
- * File Name: global.css
+ * File Name: IIUserInfo.ts
  * Author: Alexandre Kévin DE FREITAS MARTINS
  * Creation Date: 4/11/2025
- * Description: This is the global.css
+ * Description: This is the IIUserInfo.ts
  * Copyright (c) 2025 Epitech
  * Version: 1.0.0
  *
@@ -25,6 +25,9 @@
  * THE SOFTWARE.
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+export interface IUserInfo {
+    email: string;
+    login: string;
+    title: string;
+    picture: string;
+}

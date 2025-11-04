@@ -27,65 +27,13 @@
 
 import intraAuth from "./intraAuth";
 import axios, { AxiosInstance } from "axios";
+import type { IIntraUser } from "../types/IIntraUser";
+import type { IIntraEvent } from "../types/IIntraEvent";
+import type { IIntraStudent } from "../types/IIntraStudent";
+import type { IPresenceUpdate } from "../types/IPresenceUpdate";
+import type { IIntraModuleInfo } from "../types/IIntraModuleInfo";
 
 const INTRA_BASE_URL = "https://intra.epitech.eu";
-
-export interface IntraUser {
-    login: string;
-    email: string;
-    title: string;
-    firstname?: string;
-    lastname?: string;
-    picture: string;
-    location?: string;
-    promo?: number;
-    course?: string;
-    credits?: number;
-    gpa?: number[];
-    groups?: Array<{ name: string }>;
-}
-
-export interface IntraStudent {
-    login: string;
-    title: string;
-    picture: string;
-    email?: string;
-    present?: "present" | "absent" | "N/A" | null;
-    differ?: boolean;
-}
-
-export interface IntraEvent {
-    scolaryear: string;
-    codemodule: string;
-    codeinstance: string;
-    codeacti: string;
-    codeevent: string;
-    acti_title: string;
-    type_code: string;
-    start: string;
-    end: string;
-    nb_group?: number;
-    num_event?: number;
-    room?: {
-        code: string;
-        type: string;
-    } | null;
-    rights?: string[] | null;
-    is_rdv?: string;
-}
-
-export interface IntraModuleInfo {
-    scolaryear: string;
-    codemodule: string;
-    codeinstance: string;
-    title: string;
-    rights: string[] | null;
-}
-
-export interface PresenceUpdate {
-    login: string;
-    present: "present" | "absent";
-}
 
 class IntraApiService {
     private api: AxiosInstance;
@@ -179,7 +127,7 @@ class IntraApiService {
      * Get current user information
      * Endpoint: /user/?format=json
      */
-    async getCurrentUser(): Promise<IntraUser> {
+    async getCurrentUser(): Promise<IIntraUser> {
         try {
             const response = await this.api.get("/user/");
             return response.data;
@@ -209,7 +157,7 @@ class IntraApiService {
     async getStudentsByLocation(
         location: string,
         year: number
-    ): Promise<IntraStudent[]> {
+    ): Promise<IIntraStudent[]> {
         try {
             const response = await this.api.get("/user/filter/user", {
                 params: {
@@ -237,7 +185,7 @@ class IntraApiService {
         location: string,
         startDate: string,
         endDate?: string
-    ): Promise<IntraEvent[]> {
+    ): Promise<IIntraEvent[]> {
         try {
             console.log("Fetching activities from Intra API:", {
                 location,
@@ -276,7 +224,7 @@ class IntraApiService {
         scolaryear: string,
         codemodule: string,
         codeinstance: string
-    ): Promise<IntraModuleInfo> {
+    ): Promise<IIntraModuleInfo> {
         try {
             const response = await this.api.get(
                 `/module/${scolaryear}/${codemodule}/${codeinstance}`
@@ -295,7 +243,7 @@ class IntraApiService {
      * Get registered students for an event
      * Endpoint: /module/{year}/{module}/{instance}/{acti}/{event}/registered?format=json
      */
-    async getRegisteredStudents(event: IntraEvent): Promise<IntraStudent[]> {
+    async getRegisteredStudents(event: IIntraEvent): Promise<IIntraStudent[]> {
         try {
             const response = await this.api.get(
                 `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${event.codeacti}/${event.codeevent}/registered`
@@ -317,8 +265,8 @@ class IntraApiService {
      * Body: items[0][login]=student.login&items[0][present]=present
      */
     async updatePresence(
-        event: IntraEvent,
-        presences: PresenceUpdate[]
+        event: IIntraEvent,
+        presences: IPresenceUpdate[]
     ): Promise<void> {
         try {
             // Build form data body exactly like old project
@@ -378,7 +326,7 @@ class IntraApiService {
      * Convenience method wrapping updatePresence
      */
     async markStudentPresent(
-        event: IntraEvent,
+        event: IIntraEvent,
         studentLogin: string
     ): Promise<void> {
         console.log('🎯 markStudentPresent called with login:', studentLogin);
@@ -397,7 +345,7 @@ class IntraApiService {
      * Convenience method wrapping updatePresence
      */
     async markStudentAbsent(
-        event: IntraEvent,
+        event: IIntraEvent,
         studentLogin: string
     ): Promise<void> {
         return this.updatePresence(event, [

@@ -38,9 +38,9 @@ import {
 // import office365Auth from "../services/office365Auth";
 
 import intraApi from "../services/intraApi";
+import { useState, useEffect } from "react";
 import epitechApi from "../services/epitechApi";
-import React, { useState, useEffect } from "react";
-import type { IntraEvent } from "../services/intraApi";
+import { IIntraEvent } from "../types/IIntraEvent";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -48,7 +48,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 type RootStackParamList = {
     Login: undefined;
     Activities: undefined;
-    Presence: { event?: IntraEvent };
+    Presence: { event?: IIntraEvent };
     Settings: undefined;
 };
 
@@ -56,7 +56,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ActivitiesScreen() {
     const navigation = useNavigation<NavigationProp>();
-    const [activities, setActivities] = useState<IntraEvent[]>([]);
+    const [activities, setActivities] = useState<IIntraEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -128,7 +128,7 @@ export default function ActivitiesScreen() {
         loadActivities();
     };
 
-    const handleSelectActivity = (event: IntraEvent) => {
+    const handleSelectActivity = (event: IIntraEvent) => {
         navigation.navigate("Presence", { event });
     };
 
@@ -160,7 +160,7 @@ export default function ActivitiesScreen() {
         });
     };
 
-    const getRoomDisplay = (event: IntraEvent) => {
+    const getRoomDisplay = (event: IIntraEvent) => {
         if (event.room?.code) {
             return (
                 event.room.code.split("/").pop()?.replace(/-/g, " ") || "Room"

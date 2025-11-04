@@ -1,8 +1,8 @@
 /**
- * File Name: global.css
+ * File Name: IIIntraUser.ts
  * Author: Alexandre Kévin DE FREITAS MARTINS
  * Creation Date: 4/11/2025
- * Description: This is the global.css
+ * Description: This is the IIIntraUser.ts
  * Copyright (c) 2025 Epitech
  * Version: 1.0.0
  *
@@ -25,6 +25,17 @@
  * THE SOFTWARE.
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+export interface IIntraUser {
+    login: string;
+    email: string;
+    title: string;
+    firstname?: string;
+    lastname?: string;
+    picture: string;
+    location?: string;
+    promo?: number;
+    course?: string;
+    credits?: number;
+    gpa?: number[];
+    groups?: Array<{ name: string }>;
+}

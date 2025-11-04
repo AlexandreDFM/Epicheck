@@ -1,8 +1,8 @@
 /**
- * File Name: global.css
+ * File Name: IIIntraEvent.ts
  * Author: Alexandre Kévin DE FREITAS MARTINS
  * Creation Date: 4/11/2025
- * Description: This is the global.css
+ * Description: This is the IIIntraEvent.ts
  * Copyright (c) 2025 Epitech
  * Version: 1.0.0
  *
@@ -25,6 +25,22 @@
  * THE SOFTWARE.
  */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+export interface IIntraEvent {
+    scolaryear: string;
+    codemodule: string;
+    codeinstance: string;
+    codeacti: string;
+    codeevent: string;
+    acti_title: string;
+    type_code: string;
+    start: string;
+    end: string;
+    nb_group?: number;
+    num_event?: number;
+    room?: {
+        code: string;
+        type: string;
+    } | null;
+    rights?: string[] | null;
+    is_rdv?: string;
+}

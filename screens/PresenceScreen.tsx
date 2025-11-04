@@ -43,7 +43,7 @@ import epitechApi from "../services/epitechApi";
 import QRScanner from "../components/QRScanner";
 import NFCScanner from "../components/NFCScanner";
 import soundService from "../services/soundService";
-import type { IntraEvent } from "../services/intraApi";
+import type { IIntraEvent } from "../types/IIntraEvent";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -57,7 +57,7 @@ interface Student {
 type RootStackParamList = {
     Login: undefined;
     Activities: undefined;
-    Presence: { event?: IntraEvent };
+    Presence: { event?: IIntraEvent };
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -70,7 +70,7 @@ export default function PresenceScreen() {
     const [isProcessing, setIsProcessing] = useState(false);
 
     // Get event from route params
-    const event = (route.params as any)?.event as IntraEvent | undefined;
+    const event = (route.params as any)?.event as IIntraEvent | undefined;
 
     // Auto-select mode based on platform
     useEffect(() => {
