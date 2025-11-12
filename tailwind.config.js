@@ -1,11 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+    // Use class-based dark mode so NativeWind's setColorScheme can toggle it at runtime
+    // Keep CSS using :root and :root.dark working because :root.dark matches the
+    // root element when the `dark` class is applied to it.
     darkMode: "class",
     content: [
         "./App.{js,jsx,ts,tsx}",
         "./app/**/*.{js,jsx,ts,tsx}",
         "./components/**/*.{js,jsx,ts,tsx}",
         "./screens/**/*.{js,jsx,ts,tsx}",
+        "./contexts/**/*.{js,jsx,ts,tsx}",
     ],
     presets: [require("nativewind/preset")],
     theme: {
@@ -28,16 +32,20 @@ module.exports = {
                 },
                 background: {
                     DEFAULT: "rgb(var(--color-background) / <alpha-value>)",
-                    secondary: "rgb(var(--color-background-secondary) / <alpha-value>)",
-                    tertiary: "rgb(var(--color-background-tertiary) / <alpha-value>)",
+                    secondary:
+                        "rgb(var(--color-background-secondary) / <alpha-value>)",
+                    tertiary:
+                        "rgb(var(--color-background-tertiary) / <alpha-value>)",
                 },
                 surface: {
                     DEFAULT: "rgb(var(--color-surface) / <alpha-value>)",
-                    elevated: "rgb(var(--color-surface-elevated) / <alpha-value>)",
+                    elevated:
+                        "rgb(var(--color-surface-elevated) / <alpha-value>)",
                 },
                 text: {
                     primary: "rgb(var(--color-text-primary) / <alpha-value>)",
-                    secondary: "rgb(var(--color-text-secondary) / <alpha-value>)",
+                    secondary:
+                        "rgb(var(--color-text-secondary) / <alpha-value>)",
                     tertiary: "rgb(var(--color-text-tertiary) / <alpha-value>)",
                     disabled: "rgb(var(--color-text-disabled) / <alpha-value>)",
                 },
@@ -47,11 +55,13 @@ module.exports = {
                 },
                 status: {
                     success: "rgb(var(--color-success) / <alpha-value>)",
-                    "success-bg": "rgb(var(--color-success-bg) / <alpha-value>)",
+                    "success-bg":
+                        "rgb(var(--color-success-bg) / <alpha-value>)",
                     error: "rgb(var(--color-error) / <alpha-value>)",
                     "error-bg": "rgb(var(--color-error-bg) / <alpha-value>)",
                     warning: "rgb(var(--color-warning) / <alpha-value>)",
-                    "warning-bg": "rgb(var(--color-warning-bg) / <alpha-value>)",
+                    "warning-bg":
+                        "rgb(var(--color-warning-bg) / <alpha-value>)",
                     info: "rgb(var(--color-info) / <alpha-value>)",
                     "info-bg": "rgb(var(--color-info-bg) / <alpha-value>)",
                 },

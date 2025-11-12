@@ -77,7 +77,7 @@
     }
 
     /* Dark Theme */
-    .dark {
+    :root.dark {
         /* Brand Colors (slightly adjusted for dark mode) */
         --color-primary: 59 130 246; /* Brighter Blue #3B82F6 */
         --color-primary-dark: 29 78 216; /* #1D4ED8 */

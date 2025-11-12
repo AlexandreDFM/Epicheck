@@ -25,9 +25,16 @@
  * THE SOFTWARE.
  */
 
-import { useColorScheme, Platform } from "react-native";
+import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+    createContext,
+    useContext,
+    useState,
+    useEffect,
+    ReactNode,
+} from "react";
+import { useColorScheme as useNativeWindColorScheme } from "nativewind";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -44,37 +51,39 @@ const THEME_STORAGE_KEY = "@epicheck_theme";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const systemColorScheme = useColorScheme();
+    const { setColorScheme } = useNativeWindColorScheme();
     const [theme, setThemeState] = useState<ThemeMode>("system");
-    const [isDark, setIsDark] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // Calculate if dark mode is active
+    const isDark =
+        theme === "system" ? systemColorScheme === "dark" : theme === "dark";
 
     // Load saved theme preference on mount
     useEffect(() => {
         loadTheme();
     }, []);
 
-    // Update isDark when theme or system preference changes
+    // Update NativeWind colorScheme when isDark changes
     useEffect(() => {
-        const newIsDark = theme === "system" ? systemColorScheme === "dark" : theme === "dark";
-        setIsDark(newIsDark);
-
-        // Apply dark class to document root for web
-        if (Platform.OS === "web") {
-            if (newIsDark) {
-                document.documentElement.classList.add("dark");
-            } else {
-                document.documentElement.classList.remove("dark");
-            }
+        if (isLoaded) {
+            setColorScheme(isDark ? "dark" : "light");
         }
-    }, [theme, systemColorScheme]);
+    }, [isDark, isLoaded, setColorScheme]);
 
     const loadTheme = async () => {
         try {
             const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-            if (savedTheme && ["light", "dark", "system"].includes(savedTheme)) {
+            if (
+                savedTheme &&
+                ["light", "dark", "system"].includes(savedTheme)
+            ) {
                 setThemeState(savedTheme as ThemeMode);
             }
         } catch (error) {
             console.error("Failed to load theme:", error);
+        } finally {
+            setIsLoaded(true);
         }
     };
 
