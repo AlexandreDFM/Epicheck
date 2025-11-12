@@ -106,15 +106,21 @@ jobs:
                   restore-keys: |
                       ${{ runner.os }}-android-build-
 
-            - name: Ensure Android directory
+            - name: Ensure Android directory and prebuild
               run: |
-                  if [ ! -d "android" ]; then
-                    npx expo prebuild --platform android --no-install
+                  if [ ! -d "android" ] || [ ! -f "android/gradlew" ]; then
+                    echo "Android directory or gradlew not found, running prebuild..."
+                    npx expo prebuild --platform android --clean
                   fi
 
             - name: Prepare gradle wrapper permissions
               run: |
-                  chmod +x android/gradlew || true
+                  if [ -f "android/gradlew" ]; then
+                    chmod +x android/gradlew
+                  else
+                    echo "ERROR: android/gradlew not found after prebuild!"
+                    exit 1
+                  fi
 
             - name: Build Release APK
               working-directory: android
