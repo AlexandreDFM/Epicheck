@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: epicheck
+  labels:
+    name: epicheck
+    app: epicheck
+    environment: production

@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: epicheck-app
+  namespace: epicheck
+  labels:
+    app: epicheck
+    component: web
+spec:
+  type: ClusterIP
+  selector:
+    app: epicheck
+    component: web
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  sessionAffinity: ClientIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: epicheck-proxy
+  namespace: epicheck
+  labels:
+    app: epicheck
+    component: proxy
+spec:
+  type: ClusterIP
+  selector:
+    app: epicheck
+    component: proxy
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP
+  sessionAffinity: ClientIP
