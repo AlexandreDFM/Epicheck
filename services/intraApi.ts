@@ -27,6 +27,7 @@
 
 import intraAuth from "./intraAuth";
 import axios, { AxiosInstance } from "axios";
+import { Platform } from "react-native";
 import type { IIntraUser } from "../types/IIntraUser";
 import type { IIntraEvent } from "../types/IIntraEvent";
 import type { IIntraStudent } from "../types/IIntraStudent";
@@ -34,11 +35,15 @@ import type { IPresenceUpdate } from "../types/IPresenceUpdate";
 import type { IIntraModuleInfo } from "../types/IIntraModuleInfo";
 
 const INTRA_BASE_URL = "https://intra.epitech.eu";
+const PROXY_BASE_URL = "http://localhost:3001/api/intra-proxy"; // For web platform
 
 class IntraApiService {
     private api: AxiosInstance;
+    private isWeb: boolean;
 
     constructor() {
+        this.isWeb = Platform.OS === "web";
+
         this.api = axios.create({
             baseURL: INTRA_BASE_URL,
             headers: {
@@ -102,6 +107,77 @@ class IntraApiService {
     }
 
     /**
+     * Make a request through proxy server (for web platform to bypass CORS)
+     */
+    private async makeProxyRequest(
+        endpoint: string,
+        method: "GET" | "POST" = "GET",
+        data?: any,
+        params?: any,
+    ): Promise<any> {
+        const cookie = await intraAuth.getIntraCookie();
+
+        if (!cookie) {
+            throw new Error("No authentication cookie found. Please log in.");
+        }
+
+        // Build full endpoint with query params
+        let fullEndpoint = endpoint;
+        if (params) {
+            const queryString = new URLSearchParams(params).toString();
+            fullEndpoint += (endpoint.includes("?") ? "&" : "?") + queryString;
+        }
+
+        // Always add format=json
+        fullEndpoint +=
+            (fullEndpoint.includes("?") ? "&" : "?") + "format=json";
+
+        console.log("🌐 Making proxy request:", method, fullEndpoint);
+
+        try {
+            const response = await axios.post(PROXY_BASE_URL, {
+                endpoint: fullEndpoint,
+                cookie,
+                method,
+                data,
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error("Proxy request error:", error.response?.data || error.message);
+            
+            // Check if it's a proxied error from Intranet API
+            if (error.response?.data?.error) {
+                throw new Error(error.response.data.error);
+            }
+
+            throw error;
+        }
+    }
+
+    /**
+     * Universal request method that uses proxy on web, direct API on mobile
+     */
+    private async makeRequest(
+        endpoint: string,
+        method: "GET" | "POST" = "GET",
+        data?: any,
+        params?: any,
+    ): Promise<any> {
+        if (this.isWeb) {
+            return this.makeProxyRequest(endpoint, method, data, params);
+        } else {
+            // Use direct axios instance for mobile
+            const config: any = { params };
+            if (method === "POST") {
+                return (await this.api.post(endpoint, data, config)).data;
+            } else {
+                return (await this.api.get(endpoint, config)).data;
+            }
+        }
+    }
+
+    /**
      * Authenticate with Intranet using Office365 OAuth
      * This opens a WebView for authentication and extracts the session cookie
      */
@@ -129,8 +205,8 @@ class IntraApiService {
      */
     async getCurrentUser(): Promise<IIntraUser> {
         try {
-            const response = await this.api.get("/user/");
-            return response.data;
+            const data = await this.makeRequest("/user/", "GET");
+            return data;
         } catch (error: any) {
             console.error(
                 "Get current user error:",
@@ -159,15 +235,13 @@ class IntraApiService {
         year: number,
     ): Promise<IIntraStudent[]> {
         try {
-            const response = await this.api.get("/user/filter/user", {
-                params: {
-                    location,
-                    year,
-                    active: true,
-                    count: 99999,
-                },
+            const data = await this.makeRequest("/user/filter/user", "GET", null, {
+                location,
+                year,
+                active: true,
+                count: 99999,
             });
-            return response.data.items || response.data;
+            return data.items || data;
         } catch (error: any) {
             console.error(
                 "Get students error:",
@@ -192,19 +266,17 @@ class IntraApiService {
                 startDate,
                 endDate,
             });
-            const response = await this.api.get("/planning/load", {
-                params: {
-                    location,
-                    start: startDate,
-                    end: endDate || startDate,
-                },
+            const data = await this.makeRequest("/planning/load", "GET", null, {
+                location,
+                start: startDate,
+                end: endDate || startDate,
             });
             console.log(
                 "Activities response:",
-                response.data?.length || 0,
+                data?.length || 0,
                 "events",
             );
-            return response.data;
+            return data;
         } catch (error: any) {
             console.error(
                 "Get activities error:",
@@ -226,10 +298,11 @@ class IntraApiService {
         codeinstance: string,
     ): Promise<IIntraModuleInfo> {
         try {
-            const response = await this.api.get(
+            const data = await this.makeRequest(
                 `/module/${scolaryear}/${codemodule}/${codeinstance}`,
+                "GET"
             );
-            return response.data;
+            return data;
         } catch (error: any) {
             console.error(
                 "Get module info error:",
@@ -245,10 +318,11 @@ class IntraApiService {
      */
     async getRegisteredStudents(event: IIntraEvent): Promise<IIntraStudent[]> {
         try {
-            const response = await this.api.get(
+            const data = await this.makeRequest(
                 `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${event.codeacti}/${event.codeevent}/registered`,
+                "GET"
             );
-            return response.data;
+            return data;
         } catch (error: any) {
             console.error(
                 "Get registered students error:",
@@ -295,13 +369,9 @@ class IntraApiService {
             console.log("🔥 Raw body:", body);
             console.log("🔥 Decoded body:", decodeURIComponent(body));
 
-            const response = await this.api.post(endpoint, body, {
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-            });
+            await this.makeRequest(endpoint, "POST", body);
 
-            console.log("✓ Presence update successful:", response.status);
+            console.log("✓ Presence update successful");
         } catch (error: any) {
             console.error(
                 "Update presence error:",

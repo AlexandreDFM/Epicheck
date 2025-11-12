@@ -16,11 +16,13 @@ import {
     TouchableOpacity,
     Platform,
     NativeModules,
+    TextInput,
 } from "react-native";
 
 import { useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../contexts/ThemeContext";
+import intraAuth from "../services/intraAuth";
 
 const INTRA_URL = "https://intra.epitech.eu";
 const EPITECH_CLIENT_ID = "e05d4149-1624-4627-a5ba-7472a39e43ab";
@@ -371,8 +373,54 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
 // ============================================================
 // WEB COMPONENT - Manual authentication instructions
 // ============================================================
-function WebAuthComponent({ onCancel }: any) {
-    return (
+function WebAuthComponent({ onCancel, onSuccess }: any) {
+    const [cookieInput, setCookieInput] = useState("");
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleOpenIntra = () => {
+        // Open Intranet in new window
+        const authUrl = `https://login.microsoftonline.com/common/oauth2/authorize?response_type=code&client_id=${EPITECH_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+            `${INTRA_URL}/auth/office365`,
+        )}&state=${encodeURIComponent("/")}`;
+
+        window.open(authUrl, "_blank");
+        setIsExtracting(true);
+    };
+
+    const handleCookieSubmit = async () => {
+        const trimmedCookie = cookieInput.trim();
+        if (trimmedCookie.length < 20) {
+            alert("Cookie value seems too short. Please check and try again.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            console.log("[Web] Submitting cookie:", trimmedCookie.substring(0, 20) + "...");
+
+            // Save the cookie using intraAuth service
+            await intraAuth.setTestCookie(trimmedCookie);
+
+            console.log("[Web] ✓ Cookie saved successfully");
+
+            // Success message - proxy server handles CORS
+            alert(
+                "✅ Authentication Successful\n\n" +
+                "Your Intranet cookie has been saved!\n\n" +
+                "� The app now uses a proxy server to bypass browser CORS restrictions.\n\n" +
+                "Make sure the proxy server is running on http://localhost:3001"
+            );
+
+            // Call onSuccess to close the modal
+            onSuccess(trimmedCookie);
+        } catch (error) {
+            console.error("[Web] Failed to save cookie:", error);
+            alert("Failed to save cookie. Please try again or use Settings → Developer Options.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };    return (
         <SafeAreaView className="flex-1 bg-background">
             <View className="flex-row items-center justify-between bg-epitech-blue p-4">
                 <View className="flex-1">
@@ -398,13 +446,93 @@ function WebAuthComponent({ onCancel }: any) {
                     </Text>
                     <Text className="text-sm leading-relaxed text-status-info">
                         Automatic authentication is not available on web due to
-                        browser security restrictions.
+                        browser security restrictions. Follow the steps below to login.
                     </Text>
                 </View>
 
+                {/* Proxy Server Notice */}
+                <View className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-500/10 p-4">
+                    <Text className="mb-2 font-bold text-green-700">
+                        🚀 Proxy Server Solution
+                    </Text>
+                    <Text className="mb-2 text-sm leading-relaxed text-green-800">
+                        The app uses a local proxy server to bypass browser CORS restrictions. 
+                        Make sure the proxy is running on port 3001.
+                    </Text>
+                    <Text className="text-xs font-semibold text-green-900">
+                        � See proxy-server/README.md for setup instructions
+                    </Text>
+                </View>
+
+                {/* Quick Login Button */}
+                <TouchableOpacity
+                    onPress={handleOpenIntra}
+                    className="mb-6 rounded-lg bg-epitech-blue px-6 py-4 shadow-lg"
+                >
+                    <Text className="mb-1 text-center text-lg font-bold text-white">
+                        🔐 Login with Office365
+                    </Text>
+                    <Text className="text-center text-xs text-white opacity-80">
+                        Opens Epitech Intranet in a new tab
+                    </Text>
+                </TouchableOpacity>
+
+                {isExtracting && (
+                    <View className="mb-6 rounded-lg border border-yellow-500 bg-yellow-500/10 p-4">
+                        <Text className="mb-2 font-bold text-text-primary">
+                            📋 After logging in, extract your cookie:
+                        </Text>
+                        <Text className="mb-3 text-sm text-text-secondary">
+                            1. Press F12 to open DevTools{"\n"}
+                            2. Go to Application → Cookies → intra.epitech.eu{"\n"}
+                            3. Find the &quot;user&quot; cookie and copy its value{"\n"}
+                            4. Paste it below or in Settings → Developer Options
+                        </Text>
+                    </View>
+                )}
+
+                {isExtracting && (
+                    <View className="mb-6 rounded-lg border border-card-border bg-card-bg p-4">
+                        <Text className="mb-2 text-sm font-semibold text-text-primary">
+                            Quick Cookie Input:
+                        </Text>
+                        <TextInput
+                            value={cookieInput}
+                            onChangeText={setCookieInput}
+                            placeholder="Paste your 'user' cookie value here..."
+                            multiline
+                            numberOfLines={3}
+                            style={{
+                                borderWidth: 1,
+                                borderColor: "#d1d5db",
+                                backgroundColor: "#ffffff",
+                                color: "#111827",
+                                padding: 12,
+                                borderRadius: 8,
+                                marginBottom: 12,
+                                fontSize: 12,
+                                fontFamily: "monospace",
+                            }}
+                        />
+                        <TouchableOpacity
+                            onPress={handleCookieSubmit}
+                            disabled={isSubmitting || cookieInput.trim().length < 20}
+                            className={`rounded-lg px-4 py-3 ${
+                                isSubmitting || cookieInput.trim().length < 20
+                                    ? "bg-gray-400"
+                                    : "bg-green-600"
+                            }`}
+                        >
+                            <Text className="text-center font-semibold text-white">
+                                {isSubmitting ? "Saving..." : "✓ Save & Login"}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 <View className="rounded-lg border border-card-border bg-card-bg p-6">
                     <Text className="mb-4 text-lg font-bold text-text-primary">
-                        Manual Cookie Authentication
+                        Detailed Instructions
                     </Text>
 
                     <View className="space-y-3">
@@ -532,7 +660,7 @@ export default function IntraWebViewAuth({
 
     // Route to platform-specific component
     if (Platform.OS === "web") {
-        return <WebAuthComponent onCancel={onCancel} />;
+        return <WebAuthComponent onCancel={onCancel} onSuccess={onSuccess} />;
     }
 
     return (
