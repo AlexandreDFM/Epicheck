@@ -70,8 +70,6 @@ export default function SettingsScreen() {
             const file = result.assets[0];
             await soundService.importSuccessSound(file.uri);
             setHasCustomSuccess(true);
-
-            Alert.alert("Success", "Custom success sound imported!");
         } catch (error: any) {
             Alert.alert("Error", error.message || "Failed to import sound");
         }

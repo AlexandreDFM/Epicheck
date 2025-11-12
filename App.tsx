@@ -61,10 +61,7 @@ function AppNavigator() {
                 }}
             >
                 <Stack.Screen name="Login" component={LoginScreen} />
-                <Stack.Screen
-                    name="Activities"
-                    component={ActivitiesScreen}
-                />
+                <Stack.Screen name="Activities" component={ActivitiesScreen} />
                 <Stack.Screen name="Presence" component={PresenceScreen} />
                 <Stack.Screen
                     name="ManualAttendance"
