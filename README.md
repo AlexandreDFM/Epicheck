@@ -91,11 +91,27 @@ npm run ios
 npm run android
 ```
 
-#### Web
+#### Web (with Proxy Server)
 
-```bash
-npm run web
-```
+**Important**: The web platform requires a proxy server to bypass CORS restrictions.
+
+**Quick Start:**
+
+1. **Start the proxy server** (in one terminal):
+   ```bash
+   npm run proxy
+   ```
+
+2. **Start the web app** (in another terminal):
+   ```bash
+   npm run web
+   ```
+
+3. **Follow authentication steps** in the app to extract your Intranet cookie
+
+📚 **Full web setup guide:** See [`docs/WEB_QUICKSTART.md`](docs/WEB_QUICKSTART.md)
+
+**Note:** For production deployment, see [`proxy-server/README.md`](proxy-server/README.md)
 
 ### Using Expo Go (Mobile Testing)
 
