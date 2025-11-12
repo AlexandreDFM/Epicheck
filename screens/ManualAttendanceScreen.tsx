@@ -172,13 +172,13 @@ export default function ManualAttendanceScreen() {
         try {
             // Try to mark presence using epitechApi (which handles the matching)
             await epitechApi.markPresence(manualEmail.trim(), event);
-            
+
             soundService.playSuccessSound();
             setManualEmail("");
-            
+
             // Reload students to get updated status
             await loadStudents();
-            
+
             Alert.alert("Success", `Marked ${manualEmail.trim()} as present`);
         } catch (error: any) {
             console.error("Failed to mark presence:", error);
