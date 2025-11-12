@@ -1,0 +1,42 @@
+# Development Dockerfile for EpiCheck
+# This Dockerfile is optimized for local development with hot reload
+
+FROM node:20-alpine
+
+# Install dependencies for Expo and React Native
+RUN apk add --no-cache \
+    git \
+    bash \
+    curl \
+    openssh \
+    python3 \
+    make \
+    g++
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Install Expo CLI globally
+RUN npm install -g expo-cli @expo/ngrok
+
+# Copy the rest of the application
+COPY . .
+
+# Expose Expo default ports
+# 19000 - Expo DevTools
+# 19001 - Expo DevTools (websocket)
+# 19002 - Expo Metro Bundler
+# 8081 - React Native packager
+EXPOSE 19000 19001 19002 8081
+
+# Set environment to development
+ENV NODE_ENV=development
+
+# Start Expo in development mode
+CMD ["npm", "start"]

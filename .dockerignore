@@ -1,0 +1,110 @@
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn.lock
+package-lock.json
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Build outputs
+build/
+android/app/build/
+android/build/
+ios/Pods/
+ios/build/
+*.apk
+*.ipa
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+__tests__/
+*.test.js
+*.spec.js
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+docs/
+*.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Kubernetes
+kubernetes/
+
+# Old files and backups
+old/
+backup/
+*.bak
+*.backup
+
+# OS files
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.keystore
+debug.keystore
+
+# Android specific
+android/gradle/
+android/gradlew
+android/gradlew.bat
+android/.gradle/
+android/app/google-services.json
+
+# iOS specific
+ios/Pods/
+ios/*.xcworkspace
+*.xcuserstate
