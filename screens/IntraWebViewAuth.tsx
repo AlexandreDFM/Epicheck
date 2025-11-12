@@ -2,41 +2,25 @@
  * File Name: IntraWebViewAuth.tsx
  * Author: Alexandre Kévin DE FREITAS MARTINS
  * Creation Date: 29/10/2025
- * Description: This is the IntraWebViewAuth.tsx
+ * Description: Platform-specific authentication for Epitech Intranet
+ * - Mobile (iOS/Android): Uses WebView with automatic cookie extraction
+ * - Web: Provides manual authentication instructions
  * Copyright (c) 2025 Epitech
- * Version: 1.0.0
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the 'Software'), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Version: 2.0.0
  */
 
 import {
     View,
     Text,
     ActivityIndicator,
-    Alert,
     TouchableOpacity,
+    Platform,
+    NativeModules,
 } from "react-native";
 
 import { useRef, useState } from "react";
-import { WebView } from "react-native-webview";
-import CookieManager from "@react-native-cookies/cookies";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "../contexts/ThemeContext";
 
 const INTRA_URL = "https://intra.epitech.eu";
 const EPITECH_CLIENT_ID = "e05d4149-1624-4627-a5ba-7472a39e43ab";
@@ -48,84 +32,244 @@ interface IntraWebViewAuthProps {
     onCancel: () => void;
 }
 
-export default function IntraWebViewAuth({
-    onSuccess,
-    onCancel,
-}: IntraWebViewAuthProps) {
-    const webViewRef = useRef<WebView>(null);
+// ============================================================
+// MOBILE COMPONENT - Uses react-native-webview
+// ============================================================
+function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const WebView = require("react-native-webview").WebView;
+
+    const webViewRef = useRef<any>(null);
     const [loading, setLoading] = useState(true);
     const [currentUrl, setCurrentUrl] = useState("");
+    const [showManualOption, setShowManualOption] = useState(false);
 
-    // Build OAuth URL that redirects to Intranet
-    const authUrl = `${OAUTH_AUTHORIZE_URL}?response_type=code&client_id=${EPITECH_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-        `${INTRA_URL}/auth/office365`,
-    )}&state=${encodeURIComponent("/")}`;
+    const darkModeCSS = `
+        :root {
+            color-scheme: dark;
+        }
+        html {
+            filter: invert(1) hue-rotate(180deg);
+            background-color: #000 !important;
+        }
+        img, video, [style*="background-image"] {
+            filter: invert(1) hue-rotate(180deg);
+        }
+    `;
 
-    const extractCookie = async (url: string) => {
-        try {
-            console.log("Extracting cookies from:", url);
+    const injectedJavaScript = isDark
+        ? `
+        (function() {
+            const style = document.createElement('style');
+            style.innerHTML = \`${darkModeCSS}\`;
+            document.head.appendChild(style);
+        })();
+        true;
+    `
+        : "true;";
 
-            // Get all cookies for intra.epitech.eu
-            const cookies = await CookieManager.get(INTRA_URL);
-            console.log("Cookies found:", Object.keys(cookies));
+    const parseCookieString = (cookieString: string): string | null => {
+        console.log(
+            "[Mobile] Parsing cookie string:",
+            cookieString || "(empty)",
+        );
 
-            // Look for 'user' cookie
-            if (cookies.user) {
+        if (!cookieString || cookieString.trim() === "") {
+            console.log("[Mobile] ⚠ Cookie string is empty");
+            return null;
+        }
+
+        const cookies = cookieString.split(";");
+        const cookieNames = cookies.map((c) => c.trim().split("=")[0]);
+        console.log("[Mobile] Cookie names found:", cookieNames.join(", "));
+
+        for (const cookie of cookies) {
+            const [name, value] = cookie.trim().split("=");
+            if (name === "user") {
                 console.log(
-                    "User cookie found:",
-                    cookies.user.value.substring(0, 20) + "...",
+                    "[Mobile] ✓ User cookie found:",
+                    value.substring(0, 20) + "...",
                 );
-                return cookies.user.value;
+                return value;
+            }
+        }
+
+        console.log("[Mobile] ⚠ User cookie not in list");
+        return null;
+    };
+
+    const tryNativeCookieExtraction = async (): Promise<string | null> => {
+        try {
+            console.log("[Mobile] Attempting native cookie extraction...");
+
+            // First, check if the native module is available
+            console.log("[Mobile] Checking NativeModules...");
+            const { RNCookieManagerAndroid, RNCookieManagerIOS } =
+                NativeModules;
+            console.log(
+                "[Mobile] RNCookieManagerAndroid:",
+                !!RNCookieManagerAndroid,
+            );
+            console.log("[Mobile] RNCookieManagerIOS:", !!RNCookieManagerIOS);
+
+            if (!RNCookieManagerAndroid && !RNCookieManagerIOS) {
+                console.log(
+                    "[Mobile] ⚠ Native cookie modules not found in NativeModules",
+                );
+                console.log(
+                    "[Mobile] Available modules:",
+                    Object.keys(NativeModules).filter((k) =>
+                        k.toLowerCase().includes("cookie"),
+                    ),
+                );
+                return null;
             }
 
+            // Import the CookieManager - it's a CommonJS export, not ES6
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const CookieManagerModule = require("@react-native-cookies/cookies");
+
+            console.log(
+                "[Mobile] Module imported:",
+                typeof CookieManagerModule,
+            );
+            console.log(
+                "[Mobile] Module keys:",
+                Object.keys(CookieManagerModule || {}),
+            );
+
+            if (!CookieManagerModule || !CookieManagerModule.get) {
+                console.log(
+                    "[Mobile] ⚠ CookieManager.get method not available",
+                );
+                return null;
+            }
+
+            console.log("[Mobile] Calling CookieManager.get for:", INTRA_URL);
+            const cookies = await CookieManagerModule.get(INTRA_URL);
+
+            if (!cookies) {
+                console.log("[Mobile] ⚠ Cookies object is null");
+                return null;
+            }
+
+            console.log(
+                "[Mobile] Raw cookies object:",
+                JSON.stringify(cookies, null, 2),
+            );
+            const cookieKeys = Object.keys(cookies);
+            console.log("[Mobile] Native cookie keys:", cookieKeys.join(", "));
+
+            if (cookies.user) {
+                const cookieValue = cookies.user.value;
+                console.log(
+                    "[Mobile] ✓ User cookie via native API:",
+                    cookieValue.substring(0, 20) + "...",
+                );
+                return cookieValue;
+            }
+
+            console.log("[Mobile] ⚠ User cookie not in native cookies");
             return null;
         } catch (error) {
-            console.error("Error extracting cookie:", error);
+            const errorMessage =
+                error instanceof Error ? error.message : String(error);
+            console.log(
+                "[Mobile] ❌ Native extraction exception:",
+                errorMessage,
+            );
+            console.log(
+                "[Mobile] Error stack:",
+                error instanceof Error ? error.stack : "N/A",
+            );
             return null;
         }
     };
 
-    const handleNavigationStateChange = async (navState: any) => {
-        const { url } = navState;
-        setCurrentUrl(url);
-        console.log("Navigation to:", url);
+    const handleWebMessage = (event: any) => {
+        const data = event.nativeEvent.data;
+        console.log("[Mobile] Received WebView message");
 
-        // Check if we've reached the Intranet after OAuth
-        if (url.startsWith(INTRA_URL) && !url.includes("/auth/office365")) {
+        try {
+            const parsed = JSON.parse(data);
+            if (parsed.cookie !== undefined) {
+                console.log("[Mobile] Cookie from JS:", parsed.cookie);
+                const userCookie = parseCookieString(parsed.cookie);
+                if (userCookie) {
+                    onSuccess(userCookie);
+                    return;
+                }
+            }
+        } catch {
+            // Not JSON, treat as plain cookie string
+        }
+
+        const userCookie = parseCookieString(data);
+        if (userCookie) {
+            console.log("[Mobile] ✓ Cookie extracted via JavaScript");
+            onSuccess(userCookie);
+        } else {
             console.log(
-                "Reached Intranet home, attempting to extract cookie...",
+                "[Mobile] ⚠ Cookie empty (likely HttpOnly), trying native API...",
             );
 
-            // Give it a moment for cookies to be set
-            setTimeout(async () => {
-                const cookie = await extractCookie(url);
-
-                if (cookie) {
-                    console.log("Cookie extracted successfully");
-                    onSuccess(cookie);
+            // Try native cookie extraction as fallback
+            tryNativeCookieExtraction().then((nativeCookie) => {
+                if (nativeCookie) {
+                    console.log("[Mobile] ✓ Success via native API!");
+                    onSuccess(nativeCookie);
                 } else {
-                    console.warn("No cookie found, waiting a bit more...");
-                    // Try again after 1 second
-                    setTimeout(async () => {
-                        const cookie2 = await extractCookie(url);
-                        if (cookie2) {
-                            console.log("Cookie extracted on second attempt");
-                            onSuccess(cookie2);
-                        } else {
-                            Alert.alert(
-                                "Error",
-                                "Could not extract authentication cookie. Please try again.",
-                            );
-                        }
+                    console.log(
+                        "[Mobile] ❌ All extraction methods failed, showing manual option",
+                    );
+                    setTimeout(() => {
+                        setShowManualOption(true);
                     }, 1000);
                 }
-            }, 500);
+            });
+        }
+    };
+
+    const handleNavigationStateChange = (navState: any) => {
+        const { url } = navState;
+        setCurrentUrl(url);
+        console.log("[Mobile] Navigation:", url);
+
+        if (url.startsWith(INTRA_URL) && !url.includes("/auth/office365")) {
+            console.log(
+                "[Mobile] ✓ Reached Intranet, attempting cookie extraction...",
+            );
+
+            // Strategy 1: Try JavaScript extraction first (works for non-HttpOnly cookies)
+            setTimeout(() => {
+                const jsCode = `
+                    (function() {
+                        if (window.ReactNativeWebView) {
+                            console.log('[WebView] Posting cookie to native');
+                            window.ReactNativeWebView.postMessage(document.cookie);
+                        }
+                    })();
+                    true;
+                `;
+                webViewRef.current?.injectJavaScript(jsCode);
+            }, 1000);
+
+            // Strategy 2: Try native API extraction after JS attempt
+            setTimeout(() => {
+                tryNativeCookieExtraction().then((nativeCookie) => {
+                    if (nativeCookie) {
+                        console.log(
+                            "[Mobile] ✓ Cookie extracted via native API (HttpOnly bypass)",
+                        );
+                        onSuccess(nativeCookie);
+                    }
+                });
+            }, 2000);
         }
     };
 
     return (
-        <SafeAreaView className="flex-1">
-            {/* Header */}
+        <SafeAreaView className="flex-1 bg-background">
             <View className="flex-row items-center justify-between bg-epitech-blue p-4">
                 <View className="flex-1">
                     <Text className="text-lg font-bold text-white">
@@ -143,40 +287,77 @@ export default function IntraWebViewAuth({
                 </TouchableOpacity>
             </View>
 
-            {/* Loading Indicator */}
             {loading && (
                 <View className="absolute left-0 right-0 top-20 z-10 items-center">
-                    <View className="flex-row items-center rounded-lg p-4 shadow-lg">
+                    <View className="flex-row items-center rounded-lg bg-surface p-4 shadow-lg">
                         <ActivityIndicator color="#00B8D4" />
-                        <Text className="ml-3 text-epitech-navy">
+                        <Text className="ml-3 text-text-primary">
                             Loading...
                         </Text>
                     </View>
                 </View>
             )}
 
-            {/* Current URL Display (Dev only) */}
             {__DEV__ && currentUrl && (
-                <View className=" p-2">
-                    <Text className="text-xs text-gray-600" numberOfLines={1}>
+                <View className="bg-surface p-2">
+                    <Text
+                        className="text-xs text-text-secondary"
+                        numberOfLines={1}
+                    >
                         {currentUrl}
                     </Text>
                 </View>
             )}
 
-            {/* WebView */}
+            {showManualOption && (
+                <View className="m-4 border-l-4 border-yellow-500 bg-yellow-500/10 p-4">
+                    <Text className="mb-2 font-bold text-text-primary">
+                        ⚠️ Manual Authentication Required
+                    </Text>
+                    <Text className="mb-3 text-sm text-text-secondary">
+                        The authentication cookie is HttpOnly and cannot be
+                        extracted automatically on your device.
+                    </Text>
+                    <Text className="mb-2 text-xs font-semibold text-text-primary">
+                        Why this happens:
+                    </Text>
+                    <Text className="mb-3 text-xs text-text-secondary">
+                        • Running in Expo Go (requires custom dev build){"\n"}•
+                        Native cookie module not available{"\n"}• Security
+                        restrictions on HttpOnly cookies
+                    </Text>
+                    <Text className="mb-2 text-xs font-semibold text-text-primary">
+                        Solution:
+                    </Text>
+                    <Text className="mb-3 text-xs text-text-secondary">
+                        Go to Settings → Developer Options → Enter cookie
+                        manually
+                    </Text>
+                    <TouchableOpacity
+                        onPress={onCancel}
+                        className="mt-3 rounded-lg bg-epitech-blue px-4 py-2"
+                    >
+                        <Text className="text-center font-semibold text-white">
+                            Go to Settings
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
             <WebView
                 ref={webViewRef}
                 source={{ uri: authUrl }}
                 onLoadStart={() => setLoading(true)}
                 onLoadEnd={() => setLoading(false)}
                 onNavigationStateChange={handleNavigationStateChange}
+                onMessage={handleWebMessage}
                 sharedCookiesEnabled={true}
                 thirdPartyCookiesEnabled={true}
                 userAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 startInLoadingState={true}
+                injectedJavaScript={injectedJavaScript}
                 renderLoading={() => (
                     <View className="flex-1 items-center justify-center">
                         <ActivityIndicator size="large" color="#00B8D4" />
@@ -184,5 +365,182 @@ export default function IntraWebViewAuth({
                 )}
             />
         </SafeAreaView>
+    );
+}
+
+// ============================================================
+// WEB COMPONENT - Manual authentication instructions
+// ============================================================
+function WebAuthComponent({ onCancel }: any) {
+    return (
+        <SafeAreaView className="flex-1 bg-background">
+            <View className="flex-row items-center justify-between bg-epitech-blue p-4">
+                <View className="flex-1">
+                    <Text className="text-lg font-bold text-white">
+                        Epitech Login (Web)
+                    </Text>
+                    <Text className="text-xs text-white opacity-80">
+                        Manual authentication required
+                    </Text>
+                </View>
+                <TouchableOpacity
+                    onPress={onCancel}
+                    className="rounded-lg bg-white/20 px-4 py-2"
+                >
+                    <Text className="font-semibold text-white">Cancel</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View className="flex-1 p-6">
+                <View className="mb-6 rounded-lg border-l-4 border-status-info bg-status-info-bg p-4">
+                    <Text className="mb-2 font-bold text-status-info">
+                        ℹ️ Web Platform Notice
+                    </Text>
+                    <Text className="text-sm leading-relaxed text-status-info">
+                        Automatic authentication is not available on web due to
+                        browser security restrictions.
+                    </Text>
+                </View>
+
+                <View className="rounded-lg border border-card-border bg-card-bg p-6">
+                    <Text className="mb-4 text-lg font-bold text-text-primary">
+                        Manual Cookie Authentication
+                    </Text>
+
+                    <View className="space-y-3">
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                1.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Open{" "}
+                                <Text className="font-mono text-epitech-blue">
+                                    intra.epitech.eu
+                                </Text>{" "}
+                                in a new tab
+                            </Text>
+                        </View>
+
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                2.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Login with your Office365 credentials
+                            </Text>
+                        </View>
+
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                3.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Press <Text className="font-mono">F12</Text> to
+                                open DevTools
+                            </Text>
+                        </View>
+
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                4.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Go to{" "}
+                                <Text className="font-semibold">
+                                    Application
+                                </Text>{" "}
+                                → <Text className="font-semibold">Cookies</Text>{" "}
+                                →{" "}
+                                <Text className="font-mono">
+                                    intra.epitech.eu
+                                </Text>
+                            </Text>
+                        </View>
+
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                5.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Find the <Text className="font-mono">user</Text>{" "}
+                                cookie and copy its value
+                            </Text>
+                        </View>
+
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                6.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Go to{" "}
+                                <Text className="font-semibold">Settings</Text>{" "}
+                                →{" "}
+                                <Text className="font-semibold">
+                                    Developer Options
+                                </Text>
+                            </Text>
+                        </View>
+
+                        <View className="flex-row">
+                            <Text className="mr-2 font-bold text-epitech-blue">
+                                7.
+                            </Text>
+                            <Text className="flex-1 text-text-primary">
+                                Paste the cookie value and click{" "}
+                                <Text className="font-semibold">
+                                    SET COOKIE
+                                </Text>
+                            </Text>
+                        </View>
+                    </View>
+
+                    <TouchableOpacity
+                        onPress={onCancel}
+                        className="mt-6 rounded-lg bg-epitech-blue px-6 py-3"
+                    >
+                        <Text className="text-center text-base font-semibold text-white">
+                            Go to Settings
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View className="mt-4 rounded-lg border border-status-warning bg-status-warning-bg p-4">
+                    <Text className="text-xs leading-relaxed text-status-warning">
+                        💡 <Text className="font-semibold">Tip:</Text> Use the
+                        mobile app (Android/iOS) for automatic authentication.
+                    </Text>
+                </View>
+            </View>
+        </SafeAreaView>
+    );
+}
+
+// ============================================================
+// MAIN COMPONENT - Platform detection and routing
+// ============================================================
+export default function IntraWebViewAuth({
+    onSuccess,
+    onCancel,
+}: IntraWebViewAuthProps) {
+    const { isDark } = useTheme();
+
+    const authUrl = `${OAUTH_AUTHORIZE_URL}?response_type=code&client_id=${EPITECH_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+        `${INTRA_URL}/auth/office365`,
+    )}&state=${encodeURIComponent("/")}`;
+
+    console.log(`[Auth] Platform: ${Platform.OS}`);
+
+    // Route to platform-specific component
+    if (Platform.OS === "web") {
+        return <WebAuthComponent onCancel={onCancel} />;
+    }
+
+    return (
+        <MobileAuthComponent
+            onSuccess={onSuccess}
+            onCancel={onCancel}
+            authUrl={authUrl}
+            isDark={isDark}
+        />
     );
 }
