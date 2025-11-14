@@ -52,16 +52,7 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: "18"
-
-            - name: Cache node modules
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.npm
-                      node_modules
-                  key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-                  restore-keys: |
-                      ${{ runner.os }}-node-
+                  cache: 'npm'
 
             - name: Install dependencies
               run: npm ci
@@ -71,8 +62,24 @@ jobs:
               with:
                   distribution: temurin
                   java-version: "17"
+                  cache: 'gradle'
+
+            - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v3
+              with:
+                  cache-read-only: false
+
+            - name: Cache Android SDK
+              uses: actions/cache@v4
+              id: android-sdk-cache
+              with:
+                  path: ${{ env.ANDROID_SDK_ROOT }}
+                  key: ${{ runner.os }}-android-sdk-36
+                  restore-keys: |
+                      ${{ runner.os }}-android-sdk-
 
             - name: Install Android SDK
+              if: steps.android-sdk-cache.outputs.cache-hit != 'true'
               run: |
                   sudo mkdir -p $ANDROID_SDK_ROOT
                   sudo chown $USER:$USER $ANDROID_SDK_ROOT
@@ -85,26 +92,18 @@ jobs:
                   yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
                   $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-            - name: Cache Gradle
+            - name: Cache Expo prebuild
               uses: actions/cache@v4
+              id: expo-prebuild-cache
               with:
                   path: |
-                      ~/.gradle/caches
-                      ~/.gradle/wrapper
-                  key: ${{ runner.os }}-gradle-${{ hashFiles('**/gradle/wrapper/gradle-wrapper.properties') }}
+                      android
+                      !android/app/build
+                      !android/build
+                      !android/.gradle
+                  key: ${{ runner.os }}-expo-prebuild-${{ hashFiles('package-lock.json', 'app.json') }}
                   restore-keys: |
-                      ${{ runner.os }}-gradle-
-
-            - name: Cache Android Build
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      android/app/build
-                      android/build
-                      android/.gradle
-                  key: ${{ runner.os }}-android-build-${{ hashFiles('android/app/build.gradle', 'android/build.gradle', 'package-lock.json') }}
-                  restore-keys: |
-                      ${{ runner.os }}-android-build-
+                      ${{ runner.os }}-expo-prebuild-
 
             - name: Ensure Android directory and prebuild
               run: |
@@ -126,9 +125,10 @@ jobs:
               working-directory: android
               env:
                   ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+                  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.caching=true -Dorg.gradle.parallel=true
               run: |
                   export PATH=$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-                  ./gradlew assembleRelease --no-daemon --stacktrace --info
+                  ./gradlew assembleRelease --no-daemon --stacktrace --build-cache
 
             - name: Upload APK Artifact
               uses: actions/upload-artifact@v4
