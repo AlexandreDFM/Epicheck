@@ -48,13 +48,30 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            - name: Free up disk space
+              run: |
+                  sudo rm -rf /usr/share/dotnet
+                  sudo rm -rf /opt/ghc
+                  sudo rm -rf /usr/local/share/boost
+                  df -h
+
             - name: Set up Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: "18"
                   cache: 'npm'
 
+            - name: Cache node_modules
+              uses: actions/cache@v4
+              id: node-modules-cache
+              with:
+                  path: node_modules
+                  key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-node-modules-
+
             - name: Install dependencies
+              if: steps.node-modules-cache.outputs.cache-hit != 'true'
               run: npm ci
 
             - name: Set up Java 17
@@ -69,13 +86,20 @@ jobs:
               with:
                   cache-read-only: false
 
+            - name: Setup ccache
+              uses: hendrikmuhs/ccache-action@v1.2
+              with:
+                  key: ${{ runner.os }}-ccache-android
+                  max-size: 500M
+
             - name: Cache Android SDK
               uses: actions/cache@v4
               id: android-sdk-cache
               with:
                   path: ${{ env.ANDROID_SDK_ROOT }}
-                  key: ${{ runner.os }}-android-sdk-36
+                  key: ${{ runner.os }}-android-sdk-36-v2
                   restore-keys: |
+                      ${{ runner.os }}-android-sdk-36-
                       ${{ runner.os }}-android-sdk-
 
             - name: Install Android SDK
@@ -92,6 +116,16 @@ jobs:
                   yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
                   $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
+            - name: Cache Gradle dependencies
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.gradle/caches
+                      ~/.gradle/wrapper
+                  key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+                  restore-keys: |
+                      ${{ runner.os }}-gradle-
+
             - name: Cache Expo prebuild
               uses: actions/cache@v4
               id: expo-prebuild-cache
@@ -104,6 +138,16 @@ jobs:
                   key: ${{ runner.os }}-expo-prebuild-${{ hashFiles('package-lock.json', 'app.json') }}
                   restore-keys: |
                       ${{ runner.os }}-expo-prebuild-
+
+            - name: Cache build outputs
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      android/app/build/intermediates
+                      android/build/intermediates
+                  key: ${{ runner.os }}-build-intermediates-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-build-intermediates-
 
             - name: Ensure Android directory and prebuild
               run: |
@@ -135,9 +179,18 @@ jobs:
               working-directory: android
               env:
                   ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+                  CC: ccache gcc
+                  CXX: ccache g++
               run: |
                   export PATH=$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-                  ./gradlew assembleRelease --no-daemon --stacktrace --no-configuration-cache --info 2>&1 | tee build.log
+                  ./gradlew assembleRelease \
+                    --no-daemon \
+                    --stacktrace \
+                    --no-configuration-cache \
+                    --parallel \
+                    --max-workers=4 \
+                    --build-cache \
+                    --info 2>&1 | tee build.log
 
                   # Check if build succeeded
                   if [ ${PIPESTATUS[0]} -ne 0 ]; then
