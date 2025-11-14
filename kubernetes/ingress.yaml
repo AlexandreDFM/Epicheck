@@ -126,7 +126,7 @@ spec:
             X-XSS-Protection: "1; mode=block"
             Referrer-Policy: "strict-origin-when-cross-origin"
             Permissions-Policy: "camera=(), microphone=(), geolocation=()"
-        contentSecurityPolicy: "default-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://epicheck.alexandredfm.fr https://intra.epitech.eu; worker-src 'self' blob:"
+        contentSecurityPolicy: "default-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://epicheck.alexandredfm.fr https://intra.epitech.eu; worker-src 'self' blob:"
         forceSTSHeader: true
         stsSeconds: 31536000
         stsIncludeSubdomains: true
