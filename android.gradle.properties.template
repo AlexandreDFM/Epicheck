@@ -1,0 +1,34 @@
+# Gradle Build Optimization Configuration for EpiCheck
+# This file is automatically applied during CI/CD builds
+# For local development, copy to android/gradle.properties after running expo prebuild
+
+# Enable Gradle build cache (speeds up incremental builds)
+org.gradle.caching=true
+
+# Enable configuration cache (speeds up configuration phase)
+org.gradle.configuration-cache=true
+
+# Enable parallel builds
+org.gradle.parallel=true
+
+# Configure JVM memory for better performance
+org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError
+
+# Enable Gradle daemon for faster builds
+org.gradle.daemon=true
+
+# Android-specific optimizations
+android.useAndroidX=true
+android.enableJetifier=true
+
+# Enable R8 code shrinking (minification)
+android.enableR8=true
+android.enableR8.fullMode=true
+
+# Disable unnecessary features to speed up builds
+android.enableBuildCache=true
+android.enableD8.desugaring=true
+
+# Kotlin optimizations (if using Kotlin)
+kotlin.incremental=true
+kotlin.caching.enabled=true

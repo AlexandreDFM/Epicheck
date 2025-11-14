@@ -112,6 +112,16 @@ jobs:
                     npx expo prebuild --platform android --clean
                   fi
 
+            - name: Apply Gradle optimizations
+              run: |
+                  if [ -f "android.gradle.properties.template" ]; then
+                    echo "📋 Applying Gradle optimization settings..."
+                    echo "" >> android/gradle.properties
+                    echo "# GitHub Actions Optimizations" >> android/gradle.properties
+                    cat android.gradle.properties.template >> android/gradle.properties
+                    echo "✅ Gradle optimizations applied"
+                  fi
+
             - name: Prepare gradle wrapper permissions
               run: |
                   if [ -f "android/gradlew" ]; then
