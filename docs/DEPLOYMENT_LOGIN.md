@@ -1,6 +1,7 @@
 # EpiCheck - Deployment Login and Usage Guide
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Option 1: Use GitHub Container Registry (Recommended)](#option-1-use-github-container-registry-recommended)
@@ -16,6 +17,7 @@ This guide explains how to authenticate with container registries and deploy the
 ## Prerequisites
 
 Before deploying, ensure you have:
+
 - Docker installed and running
 - kubectl configured with your Kubernetes cluster
 - Access to a container registry (GitHub Container Registry or Docker Hub)
@@ -28,23 +30,23 @@ GitHub Container Registry (ghcr.io) is the recommended option as it integrates s
 ### Step 1: Create a GitHub Personal Access Token
 
 1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
-   - Or visit: https://github.com/settings/tokens
+    - Or visit: https://github.com/settings/tokens
 
 2. Click **"Generate new token"** → **"Generate new token (classic)"**
 
 3. Configure the token:
-   - **Note**: `EpiCheck Container Registry`
-   - **Expiration**: Choose duration (90 days, 1 year, or no expiration)
-   - **Scopes**: Select the following:
-     - ✅ `write:packages` (Upload packages to GitHub Package Registry)
-     - ✅ `read:packages` (Download packages from GitHub Package Registry)
-     - ✅ `delete:packages` (Delete packages from GitHub Package Registry)
-     - ✅ `repo` (Full control of private repositories - if repo is private)
+    - **Note**: `EpiCheck Container Registry`
+    - **Expiration**: Choose duration (90 days, 1 year, or no expiration)
+    - **Scopes**: Select the following:
+        - ✅ `write:packages` (Upload packages to GitHub Package Registry)
+        - ✅ `read:packages` (Download packages from GitHub Package Registry)
+        - ✅ `delete:packages` (Delete packages from GitHub Package Registry)
+        - ✅ `repo` (Full control of private repositories - if repo is private)
 
 4. Click **"Generate token"**
 
 5. **IMPORTANT**: Copy the token immediately (it won't be shown again)
-   - Format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+    - Format: `ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 ### Step 2: Login to GitHub Container Registry
 
@@ -57,6 +59,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u epitech-nice --password-stdin
 ```
 
 **Expected Output**:
+
 ```
 Login Succeeded
 ```
@@ -81,6 +84,7 @@ cd /path/to/EpiCheck
 ```
 
 The script will:
+
 1. Check registry login status
 2. Build the Docker image
 3. Tag the image with version and latest
@@ -103,19 +107,20 @@ kubectl get services -n epicheck
 For automated CI/CD with GitHub Container Registry:
 
 1. Add the token as a GitHub secret:
-   - Go to: Repository → Settings → Secrets and variables → Actions
-   - Click **"New repository secret"**
-   - Name: `GITHUB_TOKEN` (or use the built-in `secrets.GITHUB_TOKEN`)
-   - Value: Your personal access token
+    - Go to: Repository → Settings → Secrets and variables → Actions
+    - Click **"New repository secret"**
+    - Name: `GITHUB_TOKEN` (or use the built-in `secrets.GITHUB_TOKEN`)
+    - Value: Your personal access token
 
 2. The workflow (`.github/workflows/deploy.yml`) will automatically:
-   - Login to ghcr.io using the token
-   - Build and push images on every push to `main` branch
-   - Deploy to Kubernetes cluster
+    - Login to ghcr.io using the token
+    - Build and push images on every push to `main` branch
+    - Deploy to Kubernetes cluster
 
 ### Making Registry Public or Private
 
 **To make the registry public** (anyone can pull):
+
 ```bash
 # Using GitHub CLI
 gh api /user/packages/container/epicheck/versions --method PATCH \
@@ -163,6 +168,7 @@ echo "YOUR_ACCESS_TOKEN" | docker login -u epitechnice --password-stdin
 ```
 
 **To create an access token**:
+
 1. Go to Account Settings → Security → Access Tokens
 2. Click **"New Access Token"**
 3. Description: `EpiCheck Deployment`
@@ -180,12 +186,14 @@ export DOCKER_REGISTRY=epitechnice
 ```
 
 Or directly:
+
 ```bash
 # Specify registry when running script
 DOCKER_REGISTRY=epitechnice ./kubernetes/deploy.sh
 ```
 
 The script will:
+
 1. Check Docker Hub login
 2. Build the image
 3. Tag as `epitechnice/epicheck:version` and `epitechnice/epicheck:latest`
@@ -198,9 +206,9 @@ Update the image reference in `kubernetes/deployment.yaml`:
 
 ```yaml
 spec:
-  containers:
-  - name: epicheck
-    image: epitechnice/epicheck:latest  # Changed from ghcr.io/epitech-nice/epicheck
+    containers:
+        - name: epicheck
+          image: epitechnice/epicheck:latest # Changed from ghcr.io/epitech-nice/epicheck
 ```
 
 ### Step 6: Update GitHub Actions (if using CI/CD)
@@ -211,18 +219,19 @@ Update `.github/workflows/deploy.yml`:
 - name: Login to Docker Hub
   uses: docker/login-action@v2
   with:
-    username: ${{ secrets.DOCKERHUB_USERNAME }}
-    password: ${{ secrets.DOCKERHUB_TOKEN }}
+      username: ${{ secrets.DOCKERHUB_USERNAME }}
+      password: ${{ secrets.DOCKERHUB_TOKEN }}
 
 - name: Build and push Docker image
   run: |
-    docker build -t epitechnice/epicheck:${{ github.sha }} .
-    docker tag epitechnice/epicheck:${{ github.sha }} epitechnice/epicheck:latest
-    docker push epitechnice/epicheck:${{ github.sha }}
-    docker push epitechnice/epicheck:latest
+      docker build -t epitechnice/epicheck:${{ github.sha }} .
+      docker tag epitechnice/epicheck:${{ github.sha }} epitechnice/epicheck:latest
+      docker push epitechnice/epicheck:${{ github.sha }}
+      docker push epitechnice/epicheck:latest
 ```
 
 Add secrets in GitHub:
+
 - `DOCKERHUB_USERNAME`: Your Docker Hub username
 - `DOCKERHUB_TOKEN`: Your Docker Hub access token
 
@@ -278,15 +287,16 @@ Modify `kubernetes/deployment.yaml` to use local images:
 
 ```yaml
 spec:
-  containers:
-  - name: epicheck
-    image: epicheck:latest
-    imagePullPolicy: Never  # Important: Don't try to pull from registry
+    containers:
+        - name: epicheck
+          image: epicheck:latest
+          imagePullPolicy: Never # Important: Don't try to pull from registry
 ```
 
 Or use `IfNotPresent`:
+
 ```yaml
-    imagePullPolicy: IfNotPresent  # Use local if available
+imagePullPolicy: IfNotPresent # Use local if available
 ```
 
 ### Step 4: Deploy to Kubernetes
@@ -380,34 +390,35 @@ DOCKER_REGISTRY=epitechnice IMAGE_NAME=epicheck TAG=production ./kubernetes/depl
 ### Script Flow
 
 1. **Check Prerequisites**:
-   - Verifies Docker is installed and running
-   - Verifies kubectl is configured
-   - Checks registry login status (if not skipping push)
+    - Verifies Docker is installed and running
+    - Verifies kubectl is configured
+    - Checks registry login status (if not skipping push)
 
 2. **Build Image**:
-   - Builds Docker image using Dockerfile
-   - Tags with specified version and `latest`
+    - Builds Docker image using Dockerfile
+    - Tags with specified version and `latest`
 
 3. **Push to Registry** (if not skipped):
-   - Pushes versioned tag
-   - Pushes latest tag
-   - Handles push errors gracefully
+    - Pushes versioned tag
+    - Pushes latest tag
+    - Handles push errors gracefully
 
 4. **Deploy to Kubernetes**:
-   - Applies namespace
-   - Applies configmap and secrets
-   - Applies deployment with image
-   - Applies service and ingress
-   - Waits for rollout completion
+    - Applies namespace
+    - Applies configmap and secrets
+    - Applies deployment with image
+    - Applies service and ingress
+    - Waits for rollout completion
 
 5. **Verification**:
-   - Shows deployment status
-   - Lists running pods
-   - Displays service endpoints
+    - Shows deployment status
+    - Lists running pods
+    - Displays service endpoints
 
 ### Interactive Prompts
 
 The script will prompt you if:
+
 - Not logged into the registry (offers login instructions)
 - Push fails (asks if you want to deploy locally)
 - Kubernetes context is not set (asks which cluster to use)
@@ -421,6 +432,7 @@ The script will prompt you if:
 #### "Error response from daemon: Get https://ghcr.io/v2/: denied"
 
 **Solution**:
+
 ```bash
 # Verify token has correct permissions
 # Re-login with valid token
@@ -430,6 +442,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u epitech-nice --password-stdin
 #### "unauthorized: authentication required"
 
 **Solution**:
+
 ```bash
 # Check if logged in
 docker info | grep Username
@@ -447,6 +460,7 @@ docker login
 **Cause**: Repository doesn't exist or you lack permissions
 
 **Solution**:
+
 1. Ensure repository exists on registry
 2. Verify token/password has `write:packages` permission
 3. Check organization membership (for ghcr.io)
@@ -455,6 +469,7 @@ docker login
 #### "unauthorized: unauthenticated: User cannot be authenticated"
 
 **Solution**:
+
 ```bash
 # Re-authenticate
 docker logout ghcr.io
@@ -470,6 +485,7 @@ docker login ghcr.io -u epitech-nice
 **Solution**:
 
 1. **For private registries**, create image pull secret:
+
 ```bash
 kubectl create secret docker-registry regcred \
   --docker-server=ghcr.io \
@@ -479,13 +495,14 @@ kubectl create secret docker-registry regcred \
 ```
 
 2. Update `kubernetes/deployment.yaml`:
+
 ```yaml
 spec:
-  imagePullSecrets:
-  - name: regcred
-  containers:
-  - name: epicheck
-    image: ghcr.io/epitech-nice/epicheck:latest
+    imagePullSecrets:
+        - name: regcred
+    containers:
+        - name: epicheck
+          image: ghcr.io/epitech-nice/epicheck:latest
 ```
 
 3. For local images, use `imagePullPolicy: Never`
@@ -493,6 +510,7 @@ spec:
 #### "context deadline exceeded" during deployment
 
 **Solution**:
+
 ```bash
 # Check cluster connectivity
 kubectl cluster-info
@@ -509,6 +527,7 @@ kubectl rollout status deployment/epicheck -n epicheck --timeout=10m
 #### GitHub Container Registry: "Package does not exist"
 
 **Solution**:
+
 - Make first push to create the package
 - Ensure organization visibility settings allow packages
 - Check repository permissions
@@ -516,6 +535,7 @@ kubectl rollout status deployment/epicheck -n epicheck --timeout=10m
 #### Docker Hub: "rate limit exceeded"
 
 **Solution**:
+
 - Login to increase rate limits
 - Use Docker Hub Pro account
 - Switch to GitHub Container Registry (no rate limits)
@@ -525,6 +545,7 @@ kubectl rollout status deployment/epicheck -n epicheck --timeout=10m
 #### "You don't have permission to push to this repository"
 
 **Solution**:
+
 1. Verify you're a member of the `epitech-nice` organization
 2. Check organization settings allow package creation
 3. Ensure token has `write:packages` scope
@@ -545,22 +566,23 @@ kubectl rollout status deployment/epicheck -n epicheck --timeout=10m
 ### Registry Management
 
 1. **Tag images properly**:
-   - Use semantic versioning (v1.0.0, v1.0.1)
-   - Keep `latest` tag updated
-   - Tag with git SHA for traceability
+    - Use semantic versioning (v1.0.0, v1.0.1)
+    - Keep `latest` tag updated
+    - Tag with git SHA for traceability
 
 2. **Clean old images**:
-   ```bash
-   # List all tags
-   docker images | grep epicheck
-   
-   # Remove old images
-   docker image prune -a
-   ```
+
+    ```bash
+    # List all tags
+    docker images | grep epicheck
+
+    # Remove old images
+    docker image prune -a
+    ```
 
 3. **Monitor storage usage**:
-   - GitHub Container Registry: Free for public, 500MB for private
-   - Docker Hub: 6 months retention for free tier
+    - GitHub Container Registry: Free for public, 500MB for private
+    - Docker Hub: 6 months retention for free tier
 
 ### Deployment
 
