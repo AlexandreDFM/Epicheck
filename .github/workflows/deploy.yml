@@ -95,7 +95,7 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_APP }}:buildcache,mode=max
           build-args: |
-            EXPO_PUBLIC_PROXY_URL=https://epicheck.alexandredfm.fr/api/intra-proxy
+            EXPO_PUBLIC_PROXY_URL=/api/intra-proxy
 
       - name: Extract metadata for proxy
         id: meta-proxy

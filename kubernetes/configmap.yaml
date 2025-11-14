@@ -12,7 +12,7 @@ data:
     # API endpoints
     API_BASE_URL: "https://intra.epitech.eu"
     PROXY_URL: "http://epicheck-proxy:3001"
-    EXPO_PUBLIC_PROXY_URL: "https://epicheck.alexandredfm.fr/api/intra-proxy"
+    EXPO_PUBLIC_PROXY_URL: "/api/intra-proxy"
 
     # Application settings
     APP_VERSION: "1.0.0"
