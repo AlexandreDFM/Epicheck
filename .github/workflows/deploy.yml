@@ -20,10 +20,8 @@ env:
 jobs:
   build-and-push:
     name: Build and Push Docker Images
+    permissions: write-all
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
 
