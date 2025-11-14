@@ -81,6 +81,7 @@ app.post("/api/intra-proxy", async (req, res) => {
         console.log(
             `[${new Date().toISOString()}] ${method} ${endpoint} | Cookie: ${cookie.substring(0, 20)}...`,
         );
+        console.log(`[${new Date().toISOString()}] Cookie length: ${cookie.length} | Type: ${cookie.startsWith('eyJ') ? 'JWT' : 'Standard'}`);
 
         // Build Intranet URL
         const intraUrl = `https://intra.epitech.eu${endpoint}`;
@@ -93,9 +94,12 @@ app.post("/api/intra-proxy", async (req, res) => {
                 Cookie: `user=${cookie}`,
                 "User-Agent": "EpiCheck-Proxy/1.0",
                 Accept: "application/json",
+                Referer: "https://intra.epitech.eu/",
             },
             timeout: 30000, // 30 second timeout
         };
+
+        console.log(`[${new Date().toISOString()}] Request headers:`, JSON.stringify(config.headers, null, 2));
 
         // Add data for POST/PUT requests
         if (data && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
@@ -105,10 +109,19 @@ app.post("/api/intra-proxy", async (req, res) => {
 
         const response = await axios(config);
 
+        console.log(`[${new Date().toISOString()}] ✅ Success: ${response.status}`);
+
         // Forward the response
         res.status(response.status).json(response.data);
     } catch (error) {
         console.error("[Proxy Error]", error.message);
+        console.error("[Proxy Error] Status:", error.response?.status);
+        console.error("[Proxy Error] Response type:", typeof error.response?.data);
+        
+        // Log first 200 chars of error response if it's HTML
+        if (typeof error.response?.data === 'string' && error.response.data.includes('<!DOCTYPE')) {
+            console.error("[Proxy Error] HTML Response (first 200 chars):", error.response.data.substring(0, 200));
+        }
 
         if (error.response) {
             // The request was made and the server responded with a status code
