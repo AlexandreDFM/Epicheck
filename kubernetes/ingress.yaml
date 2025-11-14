@@ -3,144 +3,144 @@
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: epicheck-ingress-redirect
-  namespace: epicheck
-  labels:
-    app: epicheck
-    environment: production
+    name: epicheck-ingress-redirect
+    namespace: epicheck
+    labels:
+        app: epicheck
+        environment: production
 spec:
-  entryPoints:
-    - web
-  routes:
-    - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`)
-      kind: Rule
-      services:
-        - name: epicheck-app
-          port: 80
-      middlewares:
-        - name: redirect-to-https
+    entryPoints:
+        - web
+    routes:
+        - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`)
+          kind: Rule
+          services:
+              - name: epicheck-app
+                port: 80
+          middlewares:
+              - name: redirect-to-https
 
 ---
 # Main HTTPS Ingress with Let's Encrypt
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: epicheck-ingress
-  namespace: epicheck
-  labels:
-    app: epicheck
-    environment: production
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    name: epicheck-ingress
+    namespace: epicheck
+    labels:
+        app: epicheck
+        environment: production
+    annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`)
-      kind: Rule
-      services:
-        - name: epicheck-app
-          port: 80
-      middlewares:
-        - name: security-headers
-        - name: rate-limit
-  tls:
-    secretName: epicheck-tls-cert
-    domains:
-      - main: epicheck.alexandredfm.fr
-        sans:
-          - www.epicheck.alexandredfm.fr
+    entryPoints:
+        - websecure
+    routes:
+        - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`)
+          kind: Rule
+          services:
+              - name: epicheck-app
+                port: 80
+          middlewares:
+              - name: security-headers
+              - name: rate-limit
+    tls:
+        secretName: epicheck-tls-cert
+        domains:
+            - main: epicheck.alexandredfm.fr
+              sans:
+                  - www.epicheck.alexandredfm.fr
 
 ---
 # Traditional Kubernetes Ingress (fallback)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: epicheck-ingress-k8s
-  namespace: epicheck
-  labels:
-    app: epicheck
-    environment: production
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    cert-manager.io/acme-challenge-type: http01
-    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
-    traefik.ingress.kubernetes.io/router.middlewares: epicheck-redirect-to-https@kubernetescrd,epicheck-security-headers@kubernetescrd
-    traefik.ingress.kubernetes.io/redirect-entry-point: websecure
-    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+    name: epicheck-ingress-k8s
+    namespace: epicheck
+    labels:
+        app: epicheck
+        environment: production
+    annotations:
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+        cert-manager.io/acme-challenge-type: http01
+        traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+        traefik.ingress.kubernetes.io/router.middlewares: epicheck-redirect-to-https@kubernetescrd,epicheck-security-headers@kubernetescrd
+        traefik.ingress.kubernetes.io/redirect-entry-point: websecure
+        traefik.ingress.kubernetes.io/redirect-permanent: "true"
 spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - epicheck.alexandredfm.fr
-        - www.epicheck.alexandredfm.fr
-      secretName: epicheck-tls-cert
-  rules:
-    - host: epicheck.alexandredfm.fr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: epicheck-app
-                port:
-                  number: 80
-    - host: www.epicheck.alexandredfm.fr
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: epicheck-app
-                port:
-                  number: 80
+    ingressClassName: traefik
+    tls:
+        - hosts:
+              - epicheck.alexandredfm.fr
+              - www.epicheck.alexandredfm.fr
+          secretName: epicheck-tls-cert
+    rules:
+        - host: epicheck.alexandredfm.fr
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: epicheck-app
+                            port:
+                                number: 80
+        - host: www.epicheck.alexandredfm.fr
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: epicheck-app
+                            port:
+                                number: 80
 
 ---
 # Middleware for HTTPS redirect
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: redirect-to-https
-  namespace: epicheck
+    name: redirect-to-https
+    namespace: epicheck
 spec:
-  redirectScheme:
-    scheme: https
-    permanent: true
+    redirectScheme:
+        scheme: https
+        permanent: true
 
 ---
 # Security headers middleware
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: security-headers
-  namespace: epicheck
+    name: security-headers
+    namespace: epicheck
 spec:
-  headers:
-    customRequestHeaders:
-      X-Forwarded-Proto: "https"
-    customResponseHeaders:
-      X-Content-Type-Options: "nosniff"
-      X-Frame-Options: "DENY"
-      X-XSS-Protection: "1; mode=block"
-      Referrer-Policy: "strict-origin-when-cross-origin"
-      Permissions-Policy: "camera=(), microphone=(), geolocation=()"
-    contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'"
-    forceSTSHeader: true
-    stsSeconds: 31536000
-    stsIncludeSubdomains: true
-    stsPreload: true
+    headers:
+        customRequestHeaders:
+            X-Forwarded-Proto: "https"
+        customResponseHeaders:
+            X-Content-Type-Options: "nosniff"
+            X-Frame-Options: "DENY"
+            X-XSS-Protection: "1; mode=block"
+            Referrer-Policy: "strict-origin-when-cross-origin"
+            Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+        contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'"
+        forceSTSHeader: true
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
 
 ---
 # Rate limiting middleware
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
-  name: rate-limit
-  namespace: epicheck
+    name: rate-limit
+    namespace: epicheck
 spec:
-  rateLimit:
-    average: 100
-    period: 1s
-    burst: 50
+    rateLimit:
+        average: 100
+        period: 1s
+        burst: 50
