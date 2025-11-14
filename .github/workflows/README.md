@@ -358,7 +358,7 @@ Add manual approval for production:
 deploy-to-production:
     environment:
         name: production
-        url: https://epicheck.example.com
+        url: https://epicheck.alexandredfm.fr
     needs: build-and-push
 ```
 
@@ -413,6 +413,6 @@ If you encounter issues:
 
 ---
 
-**Last Updated**: November 12, 2025  
-**Version**: 1.0.0  
+**Last Updated**: November 12, 2025
+**Version**: 1.0.0
 **Maintainer**: EpiCheck DevOps Team

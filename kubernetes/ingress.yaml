@@ -36,11 +36,11 @@ metadata:
 spec:
     tls:
         - hosts:
-              - epicheck.example.com # Replace with your domain
-              - www.epicheck.example.com
+              - epicheck.alexandredfm.fr # Replace with your domain
+              - www.epicheck.alexandredfm.fr
           secretName: epicheck-tls
     rules:
-        - host: epicheck.example.com # Replace with your domain
+        - host: epicheck.alexandredfm.fr # Replace with your domain
           http:
               paths:
                   - path: /
@@ -57,7 +57,7 @@ spec:
                             name: epicheck-proxy
                             port:
                                 number: 3001
-        - host: www.epicheck.example.com # Replace with your domain
+        - host: www.epicheck.alexandredfm.fr
           http:
               paths:
                   - path: /

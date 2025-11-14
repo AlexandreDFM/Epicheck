@@ -84,7 +84,7 @@ jobs:
     needs: build-and-push
     environment:
       name: staging
-      url: https://staging.epicheck.example.com
+      url: https://staging.epicheck.alexandredfm.fr
 
     steps:
       - name: Checkout code
@@ -177,7 +177,7 @@ jobs:
         if: needs.deploy-to-staging.result == 'success'
         run: |
           echo "✅ Staging deployment successful!"
-          echo "🔍 Test at: https://staging.epicheck.example.com"
+          echo "🔍 Test at: https://staging.epicheck.alexandredfm.fr"
 
       - name: Staging Deployment Failure
         if: needs.deploy-to-staging.result == 'failure'

@@ -11,8 +11,8 @@ spec:
         apiVersion: apps/v1
         kind: Deployment
         name: epicheck-app
-    minReplicas: 2
-    maxReplicas: 10
+    minReplicas: 1
+    maxReplicas: 2
     metrics:
         - type: Resource
           resource:
@@ -58,8 +58,8 @@ spec:
         apiVersion: apps/v1
         kind: Deployment
         name: epicheck-proxy
-    minReplicas: 2
-    maxReplicas: 5
+    minReplicas: 1
+    maxReplicas: 2
     metrics:
         - type: Resource
           resource:
