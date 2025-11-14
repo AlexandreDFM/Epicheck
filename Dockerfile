@@ -55,3 +55,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
+# Force rebuild - Fri Nov 14 14:44:39 CET 2025
