@@ -28,13 +28,13 @@
 import {
     View,
     Text,
-    TouchableOpacity,
     Alert,
+    Image,
+    Modal,
+    Platform,
+    TouchableOpacity,
     ActivityIndicator,
     KeyboardAvoidingView,
-    Platform,
-    Modal,
-    Image,
 } from "react-native";
 
 // import epitechApi from "../services/epitechApi";
@@ -131,6 +131,7 @@ export default function LoginScreen() {
                             source={require("../assets/img/epicheck-icon.png")}
                             className="absolute h-20 w-20"
                             resizeMode="contain"
+                            style={{ width: 80, height: 80 }}
                         />
                     </View>
                     <Text className="mb-1 text-3xl font-bold text-text-primary">

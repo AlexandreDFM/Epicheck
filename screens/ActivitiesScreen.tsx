@@ -28,12 +28,12 @@
 import {
     View,
     Text,
+    Image,
+    Alert,
     ScrollView,
+    RefreshControl,
     TouchableOpacity,
     ActivityIndicator,
-    RefreshControl,
-    Alert,
-    Image,
 } from "react-native";
 
 // import office365Auth from "../services/office365Auth";
@@ -201,6 +201,7 @@ export default function ActivitiesScreen() {
                                 source={require("../assets/img/epicheck-icon.png")}
                                 className="absolute h-10 w-10 rounded-md bg-white"
                                 resizeMode="contain"
+                                style={{ width: 40, height: 40 }}
                             />
                         </View>
                         <View className="flex-1">
