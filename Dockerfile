@@ -22,6 +22,10 @@ RUN npm ci --legacy-peer-deps
 # Copy source code
 COPY . .
 
+# Build arguments for environment variables
+ARG EXPO_PUBLIC_PROXY_URL=http://localhost:3001/api/intra-proxy
+ENV EXPO_PUBLIC_PROXY_URL=${EXPO_PUBLIC_PROXY_URL}
+
 # Build the web version of the app for production using Metro
 RUN npx expo export --platform web
 
