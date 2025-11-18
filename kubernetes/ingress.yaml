@@ -12,7 +12,7 @@ spec:
     entryPoints:
         - web
     routes:
-        - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`)
+        - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`) || Host(`epicheck.nice-tek.eu`) || Host(`www.epicheck.nice-tek.eu`)
           kind: Rule
           services:
               - name: epicheck-app
@@ -36,7 +36,7 @@ spec:
     entryPoints:
         - websecure
     routes:
-        - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`)
+        - match: Host(`epicheck.alexandredfm.fr`) || Host(`www.epicheck.alexandredfm.fr`) || Host(`epicheck.nice-tek.eu`) || Host(`www.epicheck.nice-tek.eu`)
           kind: Rule
           services:
               - name: epicheck-app
@@ -50,6 +50,8 @@ spec:
             - main: epicheck.alexandredfm.fr
               sans:
                   - www.epicheck.alexandredfm.fr
+                  - epicheck.nice-tek.eu
+                  - www.epicheck.nice-tek.eu
 
 ---
 # Traditional Kubernetes Ingress (fallback)
@@ -74,6 +76,8 @@ spec:
         - hosts:
               - epicheck.alexandredfm.fr
               - www.epicheck.alexandredfm.fr
+              - epicheck.nice-tek.eu
+              - www.epicheck.nice-tek.eu
           secretName: epicheck-tls-cert
     rules:
         - host: epicheck.alexandredfm.fr
@@ -87,6 +91,26 @@ spec:
                             port:
                                 number: 80
         - host: www.epicheck.alexandredfm.fr
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: epicheck-app
+                            port:
+                                number: 80
+        - host: epicheck.nice-tek.eu
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: epicheck-app
+                            port:
+                                number: 80
+        - host: www.epicheck.nice-tek.eu
           http:
               paths:
                   - path: /
