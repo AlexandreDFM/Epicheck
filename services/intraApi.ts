@@ -119,10 +119,10 @@ class IntraApiService {
     ): Promise<any> {
         const cookie = await intraAuth.getIntraCookie();
 
-        console.log("🔑 Cookie retrieved:", cookie ? `${cookie.substring(0, 20)}... (${cookie.length} chars)` : "❌ NO COOKIE");
-
         if (!cookie) {
-            throw new Error("No authentication cookie found. Please log in through the WebView authentication.");
+            throw new Error(
+                "No authentication cookie found. Please log in through the WebView authentication.",
+            );
         }
 
         // Build full endpoint with query params
