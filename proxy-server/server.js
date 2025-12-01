@@ -52,6 +52,47 @@ app.get("/health", (req, res) => {
     });
 });
 
+// Helper function to make requests with proper headers (no Puppeteer)
+async function makeIntraRequest(endpoint, cookie, method = 'GET', data = null) {
+    const intraUrl = `https://intra.epitech.eu${endpoint}`;
+
+    const config = {
+        method: method.toLowerCase(),
+        url: intraUrl,
+        headers: {
+            Cookie: `user=${cookie}`,
+            "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            Accept: "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            Referer: "https://intra.epitech.eu/",
+            Origin: "https://intra.epitech.eu",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"macOS"',
+            DNT: "1",
+            Connection: "keep-alive",
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+        },
+        timeout: 30000,
+        maxRedirects: 5,
+        validateStatus: (status) => status < 500,
+    };
+
+    // Add data for POST/PUT requests
+    if (data && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
+        config.data = data;
+        config.headers["Content-Type"] = "application/json";
+    }
+
+    return await axios(config);
+}
+
 // Main proxy endpoint
 app.post("/api/intra-proxy", async (req, res) => {
     try {
@@ -81,58 +122,36 @@ app.post("/api/intra-proxy", async (req, res) => {
         console.log(
             `[${new Date().toISOString()}] ${method} ${endpoint} | Cookie: ${cookie.substring(0, 20)}...`,
         );
-        console.log(`[${new Date().toISOString()}] Cookie length: ${cookie.length} | Type: ${cookie.startsWith('eyJ') ? 'JWT' : 'Standard'}`);
+        console.log(
+            `[${new Date().toISOString()}] Cookie length: ${cookie.length} | Type: ${cookie.startsWith("eyJ") ? "JWT" : "Standard"}`,
+        );
 
-        // Build Intranet URL
-        const intraUrl = `https://intra.epitech.eu${endpoint}`;
+        // Make the request directly (user must have valid cookies from browser login)
+        const response = await makeIntraRequest(endpoint, cookie, method, data);
 
-        // Make request to Epitech Intranet with comprehensive headers
-        const config = {
-            method: method.toLowerCase(),
-            url: intraUrl,
-            headers: {
-                Cookie: `user=${cookie}`,
-                "User-Agent":
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-                Accept: "application/json, text/plain, */*",
-                "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
-                "Accept-Encoding": "gzip, deflate, br",
-                Referer: "https://intra.epitech.eu/",
-                Origin: "https://intra.epitech.eu",
-                Connection: "keep-alive",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "same-origin",
-                "Cache-Control": "no-cache",
-                Pragma: "no-cache",
-            },
-            timeout: 30000, // 30 second timeout
-            maxRedirects: 5,
-            validateStatus: (status) => status < 500, // Don't throw on 4xx errors
-        };
-
-        console.log(`[${new Date().toISOString()}] Request headers:`, JSON.stringify(config.headers, null, 2));
-
-        // Add data for POST/PUT requests
-        if (data && ["POST", "PUT", "PATCH"].includes(method.toUpperCase())) {
-            config.data = data;
-            config.headers["Content-Type"] = "application/json";
-        }
-
-        const response = await axios(config);
-
-        console.log(`[${new Date().toISOString()}] ✅ Success: ${response.status}`);
+        console.log(
+            `[${new Date().toISOString()}] ✅ Success: ${response.status}`,
+        );
 
         // Forward the response
         res.status(response.status).json(response.data);
     } catch (error) {
         console.error("[Proxy Error]", error.message);
         console.error("[Proxy Error] Status:", error.response?.status);
-        console.error("[Proxy Error] Response type:", typeof error.response?.data);
+        console.error(
+            "[Proxy Error] Response type:",
+            typeof error.response?.data,
+        );
 
         // Log first 200 chars of error response if it's HTML
-        if (typeof error.response?.data === 'string' && error.response.data.includes('<!DOCTYPE')) {
-            console.error("[Proxy Error] HTML Response (first 200 chars):", error.response.data.substring(0, 200));
+        if (
+            typeof error.response?.data === "string" &&
+            error.response.data.includes("<!DOCTYPE")
+        ) {
+            console.error(
+                "[Proxy Error] HTML Response (first 200 chars):",
+                error.response.data.substring(0, 200),
+            );
         }
 
         if (error.response) {
