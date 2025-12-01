@@ -32,8 +32,8 @@
 import * as FileSystem from "expo-file-system/legacy";
 
 // Default sounds
-const DEFAULT_SUCCESS_SOUND = require("../assets/sounds/metal-pipe-clang.mp3");
-const DEFAULT_ERROR_SOUND = require("../assets/sounds/metal-pipe-clang.mp3"); // Using same for now
+const DEFAULT_SUCCESS_SOUND = require("../assets/sounds/nfc-success.mp3");
+const DEFAULT_ERROR_SOUND = require("../assets/sounds/nfc-failure.mp3");
 
 // Custom sound paths (stored in app's document directory)
 const CUSTOM_SOUNDS_DIR = `${FileSystem.documentDirectory}sounds/`;
