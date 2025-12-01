@@ -83,7 +83,10 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     if (hasPermission === null) {
         return (
             <View className="flex-1 items-center justify-center bg-epitech-gray">
-                <Text className="text-epitech-gray-dark">
+                <Text
+                    className="text-epitech-gray-dark"
+                    style={{ fontFamily: "IBMPlexSans" }}
+                >
                     Requesting camera permission...
                 </Text>
             </View>
@@ -96,10 +99,16 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
                 <View className="mb-4 h-20 w-20 items-center justify-center rounded-full bg-red-100">
                     <Text className="text-4xl">🔒</Text>
                 </View>
-                <Text className="mb-2 text-lg font-bold text-red-600">
+                <Text
+                    className="mb-2 text-lg text-red-600"
+                    style={{ fontFamily: "Anton" }}
+                >
                     Camera Access Required
                 </Text>
-                <Text className="text-center text-epitech-gray-dark">
+                <Text
+                    className="text-center text-epitech-gray-dark"
+                    style={{ fontFamily: "IBMPlexSans" }}
+                >
                     Please grant camera permissions in your device settings to
                     scan QR codes.
                 </Text>
@@ -110,7 +119,10 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     if (!isActive) {
         return (
             <View className="flex-1 items-center justify-center bg-epitech-gray">
-                <Text className="text-epitech-gray-dark">
+                <Text
+                    className="text-epitech-gray-dark"
+                    style={{ fontFamily: "IBMPlexSans" }}
+                >
                     Camera is inactive
                 </Text>
             </View>
@@ -150,7 +162,10 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
                             <View className="absolute bottom-0 right-0 h-12 w-12 rounded-br-xl border-b-4 border-r-4 border-epitech-blue" />
                         </View>
                         <View className="mt-6 rounded-full bg-black/70 px-6 py-3">
-                            <Text className="text-center text-base font-semibold text-white">
+                            <Text
+                                className="text-center text-base text-white"
+                                style={{ fontFamily: "IBMPlexSansSemiBold" }}
+                            >
                                 {scanned
                                     ? "✓ Scanned! Processing..."
                                     : "Align QR code within frame"}

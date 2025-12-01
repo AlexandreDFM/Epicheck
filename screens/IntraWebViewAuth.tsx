@@ -3,26 +3,48 @@
  * Author: Alexandre Kévin DE FREITAS MARTINS
  * Creation Date: 29/10/2025
  * Description: Platform-specific authentication for Epitech Intranet
- * - Mobile (iOS/Android): Uses WebView with automatic cookie extraction
- * - Web: Provides manual authentication instructions
+ *     - Mobile (iOS/Android): Uses WebView with automatic cookie extraction
+ *     - Web: Provides manual authentication instructions
  * Copyright (c) 2025 Epitech
  * Version: 2.0.0
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the 'Software'), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 import {
     View,
     Text,
-    ActivityIndicator,
-    TouchableOpacity,
     Platform,
-    NativeModules,
     TextInput,
+    NativeModules,
+    TouchableOpacity,
+    ActivityIndicator,
+    Linking,
 } from "react-native";
 
 import { useRef, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from "../contexts/ThemeContext";
 import intraAuth from "../services/intraAuth";
+import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
+import { useTheme } from "../contexts/ThemeContext";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 
 const INTRA_URL = "https://intra.epitech.eu";
 const EPITECH_CLIENT_ID = "e05d4149-1624-4627-a5ba-7472a39e43ab";
@@ -42,6 +64,7 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
     const WebView = require("react-native-webview").WebView;
 
     const webViewRef = useRef<any>(null);
+    const hasCalledSuccessRef = useRef(false);
     const [loading, setLoading] = useState(true);
     const [currentUrl, setCurrentUrl] = useState("");
     const [showManualOption, setShowManualOption] = useState(false);
@@ -189,6 +212,8 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
     };
 
     const handleWebMessage = (event: any) => {
+        if (hasCalledSuccessRef.current) return;
+
         const data = event.nativeEvent.data;
         console.log("[Mobile] Received WebView message");
 
@@ -198,6 +223,7 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
                 console.log("[Mobile] Cookie from JS:", parsed.cookie);
                 const userCookie = parseCookieString(parsed.cookie);
                 if (userCookie) {
+                    hasCalledSuccessRef.current = true;
                     onSuccess(userCookie);
                     return;
                 }
@@ -209,6 +235,7 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
         const userCookie = parseCookieString(data);
         if (userCookie) {
             console.log("[Mobile] ✓ Cookie extracted via JavaScript");
+            hasCalledSuccessRef.current = true;
             onSuccess(userCookie);
         } else {
             console.log(
@@ -217,10 +244,11 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
 
             // Try native cookie extraction as fallback
             tryNativeCookieExtraction().then((nativeCookie) => {
-                if (nativeCookie) {
+                if (nativeCookie && !hasCalledSuccessRef.current) {
                     console.log("[Mobile] ✓ Success via native API!");
+                    hasCalledSuccessRef.current = true;
                     onSuccess(nativeCookie);
-                } else {
+                } else if (!nativeCookie) {
                     console.log(
                         "[Mobile] ❌ All extraction methods failed, showing manual option",
                     );
@@ -258,11 +286,16 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
 
             // Strategy 2: Try native API extraction after JS attempt
             setTimeout(() => {
+                if (hasCalledSuccessRef.current) {
+                    console.log("[Mobile] Success already called via other method, skipping native extraction");
+                    return;
+                }
                 tryNativeCookieExtraction().then((nativeCookie) => {
-                    if (nativeCookie) {
+                    if (nativeCookie && !hasCalledSuccessRef.current) {
                         console.log(
                             "[Mobile] ✓ Cookie extracted via native API (HttpOnly bypass)",
                         );
+                        hasCalledSuccessRef.current = true;
                         onSuccess(nativeCookie);
                     }
                 });
@@ -271,10 +304,13 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView className="flex-1">
             <View className="flex-row items-center justify-between bg-epitech-blue p-4">
                 <View className="flex-1">
-                    <Text className="text-lg font-bold text-white">
+                    <Text
+                        className="text-lg text-white"
+                        style={{ fontFamily: "Anton" }}
+                    >
                         Epitech Login
                     </Text>
                     <Text className="text-xs text-white opacity-80">
@@ -283,9 +319,9 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
                 </View>
                 <TouchableOpacity
                     onPress={onCancel}
-                    className="rounded-lg bg-white/20 px-4 py-2"
+                    className="rounded-lg border border-white/40 px-4 py-2"
                 >
-                    <Text className="font-semibold text-white">Cancel</Text>
+                    <Text className="text-white">Cancel</Text>
                 </TouchableOpacity>
             </View>
 
@@ -293,15 +329,13 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
                 <View className="absolute left-0 right-0 top-20 z-10 items-center">
                     <View className="flex-row items-center rounded-lg bg-surface p-4 shadow-lg">
                         <ActivityIndicator color="#00B8D4" />
-                        <Text className="ml-3 text-text-primary">
-                            Loading...
-                        </Text>
+                        <Text className="ml-3">Loading...</Text>
                     </View>
                 </View>
             )}
 
             {__DEV__ && currentUrl && (
-                <View className="bg-surface p-2">
+                <View className="p-2">
                     <Text
                         className="text-xs text-text-secondary"
                         numberOfLines={1}
@@ -313,14 +347,14 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
 
             {showManualOption && (
                 <View className="m-4 border-l-4 border-yellow-500 bg-yellow-500/10 p-4">
-                    <Text className="mb-2 font-bold text-text-primary">
+                    <Text className="mb-2 text-text-primary">
                         ⚠️ Manual Authentication Required
                     </Text>
                     <Text className="mb-3 text-sm text-text-secondary">
                         The authentication cookie is HttpOnly and cannot be
                         extracted automatically on your device.
                     </Text>
-                    <Text className="mb-2 text-xs font-semibold text-text-primary">
+                    <Text className="mb-2 text-xs text-text-primary">
                         Why this happens:
                     </Text>
                     <Text className="mb-3 text-xs text-text-secondary">
@@ -328,7 +362,7 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
                         Native cookie module not available{"\n"}• Security
                         restrictions on HttpOnly cookies
                     </Text>
-                    <Text className="mb-2 text-xs font-semibold text-text-primary">
+                    <Text className="mb-2 text-xs text-text-primary">
                         Solution:
                     </Text>
                     <Text className="mb-3 text-xs text-text-secondary">
@@ -337,9 +371,9 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
                     </Text>
                     <TouchableOpacity
                         onPress={onCancel}
-                        className="mt-3 rounded-lg bg-epitech-blue px-4 py-2"
+                        className="mt-3 bg-epitech-blue px-4 py-2"
                     >
-                        <Text className="text-center font-semibold text-white">
+                        <Text className="text-center text-white">
                             Go to Settings
                         </Text>
                     </TouchableOpacity>
@@ -348,6 +382,7 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
 
             <WebView
                 ref={webViewRef}
+                style={{ backgroundColor: isDark ? "#000000" : "#FFFFFF" }}
                 source={{ uri: authUrl }}
                 onLoadStart={() => setLoading(true)}
                 onLoadEnd={() => setLoading(false)}
@@ -361,8 +396,13 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
                 startInLoadingState={true}
                 injectedJavaScript={injectedJavaScript}
                 renderLoading={() => (
-                    <View className="flex-1 items-center justify-center">
-                        <ActivityIndicator size="large" color="#00B8D4" />
+                    <View
+                        className={
+                            "flex-1 items-center justify-center" +
+                            (isDark ? " bg-black" : " bg-white")
+                        }
+                    >
+                        <ActivityIndicator size="large" />
                     </View>
                 )}
             />
@@ -373,25 +413,20 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
 // ============================================================
 // WEB COMPONENT - Manual authentication instructions
 // ============================================================
-function WebAuthComponent({ onCancel, onSuccess }: any) {
+function WebAuthComponent({ onCancel, onSuccess, isDark }: any) {
     const [cookieInput, setCookieInput] = useState("");
-    const [isExtracting, setIsExtracting] = useState(false);
+    const { underscore, color } = useColoredUnderscore();
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const handleOpenIntra = () => {
-        // Open Intranet in new window
-        const authUrl = `https://login.microsoftonline.com/common/oauth2/authorize?response_type=code&client_id=${EPITECH_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-            `${INTRA_URL}/auth/office365`,
-        )}&state=${encodeURIComponent("/")}`;
-
-        window.open(authUrl, "_blank");
-        setIsExtracting(true);
-    };
 
     const handleCookieSubmit = async () => {
         const trimmedCookie = cookieInput.trim();
         if (trimmedCookie.length < 20) {
-            alert("Cookie value seems too short. Please check and try again.");
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Cookie value seems too short. Please check and try again.",
+                position: "top",
+            });
             return;
         }
 
@@ -408,247 +443,156 @@ function WebAuthComponent({ onCancel, onSuccess }: any) {
             console.log("[Web] ✓ Cookie saved successfully");
 
             // Success message - proxy server handles CORS
-            alert(
-                "✅ Authentication Successful\n\n" +
-                    "Your Intranet cookie has been saved!\n\n" +
-                    "� The app now uses a proxy server to bypass browser CORS restrictions.\n\n" +
-                    "Make sure the proxy server is running on http://localhost:3001",
-            );
+            Toast.show({
+                type: "success",
+                text1: "Success",
+                text2: "Your Intranet cookie has been saved!",
+                position: "top",
+            });
 
             // Call onSuccess to close the modal
             onSuccess(trimmedCookie);
         } catch (error) {
-            console.error("[Web] Failed to save cookie:", error);
-            alert(
-                "Failed to save cookie. Please try again or use Settings → Developer Options.",
-            );
+            // console.error("[Web] Failed to save cookie:", error);
+            // alert(
+            //     "Failed to save cookie. Please try again or use Settings → Developer Options.",
+            // );
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2:
+                    (error instanceof Error
+                        ? error.message
+                        : "Failed to save cookie") ||
+                    "An unknown error occurred.",
+                position: "top",
+            });
         } finally {
             setIsSubmitting(false);
         }
     };
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView
+            className="flex-1 bg-background"
+            style={{ backgroundColor: isDark ? "#242424" : "#FFFFFF" }}
+        >
             <View className="flex-row items-center justify-between bg-epitech-blue p-4">
+                <TouchableOpacity
+                    onPress={onCancel}
+                    className="mr-4 border-2 border-white/20 px-2 py-2"
+                >
+                    <Ionicons name="arrow-back" size={16} color="white" />
+                </TouchableOpacity>
                 <View className="flex-1">
-                    <Text className="text-lg font-bold text-white">
+                    <Text
+                        className="text-lg text-white"
+                        style={{ fontFamily: "Anton" }}
+                    >
                         Epitech Login (Web)
+                        <Text style={{ color }}>{underscore}</Text>
                     </Text>
                     <Text className="text-xs text-white opacity-80">
                         Manual authentication required
                     </Text>
                 </View>
-                <TouchableOpacity
-                    onPress={onCancel}
-                    className="rounded-lg bg-white/20 px-4 py-2"
-                >
-                    <Text className="font-semibold text-white">Cancel</Text>
-                </TouchableOpacity>
             </View>
 
-            <View className="flex-1 p-6">
-                <View className="mb-6 rounded-lg border-l-4 border-status-info bg-status-info-bg p-4">
-                    <Text className="mb-2 font-bold text-status-info">
-                        ℹ️ Web Platform Notice
-                    </Text>
-                    <Text className="text-sm leading-relaxed text-status-info">
-                        Automatic authentication is not available on web due to
-                        browser security restrictions. Follow the steps below to
-                        login.
-                    </Text>
-                </View>
-
-                {/* Proxy Server Notice */}
-                <View className="mb-6 rounded-lg border-l-4 border-green-500 bg-green-500/10 p-4">
-                    <Text className="mb-2 font-bold text-green-700">
-                        🚀 Proxy Server Solution
-                    </Text>
-                    <Text className="mb-2 text-sm leading-relaxed text-green-800">
-                        The app uses a local proxy server to bypass browser CORS
-                        restrictions. Make sure the proxy is running on port
-                        3001.
-                    </Text>
-                    <Text className="text-xs font-semibold text-green-900">
-                        � See proxy-server/README.md for setup instructions
-                    </Text>
-                </View>
-
-                {/* Quick Login Button */}
-                <TouchableOpacity
-                    onPress={handleOpenIntra}
-                    className="mb-6 rounded-lg bg-epitech-blue px-6 py-4 shadow-lg"
-                >
-                    <Text className="mb-1 text-center text-lg font-bold text-white">
-                        🔐 Login with Office365
-                    </Text>
-                    <Text className="text-center text-xs text-white opacity-80">
-                        Opens Epitech Intranet in a new tab
-                    </Text>
-                </TouchableOpacity>
-
-                {isExtracting && (
-                    <View className="mb-6 rounded-lg border border-yellow-500 bg-yellow-500/10 p-4">
-                        <Text className="mb-2 font-bold text-text-primary">
-                            📋 After logging in, extract your cookie:
-                        </Text>
-                        <Text className="mb-3 text-sm text-text-secondary">
-                            1. Press F12 to open DevTools{"\n"}
-                            2. Go to Application → Cookies → intra.epitech.eu
-                            {"\n"}
-                            3. Find the &quot;user&quot; cookie and copy its
-                            value{"\n"}
-                            4. Paste it below or in Settings → Developer Options
-                        </Text>
-                    </View>
-                )}
-
-                {isExtracting && (
-                    <View className="mb-6 rounded-lg border border-card-border bg-card-bg p-4">
-                        <Text className="mb-2 text-sm font-semibold text-text-primary">
-                            Quick Cookie Input:
-                        </Text>
-                        <TextInput
-                            value={cookieInput}
-                            onChangeText={setCookieInput}
-                            placeholder="Paste your 'user' cookie value here..."
-                            multiline
-                            numberOfLines={3}
-                            style={{
-                                borderWidth: 1,
-                                borderColor: "#d1d5db",
-                                backgroundColor: "#ffffff",
-                                color: "#111827",
-                                padding: 12,
-                                borderRadius: 8,
-                                marginBottom: 12,
-                                fontSize: 12,
-                                fontFamily: "monospace",
-                            }}
-                        />
-                        <TouchableOpacity
-                            onPress={handleCookieSubmit}
-                            disabled={
-                                isSubmitting || cookieInput.trim().length < 20
-                            }
-                            className={`rounded-lg px-4 py-3 ${
-                                isSubmitting || cookieInput.trim().length < 20
-                                    ? "bg-gray-400"
-                                    : "bg-green-600"
-                            }`}
-                        >
-                            <Text className="text-center font-semibold text-white">
-                                {isSubmitting ? "Saving..." : "✓ Save & Login"}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                <View className="rounded-lg border border-card-border bg-card-bg p-6">
-                    <Text className="mb-4 text-lg font-bold text-text-primary">
+            <View className="flex-1 p-16">
+                <View className="border border-card-border p-6">
+                    <Text className="mb-2 text-lg text-text-tertiary">
                         Detailed Instructions
                     </Text>
 
-                    <View className="space-y-3">
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                1.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Open{" "}
-                                <Text className="font-mono text-epitech-blue">
-                                    intra.epitech.eu
-                                </Text>{" "}
-                                in a new tab
-                            </Text>
+                    <View className="ml-4 space-y-2">
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">1.</Text>
+                            Open{" "}
+                            <Text
+                                className="ml-2 mr-2 text-epitech-blue"
+                                onPress={() =>
+                                    Linking.openURL("http://intra.epitech.eu")
+                                }
+                                accessibilityRole="link"
+                            >
+                                intra.epitech.eu
+                            </Text>{" "}
+                            in a new tab
                         </View>
 
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                2.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Login with your Office365 credentials
-                            </Text>
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">2.</Text>
+                            Login with your Office365 credentials
                         </View>
 
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                3.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Press <Text className="font-mono">F12</Text> to
-                                open DevTools
-                            </Text>
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">3.</Text>
+                            Press 12 to open DevTools
                         </View>
 
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                4.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Go to{" "}
-                                <Text className="font-semibold">
-                                    Application
-                                </Text>{" "}
-                                → <Text className="font-semibold">Cookies</Text>{" "}
-                                →{" "}
-                                <Text className="font-mono">
-                                    intra.epitech.eu
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">4.</Text>
+                            Go to Application → Cookies → intra.epitech.eu
+                        </View>
+
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">5.</Text>
+                            Find the user cookie and copy its value
+                        </View>
+
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">6.</Text>
+                            Go to Settings → Developer Options
+                        </View>
+
+                        <View className="flex-row items-center text-text-tertiary">
+                            <Text className="mr-2 text-epitech-blue">7.</Text>
+                            Paste the cookie value and click Save & Login
+                        </View>
+                        <View className="px-8 pt-4">
+                            <TextInput
+                                className="mb-3 border border-gray-400 p-3 text-text-primary"
+                                multiline
+                                numberOfLines={3}
+                                value={cookieInput}
+                                onChangeText={setCookieInput}
+                                placeholder="Paste your 'user' cookie value here..."
+                                selectionColor="transparent"
+                                placeholderTextColor={
+                                    isDark ? "#BBBBBB" : "#666666"
+                                }
+                                style={
+                                    Platform.OS === "web"
+                                        ? ({
+                                              outlineWidth: 0,
+                                              outlineStyle: "none" as any,
+                                              outlineColor: "transparent",
+                                              WebkitTapHighlightColor:
+                                                  "transparent",
+                                          } as any)
+                                        : undefined
+                                }
+                            />
+                            <TouchableOpacity
+                                onPress={handleCookieSubmit}
+                                disabled={
+                                    isSubmitting ||
+                                    cookieInput.trim().length < 20
+                                }
+                                className={`px-4 py-3 ${
+                                    isSubmitting ||
+                                    cookieInput.trim().length < 20
+                                        ? "bg-gray-400"
+                                        : "bg-primary"
+                                }`}
+                            >
+                                <Text className="text-center text-white">
+                                    {isSubmitting
+                                        ? "Saving..."
+                                        : "Save & Login"}
                                 </Text>
-                            </Text>
-                        </View>
-
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                5.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Find the <Text className="font-mono">user</Text>{" "}
-                                cookie and copy its value
-                            </Text>
-                        </View>
-
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                6.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Go to{" "}
-                                <Text className="font-semibold">Settings</Text>{" "}
-                                →{" "}
-                                <Text className="font-semibold">
-                                    Developer Options
-                                </Text>
-                            </Text>
-                        </View>
-
-                        <View className="flex-row">
-                            <Text className="mr-2 font-bold text-epitech-blue">
-                                7.
-                            </Text>
-                            <Text className="flex-1 text-text-primary">
-                                Paste the cookie value and click{" "}
-                                <Text className="font-semibold">
-                                    SET COOKIE
-                                </Text>
-                            </Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
-
-                    <TouchableOpacity
-                        onPress={onCancel}
-                        className="mt-6 rounded-lg bg-epitech-blue px-6 py-3"
-                    >
-                        <Text className="text-center text-base font-semibold text-white">
-                            Go to Settings
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View className="mt-4 rounded-lg border border-status-warning bg-status-warning-bg p-4">
-                    <Text className="text-xs leading-relaxed text-status-warning">
-                        💡 <Text className="font-semibold">Tip:</Text> Use the
-                        mobile app (Android/iOS) for automatic authentication.
-                    </Text>
                 </View>
             </View>
         </SafeAreaView>
@@ -672,7 +616,13 @@ export default function IntraWebViewAuth({
 
     // Route to platform-specific component
     if (Platform.OS === "web") {
-        return <WebAuthComponent onCancel={onCancel} onSuccess={onSuccess} />;
+        return (
+            <WebAuthComponent
+                onCancel={onCancel}
+                onSuccess={onSuccess}
+                isDark={isDark}
+            />
+        );
     }
 
     return (

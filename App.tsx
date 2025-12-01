@@ -26,17 +26,26 @@
  */
 
 import "./global.css";
+import { useEffect } from "react";
+import { useFonts } from "expo-font";
+import AppText from "./components/AppText";
 import { StatusBar } from "expo-status-bar";
 import LoginScreen from "./screens/LoginScreen";
+import * as SplashScreen from "expo-splash-screen";
 import PresenceScreen from "./screens/PresenceScreen";
 import SettingsScreen from "./screens/SettingsScreen";
-import ActivitiesScreen from "./screens/ActivitiesScreen";
 import type { IIntraEvent } from "./types/IIntraEvent";
-import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
+import ActivitiesScreen from "./screens/ActivitiesScreen";
 import { NavigationContainer } from "@react-navigation/native";
-import ManualAttendanceScreen from "./screens/ManualAttendanceScreen";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { setDefaultFontFamily } from "./utils/setDefaultFontFamily";
+import ManualAttendanceScreen from "./screens/ManualAttendanceScreen";
+import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 type RootStackParamList = {
     Login: undefined;
@@ -51,13 +60,81 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function AppNavigator() {
     const { isDark } = useTheme();
 
+    // Custom Toast configuration
+    const toastConfig = {
+        success: (props: any) => (
+            <BaseToast
+                {...props}
+                style={{
+                    borderLeftColor: '#10b981',
+                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                }}
+                contentContainerStyle={{ paddingHorizontal: 15 }}
+                text1Style={{
+                    fontSize: 15,
+                    fontWeight: '600',
+                    fontFamily: 'IBMPlexSansBold',
+                    color: isDark ? '#ffffff' : '#111827',
+                }}
+                text2Style={{
+                    fontSize: 13,
+                    fontFamily: 'IBMPlexSans',
+                    color: isDark ? '#d1d5db' : '#6b7280',
+                }}
+            />
+        ),
+        error: (props: any) => (
+            <ErrorToast
+                {...props}
+                style={{
+                    borderLeftColor: '#ef4444',
+                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                }}
+                text1Style={{
+                    fontSize: 15,
+                    fontWeight: '600',
+                    fontFamily: 'IBMPlexSansBold',
+                    color: isDark ? '#ffffff' : '#111827',
+                }}
+                text2Style={{
+                    fontSize: 13,
+                    fontFamily: 'IBMPlexSans',
+                    color: isDark ? '#d1d5db' : '#6b7280',
+                }}
+            />
+        ),
+        info: (props: any) => (
+            <BaseToast
+                {...props}
+                style={{
+                    borderLeftColor: '#3b82f6',
+                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                }}
+                contentContainerStyle={{ paddingHorizontal: 15 }}
+                text1Style={{
+                    fontSize: 15,
+                    fontWeight: '600',
+                    fontFamily: 'IBMPlexSansBold',
+                    color: isDark ? '#ffffff' : '#111827',
+                }}
+                text2Style={{
+                    fontSize: 13,
+                    fontFamily: 'IBMPlexSans',
+                    color: isDark ? '#d1d5db' : '#6b7280',
+                }}
+            />
+        ),
+    };
+
     return (
         <NavigationContainer>
             <Stack.Navigator
                 initialRouteName="Login"
                 screenOptions={{
                     headerShown: false,
-                    contentStyle: { backgroundColor: "transparent" },
+                    contentStyle: {
+                        backgroundColor: isDark ? "#242424" : "#FFFFFF",
+                    },
                 }}
             >
                 <Stack.Screen name="Login" component={LoginScreen} />
@@ -70,11 +147,40 @@ function AppNavigator() {
                 <Stack.Screen name="Settings" component={SettingsScreen} />
             </Stack.Navigator>
             <StatusBar style={isDark ? "light" : "dark"} />
+            <Toast config={toastConfig} />
         </NavigationContainer>
     );
 }
-
 export default function App() {
+    const [fontsLoaded, fontError] = useFonts({
+        Anton: require("./assets/fonts/Anton-Regular.ttf"),
+        IBMPlexSans: require("./assets/fonts/IBMPlexSans-Regular.ttf"),
+        IBMPlexSansBold: require("./assets/fonts/IBMPlexSans-Bold.ttf"),
+        IBMPlexSansItalic: require("./assets/fonts/IBMPlexSans-Italic.ttf"),
+        IBMPlexSansSemiBold: require("./assets/fonts/IBMPlexSans-SemiBold.ttf"),
+    });
+    useEffect(() => {
+        if (fontsLoaded || fontError) {
+            // Hide the splash screen after the fonts have loaded (or an error was returned)
+            SplashScreen.hideAsync();
+        }
+    }, [fontsLoaded, fontError]);
+
+    useEffect(() => {
+        // Set default font family after fonts are loaded
+        if (fontsLoaded) {
+            setDefaultFontFamily();
+        }
+    }, [fontsLoaded]);
+
+    if (!fontsLoaded && !fontError) {
+        return (
+            <SafeAreaProvider>
+                <AppText>Loading fonts... Maybe an error occurred.</AppText>
+            </SafeAreaProvider>
+        );
+    }
+
     return (
         <SafeAreaProvider>
             <ThemeProvider>

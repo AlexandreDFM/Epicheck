@@ -25,14 +25,6 @@
  * THE SOFTWARE.
  */
 
-import { useState, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
-import intraAuth from "../services/intraAuth";
-import soundService from "../services/soundService";
-import { useTheme } from "../contexts/ThemeContext";
-import * as DocumentPicker from "expo-document-picker";
-import { useNavigation } from "@react-navigation/native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
     View,
     Text,
@@ -41,7 +33,18 @@ import {
     TouchableOpacity,
     TextInput,
 } from "react-native";
+
+import { useState, useEffect } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import intraAuth from "../services/intraAuth";
+import Toast from "react-native-toast-message";
+import soundService from "../services/soundService";
+import { useTheme } from "../contexts/ThemeContext";
+import * as DocumentPicker from "expo-document-picker";
+import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 
 type RootStackParamList = {
     Login: undefined;
@@ -53,12 +56,12 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function SettingsScreen() {
-    const navigation = useNavigation<NavigationProp>();
     const { theme, isDark, setTheme } = useTheme();
-    const [hasCustomSuccess, setHasCustomSuccess] = useState(false);
-    const [hasCustomError, setHasCustomError] = useState(false);
+    const navigation = useNavigation<NavigationProp>();
+    const { underscore, color } = useColoredUnderscore();
     const [manualCookie, setManualCookie] = useState("");
-    const [showDevSection, setShowDevSection] = useState(__DEV__);
+    const [hasCustomError, setHasCustomError] = useState(false);
+    const [hasCustomSuccess, setHasCustomSuccess] = useState(false);
 
     useEffect(() => {
         // Check if custom sounds are configured
@@ -81,7 +84,12 @@ export default function SettingsScreen() {
             await soundService.importSuccessSound(file.uri);
             setHasCustomSuccess(true);
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Failed to import sound");
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: error.message || "Failed to import sound",
+                position: "top",
+            });
         }
     };
 
@@ -100,9 +108,19 @@ export default function SettingsScreen() {
             await soundService.importErrorSound(file.uri);
             setHasCustomError(true);
 
-            Alert.alert("Success", "Custom error sound imported!");
+            Toast.show({
+                type: "success",
+                text1: "Success",
+                text2: "Custom error sound imported!",
+                position: "top",
+            });
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Failed to import sound");
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: error.message || "Failed to import sound",
+                position: "top",
+            });
         }
     };
 
@@ -115,7 +133,12 @@ export default function SettingsScreen() {
                 onPress: async () => {
                     await soundService.resetSuccessSound();
                     setHasCustomSuccess(false);
-                    Alert.alert("Success", "Sound reset to default");
+                    Toast.show({
+                        type: "success",
+                        text1: "Success",
+                        text2: "Sound reset to default",
+                        position: "top",
+                    });
                 },
             },
         ]);
@@ -130,7 +153,12 @@ export default function SettingsScreen() {
                 onPress: async () => {
                     await soundService.resetErrorSound();
                     setHasCustomError(false);
-                    Alert.alert("Success", "Sound reset to default");
+                    Toast.show({
+                        type: "success",
+                        text1: "Success",
+                        text2: "Sound reset to default",
+                        position: "top",
+                    });
                 },
             },
         ]);
@@ -146,7 +174,12 @@ export default function SettingsScreen() {
 
     const handleSetManualCookie = async () => {
         if (!manualCookie.trim()) {
-            Alert.alert("Error", "Please enter a cookie value");
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Please enter a cookie value",
+                position: "top",
+            });
             return;
         }
 
@@ -164,7 +197,12 @@ export default function SettingsScreen() {
             );
             setManualCookie("");
         } catch (error: any) {
-            Alert.alert("Error", error.message || "Failed to set cookie");
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: error.message || "Failed to set cookie",
+                position: "top",
+            });
         }
     };
 
@@ -176,7 +214,12 @@ export default function SettingsScreen() {
                 style: "destructive",
                 onPress: async () => {
                     await intraAuth.clearIntraCookie();
-                    Alert.alert("Success", "Cookie cleared");
+                    Toast.show({
+                        type: "success",
+                        text1: "Success",
+                        text2: "Cookie cleared",
+                        position: "top",
+                    });
                     navigation.navigate("Login");
                 },
             },
@@ -194,20 +237,31 @@ export default function SettingsScreen() {
                     >
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-xl font-bold text-white">
-                        Settings
+                    <Text
+                        className="text-2xl text-white"
+                        style={{ fontFamily: "Anton" }}
+                    >
+                        SETTINGS
+                        <Text style={{ color }}>{underscore}</Text>
                     </Text>
                 </View>
             </View>
 
             <ScrollView className="flex-1">
                 {/* Theme Section */}
-                <View className="m-4 rounded-lg border border-card-border bg-card-bg shadow-sm">
+                <View className="mx-4 mb-2 mt-4 border border-card-border shadow-sm">
                     <View className="border-b border-border p-4">
-                        <Text className="text-lg font-bold text-text-primary">
+                        <Text
+                            className="text-xl text-primary"
+                            style={{ fontFamily: "Anton" }}
+                        >
                             THEME
+                            <Text style={{ color }}>{underscore}</Text>
                         </Text>
-                        <Text className="mt-1 text-xs text-text-secondary">
+                        <Text
+                            className="mt-1 text-xs text-text-tertiary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
                             Choose your preferred theme
                         </Text>
                     </View>
@@ -216,18 +270,15 @@ export default function SettingsScreen() {
                         <View className="flex-row gap-2">
                             <TouchableOpacity
                                 onPress={() => setTheme("light")}
-                                className={`flex-1 rounded-lg border-2 px-4 py-3 ${
+                                className={`flex-1 border-2 px-4 py-3 ${
                                     theme === "light"
-                                        ? "border-primary bg-status-info-bg"
+                                        ? "border-primary text-primary"
                                         : "border-border"
-                                }`}
+                                } `}
                             >
                                 <Text
-                                    className={`text-center text-sm font-semibold ${
-                                        theme === "light"
-                                            ? "text-primary"
-                                            : "text-text-secondary"
-                                    }`}
+                                    className={`text-center text-sm ${theme === "light" ? "text-primary" : isDark ? "text-white" : "text-text-secondary"}`}
+                                    style={{ fontFamily: "IBMPlexSans" }}
                                 >
                                     <Ionicons name="sunny" size={16} /> LIGHT
                                 </Text>
@@ -235,18 +286,15 @@ export default function SettingsScreen() {
 
                             <TouchableOpacity
                                 onPress={() => setTheme("dark")}
-                                className={`flex-1 rounded-lg border-2 px-4 py-3 ${
+                                className={`flex-1 border-2 px-4 py-3 ${
                                     theme === "dark"
-                                        ? "border-primary bg-status-info-bg"
-                                        : "border-border bg-background-secondary"
+                                        ? "border-primary text-primary"
+                                        : "border-border"
                                 }`}
                             >
                                 <Text
-                                    className={`text-center text-sm font-semibold ${
-                                        theme === "dark"
-                                            ? "text-primary"
-                                            : "text-text-secondary"
-                                    }`}
+                                    className={`text-center text-sm ${theme === "dark" ? "text-primary" : isDark ? "text-white" : "text-text-secondary"}`}
+                                    style={{ fontFamily: "IBMPlexSans" }}
                                 >
                                     <Ionicons name="moon" size={16} /> DARK
                                 </Text>
@@ -254,42 +302,39 @@ export default function SettingsScreen() {
 
                             <TouchableOpacity
                                 onPress={() => setTheme("system")}
-                                className={`flex-1 rounded-lg border-2 px-4 py-3 ${
+                                className={`flex-1 border-2 px-4 py-3 ${
                                     theme === "system"
-                                        ? "border-primary bg-status-info-bg"
-                                        : "border-border bg-background-secondary"
+                                        ? "border-primary text-primary"
+                                        : "border-border"
                                 }`}
                             >
                                 <Text
-                                    className={`text-center text-sm font-semibold ${
-                                        theme === "system"
-                                            ? "text-primary"
-                                            : "text-text-secondary"
-                                    }`}
+                                    className={`text-center text-sm ${theme === "system" ? "text-primary" : isDark ? "text-white" : "text-text-secondary"}`}
+                                    style={{ fontFamily: "IBMPlexSans" }}
                                 >
                                     <Ionicons name="phone-portrait" size={16} />{" "}
                                     SYSTEM
                                 </Text>
                             </TouchableOpacity>
                         </View>
-
-                        {theme === "system" && (
-                            <Text className="mt-2 text-center text-xs text-text-tertiary">
-                                Using {isDark ? "dark" : "light"} mode from
-                                system settings
-                            </Text>
-                        )}
                     </View>
                 </View>
 
                 {/* Sounds Section */}
-                <View className="m-4 rounded-lg border border-card-border bg-card-bg shadow-sm">
+                <View className="mx-4 my-2 border border-card-border shadow-sm">
                     <View className="border-b border-border p-4">
-                        <Text className="text-lg font-bold text-text-primary">
+                        <Text
+                            className="text-xl text-primary"
+                            style={{ fontFamily: "Anton" }}
+                        >
                             SOUND SETTINGS
+                            <Text style={{ color }}>{underscore}</Text>
                         </Text>
-                        <Text className="mt-1 text-xs text-text-secondary">
-                            Customize success and error sounds
+                        <Text
+                            className="text-xs text-text-tertiary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
+                            Customize sounds, supported formats: MP3, WAV, M4A
                         </Text>
                     </View>
 
@@ -297,18 +342,27 @@ export default function SettingsScreen() {
                     <View className="border-b border-border p-4">
                         <View className="mb-3 flex-row items-center justify-between">
                             <View className="flex-1">
-                                <Text className="font-semibold text-text-primary">
+                                <Text
+                                    className="text-primary"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     SUCCESS SOUND
                                 </Text>
-                                <Text className="mt-0.5 text-xs text-text-tertiary">
+                                <Text
+                                    className="mt-0.5 text-xs text-text-tertiary"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     {hasCustomSuccess ? "Custom" : "Default"}
                                 </Text>
                             </View>
                             <TouchableOpacity
                                 onPress={handleTestSuccessSound}
-                                className="rounded-lg bg-primary px-4 py-2"
+                                className="bg-primary px-4 py-2"
                             >
-                                <Text className="text-sm font-semibold text-white">
+                                <Text
+                                    className="text-sm text-white"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     <Ionicons name="volume-high" size={16} />
                                 </Text>
                             </TouchableOpacity>
@@ -317,9 +371,12 @@ export default function SettingsScreen() {
                         <View className="flex-row gap-2">
                             <TouchableOpacity
                                 onPress={handleImportSuccessSound}
-                                className="flex-1 rounded-lg border border-status-success bg-status-success-bg px-4 py-3"
+                                className="flex-1 border border-status-success px-4 py-3"
                             >
-                                <Text className="text-center text-sm font-semibold text-status-success">
+                                <Text
+                                    className="text-center text-sm text-status-success"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     <Ionicons name="folder-open" size={16} />{" "}
                                     IMPORT SOUND
                                 </Text>
@@ -328,9 +385,12 @@ export default function SettingsScreen() {
                             {hasCustomSuccess && (
                                 <TouchableOpacity
                                     onPress={handleResetSuccessSound}
-                                    className="flex-1 rounded-lg border border-status-error bg-status-error-bg px-4 py-3"
+                                    className="flex-1 border border-status-error px-4 py-3"
                                 >
-                                    <Text className="text-center text-sm font-semibold text-status-error">
+                                    <Text
+                                        className="text-center text-sm text-status-error"
+                                        style={{ fontFamily: "IBMPlexSans" }}
+                                    >
                                         <Ionicons name="refresh" size={16} />{" "}
                                         RESET
                                     </Text>
@@ -343,18 +403,27 @@ export default function SettingsScreen() {
                     <View className="p-4">
                         <View className="mb-3 flex-row items-center justify-between">
                             <View className="flex-1">
-                                <Text className="font-semibold text-text-primary">
+                                <Text
+                                    className="text-primary"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     ERROR SOUND
                                 </Text>
-                                <Text className="mt-0.5 text-xs text-text-tertiary">
+                                <Text
+                                    className="mt-0.5 text-xs text-text-tertiary"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     {hasCustomError ? "Custom" : "Default"}
                                 </Text>
                             </View>
                             <TouchableOpacity
                                 onPress={handleTestErrorSound}
-                                className="rounded-lg bg-status-error px-4 py-2"
+                                className="bg-status-error px-4 py-2"
                             >
-                                <Text className="text-sm font-semibold text-white">
+                                <Text
+                                    className="text-sm text-white"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     <Ionicons name="volume-high" size={16} />
                                 </Text>
                             </TouchableOpacity>
@@ -363,9 +432,12 @@ export default function SettingsScreen() {
                         <View className="flex-row gap-2">
                             <TouchableOpacity
                                 onPress={handleImportErrorSound}
-                                className="flex-1 rounded-lg border border-status-success bg-status-success-bg px-4 py-3"
+                                className="flex-1 border border-status-success px-4 py-3"
                             >
-                                <Text className="text-center text-sm font-semibold text-status-success">
+                                <Text
+                                    className="text-center text-sm text-status-success"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     <Ionicons name="folder-open" size={16} />{" "}
                                     IMPORT SOUND
                                 </Text>
@@ -374,9 +446,12 @@ export default function SettingsScreen() {
                             {hasCustomError && (
                                 <TouchableOpacity
                                     onPress={handleResetErrorSound}
-                                    className="flex-1 rounded-lg border border-status-error bg-status-error-bg px-4 py-3"
+                                    className="flex-1 border border-status-error px-4 py-3"
                                 >
-                                    <Text className="text-center text-sm font-semibold text-status-error">
+                                    <Text
+                                        className="text-center text-sm text-status-error"
+                                        style={{ fontFamily: "IBMPlexSans" }}
+                                    >
                                         <Ionicons name="refresh" size={16} />{" "}
                                         RESET
                                     </Text>
@@ -386,104 +461,98 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
-                {/* Developer Section - Manual Cookie Input */}
-                {showDevSection && (
-                    <View className="m-4 rounded-lg border border-card-border bg-card-bg shadow-sm">
-                        <TouchableOpacity
-                            onPress={() => setShowDevSection(!showDevSection)}
-                            className="border-b border-border p-4"
+                <View className="mx-4 my-2 border border-card-border shadow-sm">
+                    <View
+                        // onPress={() => setShowDevSection(!showDevSection)}
+                        className="border-b border-border p-4"
+                    >
+                        <Text
+                            className="text-xl text-primary"
+                            style={{ fontFamily: "Anton" }}
                         >
-                            <Text className="text-lg font-bold text-text-primary">
-                                🛠️ DEVELOPER OPTIONS
-                            </Text>
-                            <Text className="mt-1 text-xs text-text-secondary">
-                                Manual authentication for testing
-                            </Text>
-                        </TouchableOpacity>
+                            DEVELOPER OPTIONS
+                            <Text style={{ color }}>{underscore}</Text>
+                        </Text>
+                    </View>
 
-                        <View className="p-4">
-                            <Text className="mb-2 font-semibold text-text-primary">
-                                MANUAL COOKIE INPUT
-                            </Text>
-                            <Text className="mb-3 text-xs text-text-secondary">
-                                If automatic cookie extraction fails (HttpOnly
-                                cookies), you can manually input your Intranet
-                                cookie here.
-                            </Text>
+                    <View className="p-4">
+                        <Text
+                            className="mb-2 text-primary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
+                            MANUAL COOKIE INPUT
+                        </Text>
+                        <Text
+                            className="mb-3 text-xs text-text-tertiary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
+                            If automatic cookie extraction fails, you can input
+                            your cookie here.
+                        </Text>
 
-                            <View className="mb-3 rounded-lg border border-border bg-background p-3">
-                                <Text className="mb-2 text-xs font-semibold text-text-tertiary">
-                                    HOW TO GET YOUR COOKIE:
-                                </Text>
-                                <Text className="text-xs leading-relaxed text-text-secondary">
-                                    1. Login to intra.epitech.eu in your browser
-                                    {"\n"}
-                                    2. Open DevTools (F12 or Cmd+Option+I){"\n"}
-                                    3. Go to Application → Cookies{"\n"}
-                                    4. Find intra.epitech.eu{"\n"}
-                                    5. Copy the &apos;user&apos; cookie value
-                                </Text>
-                            </View>
+                        <Text
+                            className="mb-2 text-xs text-text-tertiary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
+                            HOW TO GET YOUR COOKIE:
+                        </Text>
+                        <Text
+                            className="mb-2 ml-2 text-xs leading-relaxed text-text-tertiary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
+                            1. Login to intra.epitech.eu in your browser
+                            {"\n"}
+                            2. Open DevTools (F12 or Cmd+Option+I){"\n"}
+                            3. Go to Application → Cookies{"\n"}
+                            4. Find &apos;intra.epitech.eu&apos; and copy the
+                            &apos;user&apos; cookie value
+                        </Text>
 
-                            <TextInput
-                                value={manualCookie}
-                                onChangeText={setManualCookie}
-                                placeholder="Paste your cookie value here..."
-                                placeholderTextColor={isDark ? "#666" : "#999"}
-                                multiline
-                                numberOfLines={3}
-                                className="mb-3 rounded-lg border border-border bg-background p-3 text-sm text-text-primary"
-                            />
-
-                            <View className="flex-row gap-2">
-                                <TouchableOpacity
-                                    onPress={handleSetManualCookie}
-                                    disabled={!manualCookie.trim()}
-                                    className={`flex-1 rounded-lg px-4 py-3 ${
+                        <TextInput
+                            value={manualCookie}
+                            onChangeText={setManualCookie}
+                            placeholder="Paste your cookie value here..."
+                            placeholderTextColor={isDark ? "#666" : "#999"}
+                            multiline
+                            numberOfLines={3}
+                            className="mb-3 border border-border p-3 text-sm text-primary"
+                        />
+                        <View className="flex-row gap-2">
+                            <TouchableOpacity
+                                onPress={handleSetManualCookie}
+                                disabled={!manualCookie.trim()}
+                                className={`flex-1 border border-border px-4 py-3`}
+                            >
+                                <Text
+                                    className={`text-center text-sm ${
                                         manualCookie.trim()
-                                            ? "bg-status-success"
-                                            : "bg-border"
+                                            ? "text-white"
+                                            : "text-text-tertiary"
                                     }`}
+                                    style={{ fontFamily: "IBMPlexSans" }}
                                 >
-                                    <Text
-                                        className={`text-center text-sm font-semibold ${
-                                            manualCookie.trim()
-                                                ? "text-white"
-                                                : "text-text-tertiary"
-                                        }`}
-                                    >
-                                        <Ionicons
-                                            name="checkmark-circle"
-                                            size={16}
-                                        />{" "}
-                                        SET COOKIE
-                                    </Text>
-                                </TouchableOpacity>
+                                    <Ionicons
+                                        name="checkmark-circle"
+                                        size={16}
+                                    />{" "}
+                                    SET COOKIE
+                                </Text>
+                            </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    onPress={handleClearCookie}
-                                    className="flex-1 rounded-lg border border-status-error bg-status-error-bg px-4 py-3"
+                            <TouchableOpacity
+                                onPress={handleClearCookie}
+                                className="flex-1 border border-status-error px-4 py-3"
+                            >
+                                <Text
+                                    className="text-center text-sm text-status-error"
+                                    style={{ fontFamily: "IBMPlexSans" }}
                                 >
-                                    <Text className="text-center text-sm font-semibold text-status-error">
-                                        <Ionicons name="trash" size={16} />{" "}
-                                        CLEAR COOKIE
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                                    <Ionicons name="trash" size={16} /> CLEAR
+                                    COOKIE
+                                </Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
-                )}
-
-                {/* Info Card */}
-                <View className="m-4 rounded-lg border border-status-info bg-status-info-bg p-4">
-                    <Text className="mb-2 font-semibold text-status-info">
-                        💡 Tips
-                    </Text>
-                    <Text className="text-xs leading-relaxed text-status-info">
-                        • Supported formats: MP3, WAV, M4A{"\n"}• Custom sounds
-                        are stored locally{"\n"}• Test sounds before using in
-                        production{"\n"}• Reset to default anytime
-                    </Text>
                 </View>
             </ScrollView>
         </SafeAreaView>

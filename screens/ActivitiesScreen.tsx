@@ -39,12 +39,14 @@ import {
 // import office365Auth from "../services/office365Auth";
 
 import intraApi from "../services/intraApi";
-import { useState, useEffect } from "react";
-import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
 import epitechApi from "../services/epitechApi";
+import { useState, useEffect, useRef } from "react";
 import { IIntraEvent } from "../types/IIntraEvent";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { AntDesign, Entypo, Ionicons } from "@expo/vector-icons";
+import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type RootStackParamList = {
@@ -57,10 +59,12 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ActivitiesScreen() {
-    const navigation = useNavigation<NavigationProp>();
-    const [activities, setActivities] = useState<IIntraEvent[]>([]);
+    const hasLoadedRef = useRef(false);
     const [loading, setLoading] = useState(true);
+    const navigation = useNavigation<NavigationProp>();
     const [refreshing, setRefreshing] = useState(false);
+    const { underscore, color } = useColoredUnderscore();
+    const [activities, setActivities] = useState<IIntraEvent[]>([]);
 
     const eventColors: { [key: string]: string } = {
         exam: "#dd9473",
@@ -68,6 +72,7 @@ export default function ActivitiesScreen() {
         class: "#71adc1",
         other: "#668cb3",
         proj: "#668cb3",
+        rdv: "#f97316", // Orange for RDV/appointments
     };
 
     const loadActivities = async () => {
@@ -96,11 +101,12 @@ export default function ActivitiesScreen() {
                                     await intraApi.authenticate();
                                     loadActivities();
                                 } catch (authError: any) {
-                                    Alert.alert(
-                                        "Error",
-                                        authError.message ||
-                                            "Failed to authenticate",
-                                    );
+                                    Toast.show({
+                                        type: "error",
+                                        text1: "Error",
+                                        text2: authError.message || "Failed to authenticate",
+                                        position: "top",
+                                    });
                                     handleLogout();
                                 }
                             },
@@ -113,10 +119,12 @@ export default function ActivitiesScreen() {
                     ],
                 );
             } else {
-                Alert.alert(
-                    "Error",
-                    error.message || "Failed to load activities",
-                );
+                Toast.show({
+                    type: "error",
+                    text1: "Error",
+                    text2: error.message || "Failed to load activities",
+                    position: "top",
+                });
             }
         } finally {
             setLoading(false);
@@ -125,7 +133,15 @@ export default function ActivitiesScreen() {
     };
 
     useEffect(() => {
+        if (hasLoadedRef.current) {
+            return;
+        }
+        hasLoadedRef.current = true;
         loadActivities();
+
+        return () => {
+            hasLoadedRef.current = false;
+        };
     }, []);
 
     const handleRefresh = () => {
@@ -182,7 +198,10 @@ export default function ActivitiesScreen() {
             <SafeAreaView className="flex-1">
                 <View className="flex-1 items-center justify-center">
                     <ActivityIndicator size="large" />
-                    <Text className="mt-4 font-semibold text-text-primary">
+                    <Text
+                        className="mt-4 text-text-primary"
+                        style={{ fontFamily: "IBMPlexSans" }}
+                    >
                         Loading activities...
                     </Text>
                 </View>
@@ -191,24 +210,38 @@ export default function ActivitiesScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView className="flex-1">
+            {/* FONT TEST - REMOVE AFTER DEBUGGING */}
+            {/* {__DEV__ && (
+                <View style={{ position: "absolute", top: 100, left: 0, right: 0, zIndex: 9999, backgroundColor: "white", opacity: 0.95 }}>
+                    <FontTest />
+                </View>
+            )} */}
+
             {/* Header */}
             <View className="bg-primary px-4 py-5">
                 <View className="mb-2 flex-row items-center justify-between">
                     <View className="flex-1 flex-row items-center">
-                        <View className="mr-3 h-10 w-10 items-center justify-center rounded-lg">
+                        <View className="mr-3 h-10 w-10 items-center justify-center">
                             <Image
                                 source={require("../assets/img/epicheck-icon.png")}
-                                className="absolute h-10 w-10 rounded-md bg-white"
+                                className="absolute h-8 w-8 bg-white"
                                 resizeMode="contain"
-                                style={{ width: 40, height: 40 }}
+                                style={{ width: 32, height: 32 }}
                             />
                         </View>
                         <View className="flex-1">
-                            <Text className="text-2xl font-bold text-white">
-                                Today&apos;s Activities
+                            <Text
+                                className="text-2xl text-white"
+                                style={{ fontFamily: "Anton" }}
+                            >
+                                TODAY&apos;S ACTIVITIES
+                                <Text style={{ color }}>{underscore}</Text>
                             </Text>
-                            <Text className="text-xs text-white/80">
+                            <Text
+                                className="text-xs text-white/80"
+                                style={{ fontFamily: "IBMPlexSans" }}
+                            >
                                 {new Date().toLocaleDateString("en-US", {
                                     weekday: "long",
                                     year: "numeric",
@@ -221,13 +254,13 @@ export default function ActivitiesScreen() {
                     <View className="flex-row gap-2">
                         <TouchableOpacity
                             onPress={() => navigation.navigate("Settings")}
-                            className="rounded-lg border border-white/30 bg-white/20 px-3 py-2"
+                            className="border border-white/30 bg-white/20 px-2 py-2"
                         >
                             <Ionicons name="cog" size={24} color="white" />
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={handleLogout}
-                            className="rounded-lg border border-white/30 bg-white/20 px-3 py-2"
+                            className="border border-white/30 bg-white/20 px-2 py-2"
                         >
                             <Ionicons
                                 name="log-out-outline"
@@ -241,9 +274,12 @@ export default function ActivitiesScreen() {
                 {/* Quick scan button */}
                 <TouchableOpacity
                     onPress={() => navigation.navigate("Presence", {})}
-                    className="mt-3 rounded-lg border border-white/30 bg-white/20 px-4 py-3"
+                    className="mt-3 border border-white/30 bg-white/20 px-4 py-3"
                 >
-                    <Text className="text-center font-semibold text-white">
+                    <Text
+                        className="text-center text-white"
+                        style={{ fontFamily: "Anton" }}
+                    >
                         QUICK SCAN (NO EVENT)
                     </Text>
                 </TouchableOpacity>
@@ -251,7 +287,7 @@ export default function ActivitiesScreen() {
 
             {/* Activities List */}
             <ScrollView
-                className="flex-1 bg-background"
+                className="flex-1"
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
@@ -262,10 +298,16 @@ export default function ActivitiesScreen() {
                 {activities.length === 0 ? (
                     <View className="flex-1 items-center justify-center py-20">
                         <Text className="mb-4 text-6xl">📅</Text>
-                        <Text className="text-lg font-bold text-text-primary">
+                        <Text
+                            className="text-lg text-text-primary"
+                            style={{ fontFamily: "Anton" }}
+                        >
                             No activities today
                         </Text>
-                        <Text className="mt-2 text-sm text-text-secondary">
+                        <Text
+                            className="mt-2 text-sm text-text-secondary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
                             Pull down to refresh
                         </Text>
                     </View>
@@ -279,57 +321,155 @@ export default function ActivitiesScreen() {
                             const endTime = formatTime(event.end);
                             const room = getRoomDisplay(event);
 
+                            // Debug: Log event rights
+                            if (__DEV__) {
+                                console.log(`Event: ${event.acti_title}`);
+                                console.log(`Type: ${event.type_code}`);
+                                console.log(`Rights:`, event.rights);
+                                console.log(
+                                    `Has prof_inst:`,
+                                    event.rights?.includes("prof_inst"),
+                                );
+                                console.log(
+                                    `Has assistant:`,
+                                    event.rights?.includes("assistant"),
+                                );
+                            }
+
                             return (
                                 <TouchableOpacity
                                     key={`${event.codeevent}-${index}`}
-                                    onPress={() => handleSelectActivity(event)}
-                                    className="mb-3 overflow-hidden rounded-xl shadow-sm"
                                     style={{ backgroundColor: bgColor }}
+                                    disabled={
+                                        event.type_code === "rdv" ||
+                                        event.rights?.includes(
+                                            "force_register",
+                                        ) === false
+                                    }
+                                    className="mb-3 overflow-hidden shadow-sm"
+                                    onPress={() => {
+                                        if (
+                                            event.type_code !== "rdv" &&
+                                            event.rights?.includes(
+                                                "force_register",
+                                            ) !== false
+                                        )
+                                            handleSelectActivity(event);
+                                    }}
                                 >
                                     <View className="p-4">
                                         <View className="mb-2 flex-row items-start justify-between">
                                             <View className="mr-2 flex-1">
-                                                <Text className="mb-1 text-lg font-bold text-white">
+                                                <Text
+                                                    className="mb-1 text-lg text-white"
+                                                    style={{
+                                                        fontFamily: "Anton",
+                                                    }}
+                                                >
                                                     {event.acti_title}
                                                     {event.nb_group &&
                                                     event.nb_group > 1
                                                         ? ` #${event.num_event}`
                                                         : ""}
                                                 </Text>
-                                                <Text className="text-sm capitalize text-white/90">
+                                                <Text
+                                                    className="text-sm capitalize text-white/90"
+                                                    style={{
+                                                        fontFamily:
+                                                            "IBMPlexSans",
+                                                    }}
+                                                >
                                                     {event.type_code}
                                                 </Text>
                                             </View>
-                                            <View className="rounded-full bg-white/20 px-3 py-1">
-                                                <Text className="text-xs font-semibold text-white">
-                                                    {startTime}
+                                            <View className="bg-white/20 px-3 py-1">
+                                                <Text
+                                                    className="text-xs text-white"
+                                                    style={{
+                                                        fontFamily:
+                                                            "IBMPlexSansSemiBold",
+                                                    }}
+                                                >
+                                                    <AntDesign
+                                                        name="clock-circle"
+                                                        size={12}
+                                                    />{" "}
+                                                    {startTime} - {endTime}
                                                 </Text>
                                             </View>
                                         </View>
-
-                                        <View className="mt-2 flex-row items-center">
-                                            <View className="mr-2 rounded-full bg-white/20 px-3 py-1">
-                                                <Text className="text-xs text-white">
-                                                    📍 {room}
-                                                </Text>
-                                            </View>
-                                            <View className="rounded-full bg-white/20 px-3 py-1">
-                                                <Text className="text-xs text-white">
-                                                    ⏰ {startTime} - {endTime}
-                                                </Text>
-                                            </View>
-                                        </View>
-
-                                        {event.rights &&
-                                            event.rights.indexOf(
-                                                "force_register",
-                                            ) > -1 && (
-                                                <View className="mt-2 self-start rounded-full bg-white/20 px-3 py-1">
-                                                    <Text className="text-xs font-semibold text-white">
-                                                        ⭐ Pedago Rights
-                                                    </Text>
+                                        <View className="flex-row">
+                                            <View className="flex-row">
+                                                <View className="mt-2 flex-row items-center">
+                                                    <View className="bg-white/20 px-3 py-1">
+                                                        <Text
+                                                            className="text-xs text-white"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "IBMPlexSans",
+                                                            }}
+                                                        >
+                                                            <Entypo
+                                                                name="location-pin"
+                                                                size={12}
+                                                                color={"red"}
+                                                            />{" "}
+                                                            {room}
+                                                        </Text>
+                                                    </View>
                                                 </View>
-                                            )}
+                                            </View>
+                                            <View className="ml-auto mt-auto flex-shrink">
+                                                {/* Show if user can mark presence */}
+                                                {event.rights &&
+                                                event.type_code !== "rdv" &&
+                                                Array.isArray(event.rights) &&
+                                                event.rights.length > 0 &&
+                                                event.rights.includes(
+                                                    "force_register",
+                                                ) &&
+                                                (event.rights.includes(
+                                                    "prof_inst",
+                                                ) ||
+                                                    event.rights.includes(
+                                                        "assistant",
+                                                    )) ? (
+                                                    <View className="mt-2 flex-shrink self-start bg-green-500/20 px-3 py-1">
+                                                        <Text
+                                                            className="text-xs text-green-200"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "IBMPlexSansSemiBold",
+                                                            }}
+                                                        >
+                                                            <AntDesign
+                                                                name="check"
+                                                                color="#86efac"
+                                                                size={12}
+                                                            />{" "}
+                                                            Can mark presence
+                                                        </Text>
+                                                    </View>
+                                                ) : (
+                                                    <View className="mt-2 flex-shrink self-start bg-gray-500/20 px-3 py-1">
+                                                        <Text
+                                                            className="text-xs text-gray-300"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "IBMPlexSans",
+                                                            }}
+                                                        >
+                                                            <AntDesign
+                                                                name="eye"
+                                                                color="#d1d5db"
+                                                                size={12}
+                                                            />{" "}
+                                                            View only
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </View>
                                     </View>
                                 </TouchableOpacity>
                             );

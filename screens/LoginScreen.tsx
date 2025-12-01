@@ -28,7 +28,6 @@
 import {
     View,
     Text,
-    Alert,
     Image,
     Modal,
     Platform,
@@ -40,12 +39,16 @@ import {
 // import epitechApi from "../services/epitechApi";
 // import office365Auth from "../services/office365Auth";
 
-import { useState } from "react";
 import intraApi from "../services/intraApi";
+import AppTitle from "../components/AppTitle";
 import intraAuth from "../services/intraAuth";
 import IntraWebViewAuth from "./IntraWebViewAuth";
+import { useTheme } from "../contexts/ThemeContext";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigation } from "@react-navigation/native";
+import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import Toast from "react-native-toast-message";
 
 type RootStackParamList = {
     Login: undefined;
@@ -56,9 +59,52 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function LoginScreen() {
-    const navigation = useNavigation<NavigationProp>();
+    const { isDark } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
+    const navigation = useNavigation<NavigationProp>();
+    const { underscore, color } = useColoredUnderscore();
     const [showWebView, setShowWebView] = useState(false);
+    const hasCheckedAuthRef = useRef(false);
+
+    // Check if user is already authenticated on mount
+    const checkExistingAuth = useCallback(async () => {
+        // Prevent multiple checks
+        if (hasCheckedAuthRef.current) return;
+        hasCheckedAuthRef.current = true;
+
+        try {
+            setIsLoading(true);
+            const isAuthenticated = await intraAuth.isAuthenticated();
+
+            if (isAuthenticated) {
+                console.log(
+                    "User already authenticated, navigating to Activities...",
+                );
+                const userInfo = await intraApi.getCurrentUser();
+
+                // Navigate to Activities screen
+                navigation.replace("Activities");
+                // Show toast after navigation completes
+                requestAnimationFrame(() => {
+                    Toast.show({
+                        type: "success",
+                        text1: "Welcome Back",
+                        text2: `Hello ${userInfo.title || userInfo.login}!`,
+                        position: "top",
+                    });
+                });
+            }
+        } catch (error) {
+            console.error("Auth check error:", error);
+            // If there's an error, just stay on login screen
+        } finally {
+            setIsLoading(false);
+        }
+    }, [navigation]);
+
+    useEffect(() => {
+        checkExistingAuth();
+    }, [checkExistingAuth]);
 
     const handleIntranetLogin = () => {
         // Show WebView modal for authentication
@@ -81,29 +127,37 @@ export default function LoginScreen() {
 
             // Navigate to Activities screen
             setIsLoading(false);
-            setTimeout(() => {
-                navigation.replace("Activities");
-                // Show success after navigation
-                setTimeout(() => {
-                    Alert.alert(
-                        "Success",
-                        `Welcome ${userInfo.title || userInfo.login}!`,
-                    );
-                }, 100);
-            }, 100);
+            navigation.replace("Activities");
+            // Show toast after navigation completes
+            requestAnimationFrame(() => {
+                Toast.show({
+                    type: "success",
+                    text1: "Success",
+                    text2: `Welcome ${userInfo.title || userInfo.login}!`,
+                    position: "top",
+                });
+            });
         } catch (error: any) {
-            console.error("Login error:", error);
             setIsLoading(false);
-            Alert.alert(
-                "Login Failed",
-                error.message || "Failed to authenticate with Epitech Intranet",
-            );
+            Toast.show({
+                type: "error",
+                text1: "Login Failed",
+                text2:
+                    error.message ||
+                    "Failed to authenticate with Epitech Intranet",
+                position: "top",
+            });
         }
     };
 
     const handleAuthCancel = () => {
         setShowWebView(false);
-        Alert.alert("Cancelled", "Authentication was cancelled");
+        Toast.show({
+            type: "info",
+            text1: "Cancelled",
+            text2: "Authentication was cancelled",
+            position: "top",
+        });
     };
 
     return (
@@ -116,6 +170,7 @@ export default function LoginScreen() {
                 visible={showWebView}
                 animationType="slide"
                 presentationStyle="fullScreen"
+                backdropColor={isDark ? "#121212" : "#FFFFFF"}
             >
                 <IntraWebViewAuth
                     onSuccess={handleAuthSuccess}
@@ -123,10 +178,10 @@ export default function LoginScreen() {
                 />
             </Modal>
 
-            <View className="flex-1 justify-center bg-background px-8">
+            <View className="flex-1 justify-center px-8">
                 {/* Logo Section */}
                 <View className="mb-12 items-center">
-                    <View className="mb-4 h-20 w-20 items-center justify-center rounded-2xl">
+                    <View className="mb-4 h-20 w-20 items-center justify-center">
                         <Image
                             source={require("../assets/img/epicheck-icon.png")}
                             className="absolute h-20 w-20"
@@ -134,22 +189,23 @@ export default function LoginScreen() {
                             style={{ width: 80, height: 80 }}
                         />
                     </View>
-                    <Text className="mb-1 text-3xl font-bold text-text-primary">
-                        EpiCheck
-                    </Text>
+                    <AppTitle className="mb-1 text-3xl text-primary">
+                        EPICHECK
+                        <Text style={{ color }} className="text-3xl">
+                            {underscore}
+                        </Text>
+                    </AppTitle>
                     <Text className="text-center text-sm text-text-secondary">
                         Student Presence Management Application
                     </Text>
                 </View>
 
-                <View className="rounded-2xl border border-card-border bg-card-bg p-8">
-                    {/* Info Section */}
-
+                <View className="p-8">
                     {/* Intranet Login Button */}
                     <TouchableOpacity
                         onPress={handleIntranetLogin}
                         disabled={isLoading}
-                        className={`flex-row items-center justify-center rounded-lg py-4 ${
+                        className={`flex-row items-center justify-center py-4 ${
                             isLoading ? "bg-text-disabled" : "bg-primary"
                         }`}
                     >
@@ -157,7 +213,10 @@ export default function LoginScreen() {
                             <ActivityIndicator color="white" />
                         ) : (
                             <>
-                                <Text className="text-base font-bold uppercase tracking-wide text-white">
+                                <Text
+                                    className="text-base uppercase tracking-wide text-white"
+                                    style={{ fontFamily: "IBMPlexSansBold" }}
+                                >
                                     Sign in with Epitech Intranet
                                 </Text>
                             </>
@@ -165,14 +224,20 @@ export default function LoginScreen() {
                     </TouchableOpacity>
 
                     {/* Footer */}
-                    <Text className="mt-4 text-center text-xs text-text-tertiary">
+                    <Text
+                        className="mt-4 text-center text-xs text-text-tertiary"
+                        style={{ fontFamily: "IBMPlexSans" }}
+                    >
                         Uses your Office365 credentials through the Epitech
                         Intranet
                     </Text>
                 </View>
 
                 {/* Bottom Info */}
-                <Text className="mt-8 text-center text-xs text-text-disabled">
+                <Text
+                    className="mt-8 text-center text-xs text-text-disabled"
+                    style={{ fontFamily: "IBMPlexSans" }}
+                >
                     Powered by Epitech
                 </Text>
             </View>

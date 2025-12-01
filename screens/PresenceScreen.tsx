@@ -39,15 +39,18 @@ import {
 
 import intraApi from "../services/intraApi";
 import { useState, useEffect } from "react";
+import Toast from "react-native-toast-message";
 import epitechApi from "../services/epitechApi";
 import QRScanner from "../components/QRScanner";
 import NFCScanner from "../components/NFCScanner";
+import { useTheme } from "../contexts/ThemeContext";
 import soundService from "../services/soundService";
 import type { IIntraEvent } from "../types/IIntraEvent";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { AntDesign, EvilIcons, Ionicons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Ionicons } from "@expo/vector-icons";
+import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 
 interface Student {
     email: string;
@@ -65,11 +68,13 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function PresenceScreen() {
-    const navigation = useNavigation<NavigationProp>();
     const route = useRoute();
+    const { isDark } = useTheme();
+    const navigation = useNavigation<NavigationProp>();
+    const { underscore, color } = useColoredUnderscore();
+    const [isProcessing, setIsProcessing] = useState(false);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
-    const [isProcessing, setIsProcessing] = useState(false);
 
     // Get event from route params
     const event = (route.params as any)?.event as IIntraEvent | undefined;
@@ -139,7 +144,12 @@ export default function PresenceScreen() {
 
             setScannedStudents((prev) => [newStudent, ...prev]);
 
-            Alert.alert("Error", error.message || "Failed to mark presence");
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: error.message || "Failed to mark presence",
+                position: "top",
+            });
         } finally {
             setIsProcessing(false);
         }
@@ -166,22 +176,15 @@ export default function PresenceScreen() {
     };
 
     const clearHistory = () => {
-        Alert.alert(
-            "Clear History",
-            "Are you sure you want to clear the scan history?",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Clear",
-                    style: "destructive",
-                    onPress: () => setScannedStudents([]),
-                },
-            ],
-        );
+        Toast.show({
+            type: "info",
+            text1: "Scan history cleared",
+            position: "top",
+        });
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-background">
+        <SafeAreaView className="flex-1">
             {/* Header */}
             <View className="bg-primary px-4 py-5">
                 <View className="mb-4 flex-row items-center justify-between">
@@ -197,25 +200,41 @@ export default function PresenceScreen() {
                             />
                         </TouchableOpacity>
                         <View className="flex-1">
-                            <Text className="text-xl font-bold text-white">
-                                {event ? event.acti_title : "Presence Scanner"}
+                            <Text
+                                className="text-xl text-white"
+                                style={{ fontFamily: "Anton" }}
+                            >
+                                {event ? event.acti_title : (
+                                    <Text>
+                                        PRESENCE SCANNER
+                                        <Text style={{ color }}>{underscore}</Text>
+                                    </Text>
+                                )}
                             </Text>
                             {event && (
-                                <Text className="text-xs text-white/80">
+                                <Text
+                                    className="text-xs text-white/80"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
                                     {event.type_code.toUpperCase()} •{" "}
                                     {new Date(event.start).toLocaleDateString()}
                                 </Text>
                             )}
                             {!event && (
-                                <Text className="text-xs text-status-warning">
-                                    ⚠️ No event selected
+                                <Text
+                                    className="text-xs text-status-warning"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
+                                    <AntDesign name="warning" size={12} />
+                                    {" "}
+                                    No event selected
                                 </Text>
                             )}
                         </View>
                     </View>
                     <TouchableOpacity
                         onPress={handleLogout}
-                        className="ml-2 rounded-lg border border-white/30 bg-white/20 px-4 py-2"
+                        className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
                     >
                         <Ionicons
                             name="log-out-outline"
@@ -226,54 +245,71 @@ export default function PresenceScreen() {
                 </View>
 
                 {/* Mode Selector */}
-                <View className="flex-row rounded-lg bg-white/20 p-1 backdrop-blur">
-                    <TouchableOpacity
+                <View className="flex-row bg-white/20 p-1 backdrop-blur border border-white/30">
+                    {/* <TouchableOpacity
                         onPress={() => setScanMode("qr")}
-                        className={`flex-1 rounded-md py-3 ${
-                            scanMode === "qr" ? "bg-white" : "bg-transparent"
+                        className={`flex-1 py-3 ${
+                            scanMode === "qr"
+                                ? isDark
+                                    ? "bg-black"
+                                    : "bg-white"
+                                : "bg-transparent"
                         }`}
                     >
                         <Text
-                            className={`text-center text-sm font-bold ${
+                            className={`text-center text-sm ${
                                 scanMode === "qr"
                                     ? "text-primary"
-                                    : "text-white"
+                                    : isDark
+                                      ? "text-black"
+                                      : "text-white"
                             }`}
+                            style={{ fontFamily: "Anton" }}
                         >
                             QR CODE
                         </Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
 
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         onPress={() => setScanMode("nfc")}
-                        className={`flex-1 rounded-md py-3 ${
-                            scanMode === "nfc" ? "bg-white" : "bg-transparent"
+                        className={`flex-1 py-3 ${
+                            scanMode === "nfc"
+                                ? isDark
+                                    ? "bg-black"
+                                    : "bg-white"
+                                : "bg-transparent"
                         }`}
-                        disabled={Platform.OS === "web"}
+                        // disabled={Platform.OS === "web"}
+                        disabled={true}
                     >
                         <Text
-                            className={`text-center text-sm font-bold ${
+                            className={`text-center text-sm ${
                                 scanMode === "nfc"
                                     ? "text-primary"
-                                    : "text-white/60"
+                                    : isDark
+                                      ? "text-black/60"
+                                      : "text-white/60"
                             }`}
+                            style={{ fontFamily: "Anton" }}
                         >
                             NFC CARD
                         </Text>
+                    </TouchableOpacity> */}
+                    {/* Manual Attendance Button */}
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate("ManualAttendance", { event })
+                        }
+                        className={`flex-1 py-3`}
+                    >
+                        <Text
+                            className={`text-center text-sm text-white`}
+                            style={{ fontFamily: "Anton" }}
+                        >
+                            MANUAL ATTENDANCE
+                        </Text>
                     </TouchableOpacity>
                 </View>
-
-                {/* Manual Attendance Button */}
-                <TouchableOpacity
-                    onPress={() =>
-                        navigation.navigate("ManualAttendance", { event })
-                    }
-                    className="mt-3 rounded-lg border-2 border-white/40 bg-white/10 py-3"
-                >
-                    <Text className="text-center text-sm font-bold text-white">
-                        MANUAL ATTENDANCE
-                    </Text>
-                </TouchableOpacity>
             </View>
 
             {/* Scanner */}
@@ -287,15 +323,17 @@ export default function PresenceScreen() {
 
             {/* Scanned Students List */}
             <View
-                className="border-t-2 border-primary bg-surface"
-                style={{ maxHeight: 250 }}
+                className={`border-t-2 border-primary ${isDark ? "bg-surface-dark" : "bg-surface"}`}
             >
-                <View className="flex-row items-center justify-between border-b border-border bg-background-secondary px-4 py-3">
+                <View className="flex-row items-center justify-between px-4 py-3">
                     <View>
-                        <Text className="text-base font-bold text-text-primary">
+                        <Text className="text-base text-primary">
                             Recent Scans
                         </Text>
-                        <Text className="text-xs text-text-secondary">
+                        <Text
+                            className="text-xs text-text-tertiary"
+                            style={{ fontFamily: "IBMPlexSans" }}
+                        >
                             {scannedStudents.length} student
                             {scannedStudents.length !== 1 ? "s" : ""} checked
                         </Text>
@@ -303,22 +341,31 @@ export default function PresenceScreen() {
                     {scannedStudents.length > 0 && (
                         <TouchableOpacity
                             onPress={clearHistory}
-                            className="rounded-md bg-status-error-bg px-3 py-1.5"
+                            className="border border-status-error px-3 py-1.5"
                         >
-                            <Text className="text-sm font-semibold text-status-error">
+                            <Text
+                                className="text-sm text-status-error"
+                                style={{ fontFamily: "IBMPlexSansSemiBold" }}
+                            >
                                 Clear All
                             </Text>
                         </TouchableOpacity>
                     )}
                 </View>
-
+                <View className="mx-12 border-b border-primary" />
                 <ScrollView className="px-4 py-2">
                     {scannedStudents.length === 0 ? (
                         <View className="items-center py-8">
-                            <Text className="text-center text-sm text-text-tertiary">
+                            <Text
+                                className="text-center text-sm text-text-tertiary"
+                                style={{ fontFamily: "IBMPlexSans" }}
+                            >
                                 No scans yet
                             </Text>
-                            <Text className="mt-1 text-center text-xs text-text-tertiary">
+                            <Text
+                                className="mt-1 text-center text-xs text-text-tertiary"
+                                style={{ fontFamily: "IBMPlexSans" }}
+                            >
                                 Start scanning student cards to mark presence
                             </Text>
                         </View>
@@ -326,40 +373,52 @@ export default function PresenceScreen() {
                         scannedStudents.map((student, index) => (
                             <View
                                 key={index}
-                                className={`mb-2 rounded-lg border p-3.5 ${
+                                className={`mb-2 border p-3.5 ${
                                     student.status === "success"
-                                        ? "border-status-success bg-status-success-bg"
-                                        : "border-status-error bg-status-error-bg"
+                                        ? "border-status-success"
+                                        : "border-status-error"
                                 }`}
                             >
                                 <View className="flex-row items-center justify-between">
                                     <View className="mr-2 flex-1">
                                         <View className="flex-row items-center">
                                             <View
-                                                className={`mr-2 h-2 w-2 rounded-full ${
+                                                className={`mr-2 h-2 w-2 ${
                                                     student.status === "success"
                                                         ? "bg-status-success"
                                                         : "bg-status-error"
                                                 }`}
                                             />
                                             <Text
-                                                className={`text-sm font-semibold ${
+                                                className={`text-sm ${
                                                     student.status === "success"
                                                         ? "text-status-success"
                                                         : "text-status-error"
                                                 }`}
                                                 numberOfLines={1}
+                                                style={{
+                                                    fontFamily:
+                                                        "IBMPlexSansSemiBold",
+                                                }}
                                             >
                                                 {student.email}
                                             </Text>
                                         </View>
-                                        <Text className="ml-4 mt-0.5 text-xs text-text-tertiary">
+                                        <Text
+                                            className="ml-4 mt-0.5 text-xs text-text-tertiary"
+                                            style={{
+                                                fontFamily: "IBMPlexSans",
+                                            }}
+                                        >
                                             {student.status === "success"
                                                 ? "Presence marked"
                                                 : "Failed to mark"}
                                         </Text>
                                     </View>
-                                    <Text className="text-xs font-medium text-text-secondary">
+                                    <Text
+                                        className="text-xs text-text-secondary"
+                                        style={{ fontFamily: "IBMPlexSans" }}
+                                    >
                                         {student.timestamp}
                                     </Text>
                                 </View>

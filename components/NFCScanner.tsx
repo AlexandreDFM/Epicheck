@@ -192,7 +192,7 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
                 <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-gray-300">
                     <Text className="text-5xl">📱</Text>
                 </View>
-                <Text className="mb-2 text-xl font-bold text-epitech-navy">
+                <Text className="mb-2 text-xl text-epitech-navy">
                     NFC Not Available
                 </Text>
                 <Text className="text-center text-epitech-gray-dark">
@@ -209,7 +209,7 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
                 <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-red-100">
                     <Text className="text-5xl">⚠️</Text>
                 </View>
-                <Text className="mb-2 text-xl font-bold text-red-600">
+                <Text className="mb-2 text-xl text-red-600">
                     NFC Not Supported
                 </Text>
                 <Text className="mb-2 text-center text-epitech-gray-dark">
@@ -230,13 +230,13 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
                     <Text className="text-7xl text-white">📱</Text>
                 </View>
 
-                <Text className="mb-3 text-center text-2xl font-bold text-epitech-navy">
+                <Text className="mb-3 text-center text-2xl text-epitech-navy">
                     NFC Scanner Ready
                 </Text>
 
                 {/* Status Message */}
                 <View className="mb-6 w-full rounded-xl bg-epitech-gray px-4 py-3">
-                    <Text className="text-center font-medium text-epitech-navy">
+                    <Text className="text-center text-epitech-navy">
                         {message}
                     </Text>
                 </View>
@@ -254,7 +254,7 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
                         onPress={handleManualScan}
                         className="w-full rounded-xl bg-epitech-blue px-8 py-4"
                     >
-                        <Text className="text-center text-base font-bold uppercase tracking-wide text-white">
+                        <Text className="text-center text-base uppercase tracking-wide text-white">
                             Start Scanning
                         </Text>
                     </TouchableOpacity>
@@ -263,7 +263,7 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
 
             {/* Instructions */}
             <View className="mt-8 rounded-full bg-white/10 px-6 py-3">
-                <Text className="text-center text-sm font-medium text-white">
+                <Text className="text-center text-sm text-white">
                     Hold the student card close to your device
                 </Text>
             </View>
