@@ -204,10 +204,14 @@ export default function PresenceScreen() {
                                 className="text-xl text-white"
                                 style={{ fontFamily: "Anton" }}
                             >
-                                {event ? event.acti_title : (
+                                {event ? (
+                                    event.acti_title
+                                ) : (
                                     <Text>
                                         PRESENCE SCANNER
-                                        <Text style={{ color }}>{underscore}</Text>
+                                        <Text style={{ color }}>
+                                            {underscore}
+                                        </Text>
                                     </Text>
                                 )}
                             </Text>
@@ -225,9 +229,8 @@ export default function PresenceScreen() {
                                     className="text-xs text-status-warning"
                                     style={{ fontFamily: "IBMPlexSans" }}
                                 >
-                                    <AntDesign name="warning" size={12} />
-                                    {" "}
-                                    No event selected
+                                    <AntDesign name="warning" size={12} /> No
+                                    event selected
                                 </Text>
                             )}
                         </View>
@@ -245,7 +248,7 @@ export default function PresenceScreen() {
                 </View>
 
                 {/* Mode Selector */}
-                <View className="flex-row bg-white/20 p-1 backdrop-blur border border-white/30">
+                <View className="flex-row border border-white/30 bg-white/20 p-1 backdrop-blur">
                     {/* <TouchableOpacity
                         onPress={() => setScanMode("qr")}
                         className={`flex-1 py-3 ${

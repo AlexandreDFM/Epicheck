@@ -38,10 +38,13 @@ const INTRA_BASE_URL = "https://intra.epitech.eu";
 const PROXY_BASE_URL =
     process.env.EXPO_PUBLIC_PROXY_URL ||
     "http://localhost:3001/api/intra-proxy"; // For web platform
+const BACKEND_BASE_URL =
+    process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 class IntraApiService {
     private api: AxiosInstance;
     private isWeb: boolean;
+    private sessionId: string | null = null;
 
     constructor() {
         this.isWeb = Platform.OS === "web";
@@ -109,6 +112,59 @@ class IntraApiService {
     }
 
     /**
+     * Initialize session (for web platform - bypasses anti-DDoS)
+     */
+    async initializeSession(userId: string = "web-user"): Promise<string> {
+        console.log("[IntraApi] Initializing backend session...");
+
+        try {
+            const response = await axios.post(
+                `${BACKEND_BASE_URL}/api/intra/session/create`,
+                { userId },
+            );
+
+            this.sessionId = response.data.sessionId;
+            console.log("[IntraApi] ✓ Session created:", this.sessionId);
+
+            // Store session ID locally
+            if (Platform.OS === "web") {
+                localStorage.setItem("intra_session_id", this.sessionId || "");
+            }
+
+            return this.sessionId as string;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] ❌ Session initialization failed:",
+                error.message,
+            );
+            throw new Error("Failed to initialize session: " + error.message);
+        }
+    }
+
+    /**
+     * Get or create session ID
+     */
+    private async getSessionId(): Promise<string | null> {
+        if (this.sessionId) {
+            return this.sessionId;
+        }
+
+        // Try to load from storage
+        if (Platform.OS === "web") {
+            this.sessionId = localStorage.getItem("intra_session_id");
+            if (this.sessionId) {
+                console.log(
+                    "[IntraApi] Loaded session from storage:",
+                    this.sessionId,
+                );
+                return this.sessionId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Make a request through proxy server (for web platform to bypass CORS)
      */
     private async makeProxyRequest(
@@ -117,11 +173,25 @@ class IntraApiService {
         data?: any,
         params?: any,
     ): Promise<any> {
+        // Try session-based auth first
+        const sessionId = await this.getSessionId();
+
+        if (sessionId) {
+            return this.makeSessionRequest(
+                endpoint,
+                method,
+                data,
+                params,
+                sessionId,
+            );
+        }
+
+        // Fallback to cookie-based auth
         const cookie = await intraAuth.getIntraCookie();
 
         if (!cookie) {
             throw new Error(
-                "No authentication cookie found. Please log in through the WebView authentication.",
+                "No authentication found. Please log in through the WebView authentication.",
             );
         }
 
@@ -136,7 +206,11 @@ class IntraApiService {
         fullEndpoint +=
             (fullEndpoint.includes("?") ? "&" : "?") + "format=json";
 
-        console.log("🌐 Making proxy request:", method, fullEndpoint);
+        console.log(
+            "🌐 Making proxy request (cookie-based):",
+            method,
+            fullEndpoint,
+        );
 
         try {
             const response = await axios.post(PROXY_BASE_URL, {
@@ -156,6 +230,66 @@ class IntraApiService {
             // Check if it's a proxied error from Intranet API
             if (error.response?.data?.error) {
                 throw new Error(error.response.data.error);
+            }
+
+            throw error;
+        }
+    }
+
+    /**
+     * Make a request using backend session
+     */
+    private async makeSessionRequest(
+        endpoint: string,
+        method: "GET" | "POST" = "GET",
+        data?: any,
+        params?: any,
+        sessionId?: string,
+    ): Promise<any> {
+        const sid = sessionId || (await this.getSessionId());
+
+        if (!sid) {
+            throw new Error("No session ID available");
+        }
+
+        // Build full endpoint with query params
+        let fullEndpoint = endpoint;
+        if (params) {
+            const queryString = new URLSearchParams(params).toString();
+            fullEndpoint += (endpoint.includes("?") ? "&" : "?") + queryString;
+        }
+
+        // Always add format=json
+        fullEndpoint +=
+            (fullEndpoint.includes("?") ? "&" : "?") + "format=json";
+
+        console.log(
+            "🌐 Making proxy request (session-based):",
+            method,
+            fullEndpoint,
+        );
+
+        try {
+            const response = await axios.post(PROXY_BASE_URL, {
+                endpoint: fullEndpoint,
+                sessionId: sid,
+                method,
+                data,
+            });
+
+            return response.data;
+        } catch (error: any) {
+            console.error(
+                "Session request error:",
+                error.response?.data || error.message,
+            );
+
+            // If session expired, clear it
+            if (error.response?.status === 401) {
+                this.sessionId = null;
+                if (Platform.OS === "web") {
+                    localStorage.removeItem("intra_session_id");
+                }
             }
 
             throw error;
@@ -489,6 +623,111 @@ class IntraApiService {
      */
     async isAuthenticated(): Promise<boolean> {
         return await intraAuth.isAuthenticated();
+    }
+
+    /**
+     * Get RDV registrations for an event
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/rdv?format=json
+     */
+    async getRdvRegistrations(event: IIntraEvent): Promise<any> {
+        try {
+            const codeActi = event.codeacti.startsWith("acti-")
+                ? event.codeacti
+                : `acti-${event.codeacti}`;
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/rdv`;
+
+            console.log("[IntraApi] Fetching RDV registrations:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ RDV data received");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "Get RDV registrations error:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch RDV registrations");
+        }
+    }
+
+    /**
+     * Extract clean project name from RDV data
+     * Handles formats like "[B1][MUL]  MyRadar" -> "myradar"
+     */
+    extractProjectNameFromRdv(rdvData: any): string | null {
+        if (!rdvData || !rdvData.project || !rdvData.project.title) {
+            return null;
+        }
+
+        const projectTitle = rdvData.project.title;
+        console.log(
+            "[IntraApi] Extracting project name from title:",
+            projectTitle,
+        );
+
+        // Remove all bracket content and trim
+        // Handles: "[B1][MUL]  MyRadar" -> "MyRadar"
+        let cleanName = projectTitle.replace(/\[[^\]]*\]/g, "").trim();
+
+        // Convert to lowercase and remove spaces/special chars and underscores
+        cleanName = cleanName.toLowerCase().replace(/[\s_]+/g, "");
+
+        console.log("[IntraApi] ✓ Extracted clean project name:", cleanName);
+        return cleanName;
+    }
+
+    /**
+     * Get project information for an activity
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/project?format=json
+     */
+    async getProjectInfo(event: IIntraEvent): Promise<any> {
+        try {
+            const activityName = event.codeacti.startsWith("acti-")
+                ? event.codeacti
+                : `acti-${event.codeacti}`;
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${activityName}/project`;
+
+            console.log("[IntraApi] Fetching project info:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ Project data received:", data?.title);
+            return data;
+        } catch (error: any) {
+            console.error(
+                "Get project info error:",
+                error.response?.data || error.message,
+            );
+            // Return null if project not found (some activities don't have projects)
+            if (error.response?.status === 404) {
+                console.warn("[IntraApi] Project not found for activity");
+                return null;
+            }
+            throw new Error("Failed to fetch project information");
+        }
+    }
+
+    /**
+     * Get activity details
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}?format=json
+     */
+    async getActivityDetails(event: IIntraEvent): Promise<any> {
+        try {
+            const codeActi = event.codeacti.startsWith("acti-")
+                ? event.codeacti
+                : `acti-${event.codeacti}`;
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}`;
+
+            console.log("[IntraApi] Fetching activity details:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ Activity data received");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "Get activity details error:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch activity details");
+        }
     }
 }
 

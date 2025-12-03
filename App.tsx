@@ -68,20 +68,20 @@ function AppNavigator() {
             <BaseToast
                 {...props}
                 style={{
-                    borderLeftColor: '#10b981',
-                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                    borderLeftColor: "#10b981",
+                    backgroundColor: isDark ? "#1f2937" : "#ffffff",
                 }}
                 contentContainerStyle={{ paddingHorizontal: 15 }}
                 text1Style={{
                     fontSize: 15,
-                    fontWeight: '600',
-                    fontFamily: 'IBMPlexSansBold',
-                    color: isDark ? '#ffffff' : '#111827',
+                    fontWeight: "600",
+                    fontFamily: "IBMPlexSansBold",
+                    color: isDark ? "#ffffff" : "#111827",
                 }}
                 text2Style={{
                     fontSize: 13,
-                    fontFamily: 'IBMPlexSans',
-                    color: isDark ? '#d1d5db' : '#6b7280',
+                    fontFamily: "IBMPlexSans",
+                    color: isDark ? "#d1d5db" : "#6b7280",
                 }}
             />
         ),
@@ -89,19 +89,19 @@ function AppNavigator() {
             <ErrorToast
                 {...props}
                 style={{
-                    borderLeftColor: '#ef4444',
-                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                    borderLeftColor: "#ef4444",
+                    backgroundColor: isDark ? "#1f2937" : "#ffffff",
                 }}
                 text1Style={{
                     fontSize: 15,
-                    fontWeight: '600',
-                    fontFamily: 'IBMPlexSansBold',
-                    color: isDark ? '#ffffff' : '#111827',
+                    fontWeight: "600",
+                    fontFamily: "IBMPlexSansBold",
+                    color: isDark ? "#ffffff" : "#111827",
                 }}
                 text2Style={{
                     fontSize: 13,
-                    fontFamily: 'IBMPlexSans',
-                    color: isDark ? '#d1d5db' : '#6b7280',
+                    fontFamily: "IBMPlexSans",
+                    color: isDark ? "#d1d5db" : "#6b7280",
                 }}
             />
         ),
@@ -109,20 +109,20 @@ function AppNavigator() {
             <BaseToast
                 {...props}
                 style={{
-                    borderLeftColor: '#3b82f6',
-                    backgroundColor: isDark ? '#1f2937' : '#ffffff',
+                    borderLeftColor: "#3b82f6",
+                    backgroundColor: isDark ? "#1f2937" : "#ffffff",
                 }}
                 contentContainerStyle={{ paddingHorizontal: 15 }}
                 text1Style={{
                     fontSize: 15,
-                    fontWeight: '600',
-                    fontFamily: 'IBMPlexSansBold',
-                    color: isDark ? '#ffffff' : '#111827',
+                    fontWeight: "600",
+                    fontFamily: "IBMPlexSansBold",
+                    color: isDark ? "#ffffff" : "#111827",
                 }}
                 text2Style={{
                     fontSize: 13,
-                    fontFamily: 'IBMPlexSans',
-                    color: isDark ? '#d1d5db' : '#6b7280',
+                    fontFamily: "IBMPlexSans",
+                    color: isDark ? "#d1d5db" : "#6b7280",
                 }}
             />
         ),

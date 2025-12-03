@@ -53,6 +53,7 @@ type RootStackParamList = {
     Login: undefined;
     Activities: undefined;
     Presence: { event?: IIntraEvent };
+    RdvDetails: { event: IIntraEvent };
     Settings: undefined;
 };
 
@@ -104,7 +105,9 @@ export default function ActivitiesScreen() {
                                     Toast.show({
                                         type: "error",
                                         text1: "Error",
-                                        text2: authError.message || "Failed to authenticate",
+                                        text2:
+                                            authError.message ||
+                                            "Failed to authenticate",
                                         position: "top",
                                     });
                                     handleLogout();
@@ -342,10 +345,14 @@ export default function ActivitiesScreen() {
                                     style={{ backgroundColor: bgColor }}
                                     className="mb-3 overflow-hidden shadow-sm"
                                     onPress={() => {
-                                        if (event.type_code === "rdv") {
-                                            navigation.navigate("RdvDetails", { event });
+                                        if (event.type_title === "Follow-up") {
+                                            navigation.navigate("RdvDetails", {
+                                                event,
+                                            });
                                         } else if (
-                                            event.rights?.includes("force_register") !== false
+                                            event.rights?.includes(
+                                                "force_register",
+                                            ) !== false
                                         ) {
                                             handleSelectActivity(event);
                                         }
@@ -442,6 +449,36 @@ export default function ActivitiesScreen() {
                                                                 size={12}
                                                             />{" "}
                                                             Can mark presence
+                                                        </Text>
+                                                    </View>
+                                                ) : event.rights &&
+                                                  event.type_code !==
+                                                      "Follow-up" &&
+                                                  Array.isArray(event.rights) &&
+                                                  event.rights.length > 0 &&
+                                                  event.rights.includes(
+                                                      "force_register",
+                                                  ) &&
+                                                  (event.rights.includes(
+                                                      "prof_inst",
+                                                  ) ||
+                                                      event.rights.includes(
+                                                          "assistant",
+                                                      )) ? (
+                                                    <View className="mt-2 flex-shrink self-start bg-green-500/20 px-3 py-1">
+                                                        <Text
+                                                            className="text-xs text-green-200"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "IBMPlexSansSemiBold",
+                                                            }}
+                                                        >
+                                                            <AntDesign
+                                                                name="check"
+                                                                color="#86efac"
+                                                                size={12}
+                                                            />{" "}
+                                                            Mark students
                                                         </Text>
                                                     </View>
                                                 ) : (
