@@ -340,21 +340,15 @@ export default function ActivitiesScreen() {
                                 <TouchableOpacity
                                     key={`${event.codeevent}-${index}`}
                                     style={{ backgroundColor: bgColor }}
-                                    disabled={
-                                        event.type_code === "rdv" ||
-                                        event.rights?.includes(
-                                            "force_register",
-                                        ) === false
-                                    }
                                     className="mb-3 overflow-hidden shadow-sm"
                                     onPress={() => {
-                                        if (
-                                            event.type_code !== "rdv" &&
-                                            event.rights?.includes(
-                                                "force_register",
-                                            ) !== false
-                                        )
+                                        if (event.type_code === "rdv") {
+                                            navigation.navigate("RdvDetails", { event });
+                                        } else if (
+                                            event.rights?.includes("force_register") !== false
+                                        ) {
                                             handleSelectActivity(event);
+                                        }
                                     }}
                                 >
                                     <View className="p-4">
