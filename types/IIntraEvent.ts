@@ -43,4 +43,12 @@ export interface IIntraEvent {
     } | null;
     rights?: string[] | null;
     is_rdv?: string;
+    type_title?: string;
+    prof_inst?: {
+        login: string;
+        picture: string;
+        title: string;
+        type: string;
+    }[];
+    total_students_registered?: number;
 }
