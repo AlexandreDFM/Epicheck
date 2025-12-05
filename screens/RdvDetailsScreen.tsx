@@ -240,7 +240,7 @@ export default function RdvDetailsScreen() {
         }
 
         return (
-            <View className="border-tertiary/20 mb-3 border border-white bg-primary-dark p-4 shadow-sm">
+            <View className="border-tertiary/20 mb-3 border border-white bg-primary-dark p-4">
                 <View className="flex-row items-center">
                     {/* Avatar */}
                     <View className="mr-4">
@@ -473,7 +473,7 @@ export default function RdvDetailsScreen() {
                 </View>
             ) : (
                 <View className="flex-1 p-4">
-                    <View className="mb-1 border border-white p-4 shadow-sm">
+                    <View className="mb-1 border border-white p-4">
                         <Text className="text-sm text-text-tertiary">
                             <Text className="font-bold text-primary">
                                 {registrations.length}

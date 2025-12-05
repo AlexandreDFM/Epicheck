@@ -343,7 +343,7 @@ export default function ActivitiesScreen() {
                                 <TouchableOpacity
                                     key={`${event.codeevent}-${index}`}
                                     style={{ backgroundColor: bgColor }}
-                                    className="mb-3 overflow-hidden shadow-sm"
+                                    className="mb-3 overflow-hidden"
                                     onPress={() => {
                                         if (event.type_title === "Follow-up") {
                                             navigation.navigate("RdvDetails", {

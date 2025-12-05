@@ -249,7 +249,7 @@ export default function SettingsScreen() {
 
             <ScrollView className="flex-1">
                 {/* Theme Section */}
-                <View className="mx-4 mb-2 mt-4 border border-card-border shadow-sm">
+                <View className="mx-4 mb-2 mt-4 border border-card-border">
                     <View className="border-b border-border p-4">
                         <Text
                             className="text-xl text-primary"
@@ -321,7 +321,7 @@ export default function SettingsScreen() {
                 </View>
 
                 {/* Sounds Section */}
-                <View className="mx-4 my-2 border border-card-border shadow-sm">
+                <View className="mx-4 my-2 border border-card-border">
                     <View className="border-b border-border p-4">
                         <Text
                             className="text-xl text-primary"
@@ -461,7 +461,7 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
-                <View className="mx-4 my-2 border border-card-border shadow-sm">
+                <View className="mx-4 my-2 border border-card-border">
                     <View
                         // onPress={() => setShowDevSection(!showDevSection)}
                         className="border-b border-border p-4"

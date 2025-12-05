@@ -27,7 +27,11 @@
 
 export function useOpenIntranet() {
     const openIntranet = () => {
-        window.open("https://intra.epitech.eu", "_blank", "width=1000,height=800,scrollbars=yes");
+        window.open(
+            "https://intra.epitech.eu",
+            "_blank",
+            "width=1000,height=800,scrollbars=yes",
+        );
     };
 
     return { openIntranet };
