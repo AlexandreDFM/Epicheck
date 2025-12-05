@@ -118,13 +118,13 @@ npm run android
 1. **Build and run with Docker**:
 
     ```bash
-    docker build -f docker-compose.dev.yml .
+    docker compose -f docker-compose.dev.yml -p epicheck-dev build
     ```
 
 2. **Run the container**:
 
     ```bash
-    docker compose -f docker-compose.dev.yml up -d
+    docker compose -f docker-compose.dev.yml -p epicheck-dev up -d
     ```
 
 ##### Prod Mode
@@ -132,13 +132,13 @@ npm run android
 1. **Build and run with Docker**:
 
     ```bash
-    docker build -t epicheck-proxy-prod -f docker-compose.yml .
+    docker compose -f docker-compose.yml -p epicheck-prod build
     ```
 
 2. **Run the container**:
 
     ```bash
-    docker compose -f docker-compose.yml up -d
+    docker compose -f docker-compose.yml -p epicheck-prod up -d
     ```
 
 📚 **Full web setup guide:** See [`docs/WEB_QUICKSTART.md`](docs/WEB_QUICKSTART.md)
