@@ -195,6 +195,7 @@ jobs:
                     --parallel \
                     --max-workers=4 \
                     --build-cache \
+                    --warning-mode all \
                     --info 2>&1 | tee build.log
 
                   # Check if build succeeded
