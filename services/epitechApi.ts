@@ -313,6 +313,46 @@ class EpitechApiService {
     }
 
     /**
+     * Get activities for a specific date from Intra
+     */
+    async getActivitiesForDate(date: Date): Promise<IIntraEvent[]> {
+        try {
+            // Get current user to get location
+            const user = await intraApi.getCurrentUser();
+
+            if (!user.location) {
+                throw new Error("User location not found");
+            }
+
+            // Get date in YYYY-MM-DD format (padded with zeros)
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            const dateStr = `${year}-${month}-${day}`;
+
+            console.log(
+                "Fetching activities for date:",
+                dateStr,
+                "location:",
+                user.location,
+            );
+
+            const activities = await intraApi.getActivities(
+                user.location,
+                dateStr,
+            );
+
+            return activities;
+        } catch (error: any) {
+            console.error(
+                "Get activities error:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch activities");
+        }
+    }
+
+    /**
      * Get today's activities from Intra
      */
     async getTodayActivities(): Promise<IIntraEvent[]> {

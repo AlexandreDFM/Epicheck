@@ -60,12 +60,12 @@ type RootStackParamList = {
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ActivitiesScreen() {
-    const hasLoadedRef = useRef(false);
     const [loading, setLoading] = useState(true);
     const navigation = useNavigation<NavigationProp>();
     const [refreshing, setRefreshing] = useState(false);
     const { underscore, color } = useColoredUnderscore();
     const [activities, setActivities] = useState<IIntraEvent[]>([]);
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     const eventColors: { [key: string]: string } = {
         exam: "#dd9473",
@@ -76,10 +76,11 @@ export default function ActivitiesScreen() {
         rdv: "#f97316", // Orange for RDV/appointments
     };
 
-    const loadActivities = async () => {
+    const loadActivities = async (date: Date = selectedDate) => {
         try {
-            console.log("Loading today's activities...");
-            const data = await epitechApi.getTodayActivities();
+            console.log("Loading activities...");
+            setLoading(true);
+            const data = await epitechApi.getActivitiesForDate(date);
             console.log("Activities loaded:", data.length, "events");
             setActivities(data);
         } catch (error: any) {
@@ -100,7 +101,7 @@ export default function ActivitiesScreen() {
                             onPress: async () => {
                                 try {
                                     await intraApi.authenticate();
-                                    loadActivities();
+                                    loadActivities(date);
                                 } catch (authError: any) {
                                     Toast.show({
                                         type: "error",
@@ -136,24 +137,28 @@ export default function ActivitiesScreen() {
     };
 
     useEffect(() => {
-        if (hasLoadedRef.current) {
-            return;
-        }
-        hasLoadedRef.current = true;
-        loadActivities();
-
-        return () => {
-            hasLoadedRef.current = false;
-        };
-    }, []);
+        loadActivities(selectedDate);
+    }, [selectedDate]);
 
     const handleRefresh = () => {
         setRefreshing(true);
-        loadActivities();
+        loadActivities(selectedDate);
     };
 
     const handleSelectActivity = (event: IIntraEvent) => {
         navigation.navigate("Presence", { event });
+    };
+
+    const handlePrevDay = () => {
+        const newDate = new Date(selectedDate);
+        newDate.setDate(selectedDate.getDate() - 1);
+        setSelectedDate(newDate);
+    };
+
+    const handleNextDay = () => {
+        const newDate = new Date(selectedDate);
+        newDate.setDate(selectedDate.getDate() + 1);
+        setSelectedDate(newDate);
     };
 
     const handleLogout = () => {
@@ -238,20 +243,42 @@ export default function ActivitiesScreen() {
                                 className="text-2xl text-white"
                                 style={{ fontFamily: "Anton" }}
                             >
-                                TODAY&apos;S ACTIVITIES
+                                ACTIVITIES
                                 <Text style={{ color }}>{underscore}</Text>
                             </Text>
-                            <Text
-                                className="text-xs text-white/80"
-                                style={{ fontFamily: "IBMPlexSans" }}
-                            >
-                                {new Date().toLocaleDateString("en-US", {
-                                    weekday: "long",
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                })}
-                            </Text>
+                            <View className="mt-1 flex-row items-center">
+                                <TouchableOpacity
+                                    onPress={handlePrevDay}
+                                    className="mr-3 p-1"
+                                >
+                                    <AntDesign
+                                        name="left"
+                                        size={16}
+                                        color="white"
+                                    />
+                                </TouchableOpacity>
+                                <Text
+                                    className="text-xs text-white/80"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                >
+                                    {selectedDate.toLocaleDateString("en-US", {
+                                        weekday: "long",
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                    })}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={handleNextDay}
+                                    className="ml-3 p-1"
+                                >
+                                    <AntDesign
+                                        name="right"
+                                        size={16}
+                                        color="white"
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                     <View className="flex-row gap-2">
@@ -305,7 +332,7 @@ export default function ActivitiesScreen() {
                             className="text-lg text-text-primary"
                             style={{ fontFamily: "Anton" }}
                         >
-                            No activities today
+                            No activities found
                         </Text>
                         <Text
                             className="mt-2 text-sm text-text-secondary"
