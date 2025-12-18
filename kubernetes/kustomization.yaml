@@ -34,6 +34,6 @@ configMapGenerator:
 # Replicas overlay
 replicas:
     - name: epicheck-app
-      count: 3
+      count: 1
     - name: epicheck-proxy
-      count: 2
+      count: 1

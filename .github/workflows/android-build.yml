@@ -38,6 +38,11 @@ on:
             - main
     workflow_dispatch: {}
 
+permissions:
+    contents: write
+    actions: write
+    packages: write
+
 jobs:
     build-android-apk:
         name: Build Android APK

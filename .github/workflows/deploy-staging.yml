@@ -106,6 +106,15 @@ jobs:
           kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
           kubectl label namespace ${{ env.NAMESPACE }} environment=staging --overwrite
 
+      - name: Create/Update Image Pull Secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --docker-server=${{ env.REGISTRY }} \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --namespace ${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Create/Update Staging Secrets
         run: |
           kubectl create secret generic epicheck-secrets \
