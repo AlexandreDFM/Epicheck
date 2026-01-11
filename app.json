@@ -17,14 +17,10 @@
         },
         "ios": {
             "supportsTablet": true,
-            "bundleIdentifier": "com.epicheck.app",
+            "bundleIdentifier": "com.hownee.epicheck.app",
             "userInterfaceStyle": "automatic",
             "infoPlist": {
-                "NFCReaderUsageDescription": "This app requires NFC to scan student cards for presence checking.",
                 "NSCameraUsageDescription": "This app requires camera access to scan QR codes for presence checking."
-            },
-            "entitlements": {
-                "com.apple.developer.nfc.readersession.formats": ["NDEF", "TAG"]
             }
         },
         "android": {
@@ -37,7 +33,7 @@
                 }
             },
             "userInterfaceStyle": "automatic",
-            "package": "com.epicheck.app",
+            "package": "com.hownee.epicheck.app",
             "versionCode": 1,
             "permissions": [
                 "android.permission.CAMERA",
