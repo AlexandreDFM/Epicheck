@@ -78,7 +78,7 @@ jobs:
               id: node-modules-cache
               with:
                   path: node_modules
-                  key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
+                  key: ${{ runner.os }}-node-modules-${{ hashFiles('pnpm-lock.yaml') }}
                   restore-keys: |
                       ${{ runner.os }}-node-modules-
 
@@ -147,7 +147,7 @@ jobs:
                       !android/app/build
                       !android/build
                       !android/.gradle
-                  key: ${{ runner.os }}-expo-prebuild-${{ hashFiles('package-lock.json', 'app.json') }}
+                  key: ${{ runner.os }}-expo-prebuild-${{ hashFiles('pnpm-lock.yaml', 'app.json') }}
                   restore-keys: |
                       ${{ runner.os }}-expo-prebuild-
 
