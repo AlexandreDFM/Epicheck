@@ -352,6 +352,30 @@ class IntraApiService {
     }
 
     /**
+     * Get registered students for a module instance
+     * Endpoint: /module/{year}/{module}/{instance}/registered?format=json
+     */
+    async getModuleRegisteredStudents(
+        scolaryear: string,
+        codemodule: string,
+        codeinstance: string,
+    ): Promise<IIntraStudent[]> {
+        try {
+            const data = await this.makeRequest(
+                `/module/${scolaryear}/${codemodule}/${codeinstance}/registered`,
+                "GET",
+            );
+            return data;
+        } catch (error: any) {
+            console.error(
+                "Get module registered students error:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch module registered students");
+        }
+    }
+
+    /**
      * Get registered students for an event
      * Endpoint: /module/{year}/{module}/{instance}/{acti}/{event}/registered?format=json
      */
@@ -605,6 +629,163 @@ class IntraApiService {
                 error.response?.data || error.message,
             );
             throw new Error("Failed to fetch activity details");
+        }
+    }
+
+    /**
+     * Get the list of student that can be registered to an event by checking with module registered students
+     * Endpoint: /module/{year}/{module}/{instance}/registered
+     * Method: GET
+     * Returns list of students that can be registered
+     * Type :  object
+     * The response is an array of objects with the following structure:
+     * [{
+     *      "course_code": "bachelor/classic",
+     *      "credits": 0,
+     *      "cycle": "bachelor",
+     *      "date_ins": "2026-01-29 22:11:45",
+     *      "flags": [],
+     *      "grade": "-",
+     *      "location": null,
+     *      "login": "student.login@school.domain",
+     *      "picture": "/file/userprofil/student.login@school.domain.bmp",
+     *      "promo": 2028,
+     *      "semester": "B5",
+     *      "title": "Student Name"
+     * }]
+     *
+     */
+    async getRegistrableStudents(event: IIntraEvent): Promise<IIntraStudent[]> {
+        try {
+            const data = await this.makeRequest(
+                `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/registered?format=json`,
+                "GET",
+            );
+            if (__DEV__) {
+                console.log("Registrable students data:", data);
+            }
+            return data;
+        } catch (error: any) {
+            console.error(
+                "Get registrable students error:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch registrable students");
+        }
+    }
+
+    /**
+     * Force register a student for a module
+     * Endpoint: /module/{year}/{module}/{instance}/savegrade
+     * Method: POST
+     * note=%5B%7B%22login%22%3A%22nicolas.toro%40epitech.eu%22%7D%5D&force=false
+     * Body: items[0][login]=student.login false
+     */
+    async forceRegisterStudentModule(
+        email: string,
+        event: IIntraEvent,
+    ): Promise<void> {
+        try {
+            const noteArray = [{ login: email }];
+            const noteParam =
+                encodeURIComponent("note") +
+                "=" +
+                encodeURIComponent(JSON.stringify(noteArray));
+            const forceParam =
+                encodeURIComponent("force") + "=" + encodeURIComponent("false");
+            const body = `${noteParam}&${forceParam}`;
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/savegrade`;
+
+            if (__DEV__) {
+                console.log("Forcing registration on Intranet:");
+                console.log("Endpoint:", endpoint);
+                console.log("Raw body:", body);
+                console.log("Decoded body:", decodeURIComponent(body));
+            }
+
+            try {
+                await this.makeRequest(endpoint, "POST", body);
+            } catch (postError: any) {
+                if (__DEV__) {
+                    console.error(
+                        "Error during force registration POST:",
+                        postError.response?.data || postError.message,
+                    );
+                }
+                throw postError;
+            }
+        } catch (error: any) {
+            if (__DEV__) {
+                console.error(
+                    "Module : Force register student error:",
+                    error.response?.data || error.message,
+                );
+            }
+            throw new Error(
+                error.response?.data?.message ||
+                    error.message ||
+                    "Failed to force register student",
+            );
+        }
+    }
+
+    /**
+     * Force register a student for an event
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/{event}/registered?format=json
+     * Method: POST
+     * Body: items[0][login]=student.login
+     */
+    async forceRegisterStudentEvent(
+        event: IIntraEvent,
+        studentLogin: string,
+    ): Promise<void> {
+        try {
+            const body =
+                encodeURIComponent(`items[0][login]`) +
+                "=" +
+                encodeURIComponent(studentLogin);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${event.codeacti}/${event.codeevent}/updateregistered`;
+
+            const data = await this.getRegistrableStudents(event);
+
+            if (!data.find((student) => student.login === studentLogin)) {
+                throw new Error(
+                    `Student with login ${studentLogin} cannot be registered for this event.`,
+                );
+            }
+
+            if (__DEV__) {
+                console.log("Forcing registration for activity on Intranet:");
+                console.log("Endpoint:", endpoint);
+                console.log("Raw body:", body);
+                console.log("Decoded body:", decodeURIComponent(body));
+            }
+
+            try {
+                await this.makeRequest(endpoint, "POST", body);
+            } catch (postError: any) {
+                if (__DEV__) {
+                    console.error(
+                        "Error during force registration POST:",
+                        postError.response?.data || postError.message,
+                    );
+                }
+                throw postError;
+            }
+        } catch (error: any) {
+            if (__DEV__) {
+                console.error(
+                    "Event : Force register student error:",
+                    error.response?.data || error.message,
+                );
+            }
+            throw new Error(
+                error.response?.data?.message ||
+                    error.message ||
+                    "Failed to force register student",
+            );
         }
     }
 }

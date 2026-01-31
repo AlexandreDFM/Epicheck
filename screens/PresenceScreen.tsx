@@ -73,6 +73,7 @@ export default function PresenceScreen() {
     const navigation = useNavigation<NavigationProp>();
     const { underscore, color } = useColoredUnderscore();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isRegisterMode, setIsRegisterMode] = useState(false);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
 
@@ -97,6 +98,26 @@ export default function PresenceScreen() {
         };
     }, []);
 
+    const handleRegisterModeToggle = () => {
+        if (isRegisterMode) {
+            setIsRegisterMode(!isRegisterMode);
+            return;
+        }
+        Alert.alert(
+            "Confirm Mode Switch",
+            "Are you sure you want to switch to Register Mode? \n" +
+                "In Register Mode, students not registered for the activity " +
+                "will be automatically registered to the module and to the activity.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Confirm",
+                    onPress: () => setIsRegisterMode(!isRegisterMode),
+                },
+            ],
+        );
+    };
+
     const handleScan = async (email: string) => {
         if (isProcessing) return;
 
@@ -113,6 +134,18 @@ export default function PresenceScreen() {
                 throw new Error(
                     "No event selected. Please go back and select an activity first.",
                 );
+            }
+
+            // Register student via API if in register mode
+            const checking = await epitechApi.isStudentRegisteredOnModule(
+                email,
+                event,
+            );
+            if (isRegisterMode && !checking) {
+                await epitechApi.forceRegisterStudentModule(email, event);
+                await epitechApi.forceRegisterStudentEvent(email, event);
+            } else if (isRegisterMode && checking) {
+                await epitechApi.forceRegisterStudentEvent(email, event);
             }
 
             // Mark presence via API with event context
@@ -176,6 +209,7 @@ export default function PresenceScreen() {
     };
 
     const clearHistory = () => {
+        setScannedStudents([]);
         Toast.show({
             type: "info",
             text1: "Scan history cleared",
@@ -235,6 +269,20 @@ export default function PresenceScreen() {
                             )}
                         </View>
                     </View>
+                    <TouchableOpacity
+                        onPress={() => handleRegisterModeToggle()}
+                        className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
+                    >
+                        {isRegisterMode ? (
+                            <Ionicons name="person" size={24} color="rgba(50,255,50,0.75)" />
+                        ) : (
+                            <Ionicons
+                                name="people-circle-outline"
+                                size={24}
+                                color="rgba(255,50,0,0.76)"
+                            />
+                        )}
+                    </TouchableOpacity>
                     <TouchableOpacity
                         onPress={handleLogout}
                         className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
@@ -356,7 +404,7 @@ export default function PresenceScreen() {
                     )}
                 </View>
                 <View className="mx-12 border-b border-primary" />
-                <ScrollView className="px-4 py-2">
+                <ScrollView className="h-auto max-h-32 px-4 py-2">
                     {scannedStudents.length === 0 ? (
                         <View className="items-center py-8">
                             <Text

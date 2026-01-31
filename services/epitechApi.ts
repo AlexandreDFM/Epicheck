@@ -251,6 +251,189 @@ class EpitechApiService {
     }
 
     /**
+     * Check if a student is registered on a specific module
+     */
+    async isStudentRegisteredOnModule(
+        studentEmail: string,
+        event: IIntraEvent,
+    ): Promise<boolean> {
+        try {
+            const login = intraApi.getLoginFromEmail(studentEmail);
+
+            const registeredStudents =
+                await intraApi.getModuleRegisteredStudents(
+                    event.scolaryear,
+                    event.codemodule,
+                    event.codeinstance,
+                );
+
+            if (__DEV__) {
+                console.log("Registered Students for module:", registeredStudents);
+            }
+
+            const registeredStudentsList = registeredStudents;
+
+            const student = registeredStudentsList.find((s) => {
+                return (
+                    s.login === login ||
+                    s.login === studentEmail ||
+                    s.email === studentEmail ||
+                    s.login === `${login}@epitech.eu` ||
+                    s.login?.split("@")[0] === login
+                );
+            });
+
+            return !!student;
+        } catch (error: any) {
+            console.error(
+                "Check student registration to module error:",
+                error.response?.data || error.message,
+            );
+            throw new Error(
+                error.response?.data?.message ||
+                    error.message ||
+                    "Failed to check student registration to module",
+            );
+        }
+    }
+
+    /**
+     * Check if a student is registered on a specific event
+     */
+    async isStudentRegisteredToTheEvent(
+        studentEmail: string,
+        event: IIntraEvent,
+    ): Promise<boolean> {
+        try {
+            const login = intraApi.getLoginFromEmail(studentEmail);
+
+            const registeredStudents =
+                await intraApi.getRegisteredStudents(event);
+
+            if (__DEV__) {
+                console.log("Type :", typeof registeredStudents);
+                console.log("Registered Students :", registeredStudents);
+            }
+
+            const student = registeredStudents.find((s) => {
+                return (
+                    s.login === login ||
+                    s.login === studentEmail ||
+                    s.email === studentEmail ||
+                    s.login === `${login}@epitech.eu` ||
+                    s.login?.split("@")[0] === login
+                );
+            });
+
+            return !!student;
+        } catch (error: any) {
+            if (__DEV__) {
+                console.error(
+                    "Check student registration error:",
+                    error.response?.data || error.message,
+                );
+            }
+            throw new Error(
+                error.response?.data?.message ||
+                    error.message ||
+                    "Failed to check student registration",
+            );
+        }
+    }
+
+    /**
+     * Force register a student for a module using Intranet API
+     */
+    async forceRegisterStudentModule(
+        email: string,
+        event: IIntraEvent,
+    ): Promise<any> {
+        try {
+            if (__DEV__) {
+                console.log("Registering student for:", email);
+                console.log("Event:", event ? event.acti_title : "No event");
+                console.log(
+                    "📤 Calling intraApi.forceRegisterStudent with login:",
+                    email,
+                );
+            }
+
+            await intraApi.forceRegisterStudentModule(email, event);
+
+            if (__DEV__) {
+                console.log(`✓ Registered ${email} for event: ${event.acti_title}`);
+            }
+
+            return {
+                success: true,
+                studentEmail: email,
+                login: email,
+                event: event.acti_title,
+                timestamp: new Date().toISOString(),
+            };
+        } catch (error: any) {
+            if (__DEV__) {
+                console.error(
+                    "Register student error:",
+                    error.response?.data || error.message,
+                );
+            }
+            throw new Error(
+                error.response?.data?.message ||
+                    error.message ||
+                    "Failed to register student",
+            );
+        }
+    }
+
+    /**
+     * Force register a student for an event using Intranet API
+     */
+    async forceRegisterStudentEvent(
+        studentEmail: string,
+        event: IIntraEvent,
+    ): Promise<any> {
+        try {
+            if (__DEV__) {
+                console.log("Registering student for:", studentEmail);
+                console.log("Event:", event ? event.acti_title : "No event");
+                console.log(
+                    "📤 Calling intraApi.forceRegisterStudent with login:",
+                    studentEmail,
+                );
+            }
+
+            await intraApi.forceRegisterStudentEvent(event, studentEmail);
+
+            if (__DEV__) {
+                console.log(
+                    `✓ Registered ${studentEmail} for event: ${event.acti_title}`,
+                );
+            }
+
+            return {
+                success: true,
+                studentEmail,
+                login: studentEmail,
+                event: event.acti_title,
+                timestamp: new Date().toISOString(),
+            };
+        } catch (error: any) {
+            if (__DEV__) {
+                console.error(
+                    "Register student error:",
+                    error.response?.data || error.message,
+                );
+            }
+            throw new Error(
+                error.response?.data?.message ||
+                    error.message ||
+                    "Failed to register student",
+            );
+        }
+    }
+
+    /**
      * Get student information by email
      */
     async getStudentByEmail(email: string): Promise<any> {
