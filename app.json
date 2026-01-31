@@ -8,7 +8,6 @@
         "userInterfaceStyle": "automatic",
         "splash": {
             "image": "./assets/splash-icon.png",
-            "resizeMode": "native",
             "backgroundColor": "#232323",
             "dark": {
                 "image": "./assets/splash-icon.png",
@@ -16,6 +15,7 @@
             }
         },
         "ios": {
+            "buildNumber": "2",
             "supportsTablet": true,
             "bundleIdentifier": "com.hownee.epicheck.app",
             "userInterfaceStyle": "automatic",
