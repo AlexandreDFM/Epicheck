@@ -45,10 +45,10 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-    name: epicheck-tls-cert
+    name: epicheck-tls
     namespace: epicheck
 spec:
-    secretName: epicheck-tls-cert
+    secretName: epicheck-tls
     issuerRef:
         name: letsencrypt-prod
         kind: ClusterIssuer

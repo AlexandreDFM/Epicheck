@@ -186,6 +186,17 @@ jobs:
         run: |
           echo "🔐 Setting up SSL certificates with cert-manager..."
           kubectl apply -f kubernetes/cert-issuer.yaml || echo "⚠️ cert-manager may not be installed. SSL certificates won't be automatically managed."
+          
+          # Clean up any failed certificate attempts to allow fresh start
+          echo "🧹 Cleaning up any failed certificate attempts..."
+          kubectl delete challenges --all -n epicheck 2>/dev/null || true
+          
+          # Check if old certificate secrets exist and are invalid
+          if kubectl get secret epicheck-tls-cert -n epicheck 2>/dev/null; then
+            echo "🗑️ Removing old epicheck-tls-cert secret..."
+            kubectl delete secret epicheck-tls-cert -n epicheck 2>/dev/null || true
+            kubectl delete certificate epicheck-tls-cert -n epicheck 2>/dev/null || true
+          fi
 
       - name: Check and clean old deployments
         run: |
@@ -204,7 +215,11 @@ jobs:
         run: |
           kubectl apply -f kubernetes/deployment.yaml --namespace epicheck
           kubectl apply -f kubernetes/service.yaml --namespace epicheck
+          
+          # Apply ingress with ACME challenge support
+          echo "🌐 Applying ingress configuration with ACME challenge support..."
           kubectl apply -f kubernetes/ingress.yaml --namespace epicheck
+          
           kubectl apply -f kubernetes/hpa.yaml --namespace epicheck
 
       - name: Update deployment image tags
@@ -245,8 +260,17 @@ jobs:
           echo "=== Ingress ==="
           kubectl get ingress -n epicheck
           echo ""
+          echo "=== IngressRoutes ==="
+          kubectl get ingressroute -n epicheck 2>/dev/null || echo "No Traefik IngressRoutes found"
+          echo ""
           echo "=== HPA ==="
           kubectl get hpa -n epicheck
+          echo ""
+          echo "=== SSL Certificates ==="
+          kubectl get certificate -n epicheck
+          echo ""
+          echo "🔐 Certificate details:"
+          kubectl describe certificate epicheck-tls -n epicheck | grep -A 5 "Status:" || echo "Certificate not yet issued"
 
       - name: Run smoke tests
         run: |
