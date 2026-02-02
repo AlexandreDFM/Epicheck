@@ -25,8 +25,8 @@
  * THE SOFTWARE.
  */
 
-import { Text, View } from "react-native";
-import { useState, useEffect } from "react";
+import { Text, View, Platform, Pressable } from "react-native";
+import { useState, useEffect, useCallback } from "react";
 import { CameraView, Camera, BarcodeScanningResult } from "expo-camera";
 
 interface QRScannerProps {
@@ -37,15 +37,85 @@ interface QRScannerProps {
 export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [scanned, setScanned] = useState(false);
+    const [permissionError, setPermissionError] = useState<string | null>(null);
+
+    const requestCameraPermission = useCallback(async () => {
+        try {
+            setPermissionError(null);
+            
+            if (Platform.OS === "web") {
+                // On web, we need to use the native browser API
+                // First check if we're in a secure context (HTTPS)
+                if (typeof window !== "undefined" && !window.isSecureContext) {
+                    console.error("[QRScanner] Not in secure context (HTTPS required)");
+                    setPermissionError("Camera requires HTTPS. Please access the site via https://");
+                    setHasPermission(false);
+                    return;
+                }
+
+                // Check if mediaDevices is available
+                if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+                    console.error("[QRScanner] navigator.mediaDevices not available");
+                    setPermissionError("Camera API not available in this browser");
+                    setHasPermission(false);
+                    return;
+                }
+
+                try {
+                    // Request camera permission using browser API
+                    console.log("[QRScanner] Requesting camera permission via getUserMedia...");
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "environment" } 
+                    });
+                    
+                    // Stop the stream immediately - we just needed to trigger permission
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    console.log("[QRScanner] Camera permission granted via getUserMedia");
+                    setHasPermission(true);
+                } catch (err: unknown) {
+                    const error = err as Error & { name?: string };
+                    console.error("[QRScanner] getUserMedia error:", error.name, error.message);
+                    
+                    if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+                        setPermissionError("Camera permission was denied. Please allow camera access in your browser settings.");
+                    } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+                        setPermissionError("No camera found on this device.");
+                    } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+                        setPermissionError("Camera is in use by another application.");
+                    } else if (error.name === "OverconstrainedError") {
+                        // Try again without facingMode constraint
+                        try {
+                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                            stream.getTracks().forEach(track => track.stop());
+                            setHasPermission(true);
+                            return;
+                        } catch {
+                            setPermissionError("Could not access camera with requested settings.");
+                        }
+                    } else {
+                        setPermissionError(`Camera error: ${error.message || "Unknown error"}`);
+                    }
+                    setHasPermission(false);
+                }
+            } else {
+                // Native platforms - use expo-camera
+                const { status } = await Camera.requestCameraPermissionsAsync();
+                setHasPermission(status === "granted");
+                if (status !== "granted") {
+                    setPermissionError("Camera permission was denied.");
+                }
+            }
+        } catch (err) {
+            console.error("[QRScanner] Permission request error:", err);
+            setPermissionError("Failed to request camera permission.");
+            setHasPermission(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const getCameraPermissions = async () => {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            setHasPermission(status === "granted");
-        };
-
-        getCameraPermissions();
-    }, []);
+        requestCameraPermission();
+    }, [requestCameraPermission]);
 
     useEffect(() => {
         // Reset scanned state when scanner becomes active
@@ -106,12 +176,24 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
                     Camera Access Required
                 </Text>
                 <Text
-                    className="text-center text-epitech-gray-dark"
+                    className="mb-4 text-center text-epitech-gray-dark"
                     style={{ fontFamily: "IBMPlexSans" }}
                 >
-                    Please grant camera permissions in your device settings to
-                    scan QR codes.
+                    {permissionError || "Please grant camera permissions in your device settings to scan QR codes."}
                 </Text>
+                {Platform.OS === "web" && (
+                    <Pressable
+                        onPress={requestCameraPermission}
+                        className="mt-2 rounded-lg bg-epitech-blue px-6 py-3"
+                    >
+                        <Text
+                            className="text-white"
+                            style={{ fontFamily: "IBMPlexSansSemiBold" }}
+                        >
+                            Retry Camera Access
+                        </Text>
+                    </Pressable>
+                )}
             </View>
         );
     }
