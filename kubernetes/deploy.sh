@@ -112,6 +112,10 @@ kubectl apply -f kubernetes/configmap.yaml
 echo -e "${YELLOW}Creating Secrets...${NC}"
 kubectl apply -f kubernetes/secrets.yaml
 
+# Create Certificate Issuers and Certificates
+echo -e "${YELLOW}Creating Certificate Issuers and Certificates...${NC}"
+kubectl apply -f kubernetes/cert-issuer.yaml
+
 # Deploy applications
 echo -e "${YELLOW}Deploying applications...${NC}"
 kubectl apply -f kubernetes/deployment.yaml

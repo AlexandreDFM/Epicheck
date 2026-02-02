@@ -182,6 +182,11 @@ jobs:
         run: |
           kubectl apply -f kubernetes/configmap.yaml --namespace epicheck
 
+      - name: Apply Certificate Issuers and Certificates
+        run: |
+          echo "🔐 Setting up SSL certificates with cert-manager..."
+          kubectl apply -f kubernetes/cert-issuer.yaml || echo "⚠️ cert-manager may not be installed. SSL certificates won't be automatically managed."
+
       - name: Check and clean old deployments
         run: |
           # Check if deployments exist and have wrong images
