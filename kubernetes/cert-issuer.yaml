@@ -1,0 +1,62 @@
+---
+# Let's Encrypt Staging Issuer (for testing)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+    name: letsencrypt-staging
+spec:
+    acme:
+        # The ACME server URL
+        server: https://acme-staging-v02.api.letsencrypt.org/directory
+        # Email address used for ACME registration
+        email: alexandre@alexandredfm.fr
+        # Name of a secret used to store the ACME account private key
+        privateKeySecretRef:
+            name: letsencrypt-staging
+        # Enable the HTTP-01 challenge provider
+        solvers:
+            - http01:
+                  ingress:
+                      class: traefik
+
+---
+# Let's Encrypt Production Issuer
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+    name: letsencrypt-prod
+spec:
+    acme:
+        # The ACME server URL
+        server: https://acme-v02.api.letsencrypt.org/directory
+        # Email address used for ACME registration
+        email: alexandre@alexandredfm.fr
+        # Name of a secret used to store the ACME account private key
+        privateKeySecretRef:
+            name: letsencrypt-prod
+        # Enable the HTTP-01 challenge provider
+        solvers:
+            - http01:
+                  ingress:
+                      class: traefik
+
+---
+# Certificate Resource
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+    name: epicheck-tls-all-domains
+    namespace: epicheck
+spec:
+    secretName: epicheck-tls-all-domains
+    issuerRef:
+        name: letsencrypt-prod
+        kind: ClusterIssuer
+    dnsNames:
+        - epicheck.alexandredfm.fr
+        - www.epicheck.alexandredfm.fr
+        - epicheck.nice-tek.eu
+        - www.epicheck.nice-tek.eu
+    # Certificate will be renewed automatically before expiry
+    duration: 2160h # 90 days
+    renewBefore: 360h # 15 days before expiry

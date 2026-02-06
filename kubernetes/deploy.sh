@@ -59,7 +59,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}Registry: ${DOCKER_REGISTRY}${NC}"
     echo -e "${YELLOW}Tag: ${IMAGE_TAG}${NC}"
     echo ""
-    
+
     # Check if logged in to registry
     if [[ $DOCKER_REGISTRY == ghcr.io* ]]; then
         echo -e "${YELLOW}Note: Make sure you're logged in to GitHub Container Registry${NC}"
@@ -76,7 +76,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Build main app
     echo -e "${YELLOW}Building epicheck:${IMAGE_TAG}${NC}"
     docker build -t ${DOCKER_REGISTRY}/epicheck:${IMAGE_TAG} .
-    
+
     echo -e "${YELLOW}Pushing epicheck:${IMAGE_TAG}${NC}"
     docker push ${DOCKER_REGISTRY}/epicheck:${IMAGE_TAG} || {
         echo -e "${RED}Failed to push image. Check your registry credentials.${NC}"
@@ -86,7 +86,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Build proxy
     echo -e "${YELLOW}Building epicheck-proxy:${IMAGE_TAG}${NC}"
     docker build -t ${DOCKER_REGISTRY}/epicheck-proxy:${IMAGE_TAG} ./proxy-server
-    
+
     echo -e "${YELLOW}Pushing epicheck-proxy:${IMAGE_TAG}${NC}"
     docker push ${DOCKER_REGISTRY}/epicheck-proxy:${IMAGE_TAG} || {
         echo -e "${RED}Failed to push proxy image. Check your registry credentials.${NC}"
@@ -111,6 +111,10 @@ kubectl apply -f kubernetes/configmap.yaml
 # Create Secrets
 echo -e "${YELLOW}Creating Secrets...${NC}"
 kubectl apply -f kubernetes/secrets.yaml
+
+# Create Certificate Issuers and Certificates
+echo -e "${YELLOW}Creating Certificate Issuers and Certificates...${NC}"
+kubectl apply -f kubernetes/cert-issuer.yaml
 
 # Deploy applications
 echo -e "${YELLOW}Deploying applications...${NC}"

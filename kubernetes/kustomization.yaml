@@ -5,6 +5,7 @@ resources:
     - namespace.yaml
     - configmap.yaml
     - secrets.yaml
+    - cert-issuer.yaml
     - deployment.yaml
     - service.yaml
     - ingress.yaml
