@@ -26,8 +26,8 @@
  */
 
 import intraAuth from "./intraAuth";
-import axios, { AxiosInstance } from "axios";
 import { Platform } from "react-native";
+import axios, { AxiosInstance } from "axios";
 import type { IIntraUser } from "../types/IIntraUser";
 import type { IIntraEvent } from "../types/IIntraEvent";
 import type { IIntraStudent } from "../types/IIntraStudent";
@@ -99,7 +99,10 @@ class IntraApiService {
         this.api.interceptors.response.use(
             (response) => response,
             (error) => {
-                if (error.response) {
+                if (error.response.status === 403) {
+                    const message = "\tStatus:\t" + (error.response.status) + "\n\tURL:\t" + error.config?.url + (error.response.data.message ? "\n\tLog: " : "\n\tData:\t") + (error.response.data.message || error.response.data);
+                    console.warn("[IntraAPI] Access Forbidden. User may not have rights to access this resource:\n", message);
+                } else if (error.response) {
                     console.error("Intranet API Error:");
                     console.error("  Status:", error.response.status);
                     console.error("  URL:", error.config?.url);
@@ -624,6 +627,21 @@ class IntraApiService {
             console.log("[IntraApi] ✓ Activity data received");
             return data;
         } catch (error: any) {
+            if (error.response?.status === 403) {
+                console.warn(
+                    "[IntraApi] Access forbidden for activity details. User may not have rights to view this activity.\n\tStatus:\t" +
+                        (error.response.status) +
+                        "\n\tURL:\t" +
+                        error.config?.url +
+                        (error.response.data.message
+                            ? "\n\tLog: "
+                            : "\n\tData:\t") +
+                            (error.response?.data.message || error.response?.data || error.message || "No additional error data"),
+                );
+                throw new Error(
+                    "You don't have permission to view details of this activity.",
+                );
+            }
             console.error(
                 "Get activity details error:",
                 error.response?.data || error.message,

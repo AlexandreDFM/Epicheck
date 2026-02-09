@@ -70,6 +70,9 @@ export default function ActivitiesScreen() {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [activities, setActivities] = useState<IIntraEvent[]>([]);
+    const [currentUserLogin, setCurrentUserLogin] = useState<string | null>(
+        null,
+    );
 
     const eventColors: { [key: string]: string } = {
         exam: "#dd9473",
@@ -161,6 +164,19 @@ export default function ActivitiesScreen() {
         },
         [handleLogout, selectedDate],
     );
+
+    // Fetch current user login on mount
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const user = await intraApi.getCurrentUser();
+                setCurrentUserLogin(user.login);
+            } catch (error) {
+                console.error("Failed to fetch current user:", error);
+            }
+        };
+        fetchCurrentUser();
+    }, []);
 
     useEffect(() => {
         if (selectedDate === undefined) {
@@ -512,13 +528,37 @@ export default function ActivitiesScreen() {
                                     `Has assistant:`,
                                     event.rights?.includes("assistant"),
                                 );
+                                console.log(
+                                    `Has Subtitle:`,
+                                    event.event_subtitle ? "Yes" : "No",
+                                );
+                                console.log(
+                                    `Subtitle:`,
+                                    event.event_subtitle || "N/A",
+                                );
                             }
+
+                            const isCurrentUserStaff =
+                                currentUserLogin &&
+                                (event.prof_inst?.some(
+                                    (p) => p.login === currentUserLogin,
+                                ) ||
+                                    event.assistants?.some(
+                                        (a) => a.login === currentUserLogin,
+                                    ));
 
                             return (
                                 <TouchableOpacity
                                     key={`${event.codeevent}-${index}`}
-                                    style={{ backgroundColor: bgColor }}
-                                    className="mb-3 overflow-hidden"
+                                    style={{
+                                        backgroundColor: bgColor,
+                                        borderWidth: isCurrentUserStaff ? 4 : 0,
+                                    }}
+                                    className={`mb-3 overflow-hidden ${
+                                        isCurrentUserStaff
+                                            ? "border-primary"
+                                            : "transparent"
+                                    }`}
                                     onPress={() => {
                                         if (
                                             event.rights === undefined ||
@@ -559,36 +599,170 @@ export default function ActivitiesScreen() {
                                                         ? ` #${event.num_event}`
                                                         : ""}
                                                 </Text>
-                                                <Text
-                                                    className="text-sm capitalize text-white/90"
-                                                    style={{
-                                                        fontFamily:
-                                                            "IBMPlexSans",
-                                                    }}
-                                                >
-                                                    {event.type_code}
-                                                </Text>
+                                                {event.title_module && (
+                                                    <Text
+                                                        className="mb-1 text-sm text-white/80"
+                                                        style={{
+                                                            fontFamily:
+                                                                "IBMPlexSans",
+                                                        }}
+                                                    >
+                                                        {event.title_module}
+                                                    </Text>
+                                                )}
+                                                <View className="flex-row items-center">
+                                                    <Text
+                                                        className="mb-1 text-sm capitalize text-white/80"
+                                                        style={{
+                                                            fontFamily:
+                                                                "IBMPlexSans",
+                                                        }}
+                                                    >
+                                                        {event.type_code}
+                                                    </Text>
+
+                                                    {event.event_subtitle && (
+                                                        <>
+                                                            <Text
+                                                                className="mx-1 text-sm text-white/80"
+                                                                style={{
+                                                                    fontFamily:
+                                                                        "IBMPlexSans",
+                                                                }}
+                                                            >
+                                                                •
+                                                            </Text>
+                                                            <Text
+                                                                className="text-xs italic text-white/70"
+                                                                style={{
+                                                                    fontFamily:
+                                                                        "IBMPlexSans",
+                                                                }}
+                                                            >
+                                                                {event
+                                                                    .event_subtitle
+                                                                    .length > 40
+                                                                    ? event.event_subtitle.substring(
+                                                                          0,
+                                                                          40,
+                                                                      ) + "..."
+                                                                    : event.event_subtitle}
+                                                            </Text>
+                                                        </>
+                                                    )}
+                                                </View>
                                             </View>
-                                            <View className="bg-white/20 px-3 py-1">
-                                                <Text
-                                                    className="text-xs text-white"
-                                                    style={{
-                                                        fontFamily:
-                                                            "IBMPlexSansSemiBold",
-                                                    }}
-                                                >
-                                                    <AntDesign
-                                                        name="clock-circle"
-                                                        size={12}
-                                                    />{" "}
-                                                    {startTime} - {endTime}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        <View className="flex-row">
-                                            <View className="flex-row">
+                                            <View className="flex-shrink items-end">
+                                                <View className="flex-row space-x-2">
+                                                    <View className="bg-white/20 px-2 py-1">
+                                                        <Text
+                                                            className="text-xs text-white"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "IBMPlexSansSemiBold",
+                                                            }}
+                                                        >
+                                                            <AntDesign
+                                                                name="clock-circle"
+                                                                size={12}
+                                                            />{" "}
+                                                            {startTime}{" - "}
+                                                            {endTime}
+                                                        </Text>
+                                                    </View>
+                                                    <View>
+                                                        {/* Show if user can mark presence */}
+                                                        {event.rights &&
+                                                        event.type_code !==
+                                                            "rdv" &&
+                                                        Array.isArray(
+                                                            event.rights,
+                                                        ) &&
+                                                        event.rights.length >
+                                                            0 &&
+                                                        event.rights.includes(
+                                                            "force_register",
+                                                        ) &&
+                                                        (event.rights.includes(
+                                                            "prof_inst",
+                                                        ) ||
+                                                            event.rights.includes(
+                                                                "assistant",
+                                                            )) ? (
+                                                            <View className="flex-shrink self-start bg-green-500/20 px-2 py-1">
+                                                                <Text
+                                                                    className="text-xs text-green-200"
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            "IBMPlexSansSemiBold",
+                                                                    }}
+                                                                >
+                                                                    <AntDesign
+                                                                        name="check"
+                                                                        color="#86efac"
+                                                                        size={
+                                                                            12
+                                                                        }
+                                                                    />
+                                                                </Text>
+                                                            </View>
+                                                        ) : event.rights &&
+                                                          event.type_code !==
+                                                              "Follow-up" &&
+                                                          Array.isArray(
+                                                              event.rights,
+                                                          ) &&
+                                                          event.rights.length >
+                                                              0 &&
+                                                          event.rights.includes(
+                                                              "force_register",
+                                                          ) &&
+                                                          (event.rights.includes(
+                                                              "prof_inst",
+                                                          ) ||
+                                                              event.rights.includes(
+                                                                  "assistant",
+                                                              )) ? (
+                                                            <View className="flex-shrink self-start bg-green-500/20 px-2 py-1">
+                                                                <Text
+                                                                    className="text-xs text-green-200"
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            "IBMPlexSansSemiBold",
+                                                                    }}
+                                                                >
+                                                                    <AntDesign
+                                                                        name="check"
+                                                                        color="#86efac"
+                                                                        size={
+                                                                            12
+                                                                        }
+                                                                    />
+                                                                </Text>
+                                                            </View>
+                                                        ) : (
+                                                            <View className="flex-shrink self-start bg-gray-500/20 px-2 py-1">
+                                                                <Text
+                                                                    className="text-xs text-gray-300"
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            "IBMPlexSans",
+                                                                    }}
+                                                                >
+                                                                    <AntDesign
+                                                                        name="eye"
+                                                                        color="#d1d5db"
+                                                                        size={
+                                                                            12
+                                                                        }
+                                                                    />
+                                                                </Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                </View>
                                                 <View className="mt-2 flex-row items-center">
-                                                    <View className="bg-white/20 px-3 py-1">
+                                                    <View className="bg-white/20 px-2 py-1">
                                                         <Text
                                                             className="text-xs text-white"
                                                             style={{
@@ -601,90 +775,223 @@ export default function ActivitiesScreen() {
                                                                 size={12}
                                                                 color={"red"}
                                                             />{" "}
-                                                            {room}
+                                                            {room.length > 20
+                                                                ? room.substring(
+                                                                      0,
+                                                                      20,
+                                                                  ) + "..."
+                                                                : room}
                                                         </Text>
                                                     </View>
                                                 </View>
                                             </View>
-                                            <View className="ml-auto mt-auto flex-shrink">
-                                                {/* Show if user can mark presence */}
-                                                {event.rights &&
-                                                event.type_code !== "rdv" &&
-                                                Array.isArray(event.rights) &&
-                                                event.rights.length > 0 &&
-                                                event.rights.includes(
-                                                    "force_register",
-                                                ) &&
-                                                (event.rights.includes(
-                                                    "prof_inst",
-                                                ) ||
-                                                    event.rights.includes(
-                                                        "assistant",
-                                                    )) ? (
-                                                    <View className="mt-2 flex-shrink self-start bg-green-500/20 px-3 py-1">
-                                                        <Text
-                                                            className="text-xs text-green-200"
-                                                            style={{
-                                                                fontFamily:
-                                                                    "IBMPlexSansSemiBold",
-                                                            }}
-                                                        >
-                                                            <AntDesign
-                                                                name="check"
-                                                                color="#86efac"
-                                                                size={12}
-                                                            />{" "}
-                                                            Can mark presence
-                                                        </Text>
-                                                    </View>
-                                                ) : event.rights &&
-                                                  event.type_code !==
-                                                      "Follow-up" &&
-                                                  Array.isArray(event.rights) &&
-                                                  event.rights.length > 0 &&
-                                                  event.rights.includes(
-                                                      "force_register",
-                                                  ) &&
-                                                  (event.rights.includes(
-                                                      "prof_inst",
-                                                  ) ||
-                                                      event.rights.includes(
-                                                          "assistant",
-                                                      )) ? (
-                                                    <View className="mt-2 flex-shrink self-start bg-green-500/20 px-3 py-1">
-                                                        <Text
-                                                            className="text-xs text-green-200"
-                                                            style={{
-                                                                fontFamily:
-                                                                    "IBMPlexSansSemiBold",
-                                                            }}
-                                                        >
-                                                            <AntDesign
-                                                                name="check"
-                                                                color="#86efac"
-                                                                size={12}
-                                                            />{" "}
-                                                            Mark students
-                                                        </Text>
-                                                    </View>
+                                        </View>
+                                        <View className="flex-row flex-wrap">
+                                            <View className="flex-row flex-wrap">
+                                                {/* Teachers */}
+                                                {event.prof_inst &&
+                                                event.prof_inst.length > 0 ? (
+                                                    event.prof_inst.map(
+                                                        (p, idx) => (
+                                                            <View
+                                                                key={
+                                                                    "prof-" +
+                                                                    p.title +
+                                                                    idx
+                                                                }
+                                                                className="mr-2 mt-2 flex-row items-center bg-white/20 px-3 py-1"
+                                                            >
+                                                                {p.picture ? (
+                                                                    <Image
+                                                                        source={{
+                                                                            uri:
+                                                                                "https://intra.epitech.eu" +
+                                                                                p.picture,
+                                                                        }}
+                                                                        style={{
+                                                                            width: 18,
+                                                                            height: 18,
+                                                                            borderRadius: 9,
+                                                                            marginRight: 6,
+                                                                            backgroundColor:
+                                                                                "#ccc",
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <Ionicons
+                                                                        name="person"
+                                                                        size={
+                                                                            12
+                                                                        }
+                                                                        color="white"
+                                                                        style={{
+                                                                            marginRight: 4,
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                                <Text
+                                                                    className="text-xs text-white"
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            "IBMPlexSans",
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        p && p.title
+                                                                            ?
+                                                                        p.title.split(
+                                                                            " ",
+                                                                        )[0]
+                                                                            : "Teacher"
+                                                                    }
+                                                                </Text>
+                                                            </View>
+                                                        ),
+                                                    )
                                                 ) : (
-                                                    <View className="mt-2 flex-shrink self-start bg-gray-500/20 px-3 py-1">
+                                                    <View className="mr-2 mt-2 flex-row items-center bg-white/10 px-3 py-1">
+                                                        <Ionicons
+                                                            name="person-outline"
+                                                            size={12}
+                                                            color="rgba(255,255,255,0.5)"
+                                                            style={{
+                                                                marginRight: 4,
+                                                            }}
+                                                        />
                                                         <Text
-                                                            className="text-xs text-gray-300"
+                                                            className="text-xs text-white/50"
                                                             style={{
                                                                 fontFamily:
                                                                     "IBMPlexSans",
                                                             }}
                                                         >
-                                                            <AntDesign
-                                                                name="eye"
-                                                                color="#d1d5db"
-                                                                size={12}
-                                                            />{" "}
-                                                            View only
+                                                            No teacher
                                                         </Text>
                                                     </View>
                                                 )}
+                                                {/* Assistants */}
+                                                {event.assistants &&
+                                                event.assistants.length > 0 ? (
+                                                    event.assistants.map(
+                                                        (a, idx) => (
+                                                            <View
+                                                                key={
+                                                                    "asst-" +
+                                                                    a.title +
+                                                                    idx
+                                                                }
+                                                                className="mr-2 mt-2 flex-row items-center bg-white/20 px-3 py-1"
+                                                            >
+                                                                {a.picture ? (
+                                                                    (() => {
+                                                                        // Convert .bmp to miniview .jpg if needed
+                                                                        const original =
+                                                                            a.picture;
+                                                                        let miniview =
+                                                                            original;
+
+                                                                        if (
+                                                                            original &&
+                                                                            original.endsWith(
+                                                                                ".bmp",
+                                                                            )
+                                                                        ) {
+                                                                            // Try full path format first: /file/userprofil/xxx.bmp
+                                                                            if (
+                                                                                original.includes(
+                                                                                    "/file/userprofil/",
+                                                                                )
+                                                                            ) {
+                                                                                const match =
+                                                                                    original.match(
+                                                                                        /\/file\/userprofil\/(.+)\.bmp$/,
+                                                                                    );
+                                                                                if (
+                                                                                    match &&
+                                                                                    match[1]
+                                                                                ) {
+                                                                                    miniview = `/file/userprofil/profilview/${match[1]}.jpg`;
+                                                                                }
+                                                                            } else {
+                                                                                // Just filename: olivier.bmp => /file/userprofil/profilview/olivier.jpg
+                                                                                const filename =
+                                                                                    original.replace(
+                                                                                        /\.bmp$/,
+                                                                                        "",
+                                                                                    );
+                                                                                miniview = `/file/userprofil/profilview/${filename}.jpg`;
+                                                                            }
+                                                                        }
+
+                                                                        return (
+                                                                            <Image
+                                                                                source={{
+                                                                                    uri: `https://intra.epitech.eu${miniview}`,
+                                                                                }}
+                                                                                style={{
+                                                                                    width: 18,
+                                                                                    height: 18,
+                                                                                    borderRadius: 9,
+                                                                                    marginRight: 6,
+                                                                                    backgroundColor:
+                                                                                        "#ccc",
+                                                                                }}
+                                                                            />
+                                                                        );
+                                                                    })()
+                                                                ) : (
+                                                                    <Ionicons
+                                                                        name="people"
+                                                                        size={
+                                                                            12
+                                                                        }
+                                                                        color="white"
+                                                                        style={{
+                                                                            marginRight: 4,
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                                <Text
+                                                                    className="text-xs text-white"
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            "IBMPlexSans",
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        a && a.title
+                                                                            ?
+                                                                        a.title.split(
+                                                                            " ",
+                                                                        )[0]
+                                                                            : "Assistant"
+                                                                    }
+                                                                </Text>
+                                                            </View>
+                                                        ),
+                                                    )
+                                                ) : event.assistants ===
+                                                  undefined ? (
+                                                    <View className="mr-2 mt-2 flex-row items-center bg-white/10 px-3 py-1">
+                                                        <Ionicons
+                                                            name="people-outline"
+                                                            size={12}
+                                                            color="rgba(255,255,255,0.5)"
+                                                            style={{
+                                                                marginRight: 4,
+                                                            }}
+                                                        />
+                                                        <Text
+                                                            className="text-xs text-white/50"
+                                                            style={{
+                                                                fontFamily:
+                                                                    "IBMPlexSans",
+                                                            }}
+                                                        >
+                                                            No assistant
+                                                        </Text>
+                                                    </View>
+                                                ) : null}
                                             </View>
                                         </View>
                                     </View>
