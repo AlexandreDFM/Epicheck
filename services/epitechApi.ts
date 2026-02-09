@@ -525,13 +525,125 @@ class EpitechApiService {
                 dateStr,
             );
 
-            return activities;
+            // Enrich activities with details (subtitle, description, etc.)
+            const enriched = await this.enrichActivitiesWithDetails(activities);
+
+            return enriched;
         } catch (error: any) {
             console.error(
                 "Get activities error:",
                 error.response?.data || error.message,
             );
             throw new Error("Failed to fetch activities");
+        }
+    }
+
+    /**
+     * Enrich activities with details from the activity detail endpoint.
+     * Groups by unique activity to avoid duplicate requests.
+     */
+    private async enrichActivitiesWithDetails(
+        activities: IIntraEvent[],
+    ): Promise<IIntraEvent[]> {
+        try {
+            // Group activities by unique activity key to avoid duplicate fetches
+            const uniqueKeys = new Map<string, IIntraEvent>();
+            if (!Array.isArray(activities)) {
+                console.warn("[EpitechApi] Activities is not an array:", activities);
+                return activities;
+            }
+
+            for (const event of activities) {
+                if (!event || !event.scolaryear) {
+                    console.warn("[EpitechApi] Invalid event:", event);
+                    continue;
+                }
+                const key = `${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${event.codeacti}`;
+                if (!uniqueKeys.has(key)) {
+                    uniqueKeys.set(key, event);
+                }
+            }
+
+            // Fetch details for each unique activity in parallel
+            const detailsMap = new Map<string, any>();
+            if (!(uniqueKeys instanceof Map)) {
+                throw new Error("uniqueKeys is not a Map");
+            }
+
+            const fetchPromises = Array.from(uniqueKeys.entries()).map(
+                async ([key, event]) => {
+                    try {
+                        const details =
+                            await intraApi.getActivityDetails(event);
+                        detailsMap.set(key, details);
+                    } catch (err) {
+                        console.warn(
+                            `[EpitechApi] Failed to fetch details for ${key}:`,
+                            err,
+                        );
+                    }
+                },
+            );
+            await Promise.all(fetchPromises);
+
+            // Merge detail fields into each activity
+            return activities.map((event) => {
+                const key = `${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${event.codeacti}`;
+                const details = detailsMap.get(key);
+                if (!details) return event;
+
+                // Find matching event in the events array to get its title (subtitle)
+                const matchingEvent = details.events?.find(
+                    (e: any) => e.code === event.codeevent,
+                );
+
+                // Extract assistants from the matching event, excluding duplicates already in prof_inst
+                const rawAssistants = Array.isArray(
+                    matchingEvent?.assistants,
+                )
+                    ? matchingEvent.assistants
+                    : [];
+                const profLogins = new Set(
+                    (event.prof_inst || []).map((p: any) => p.login),
+                );
+                const deduped = rawAssistants.filter(
+                    (a: any) => !profLogins.has(a.login),
+                );
+                // null = assistants exist but all are duplicates of prof_inst (don't show "No assistant")
+                // undefined = no assistant data at all (show "No assistant")
+                const assistants =
+                    deduped.length > 0
+                        ? deduped
+                        : rawAssistants.length > 0
+                          ? null
+                          : undefined;
+
+                return {
+                    ...event,
+                    description: details.description || undefined,
+                    event_subtitle: matchingEvent?.title || undefined,
+                    assistants: assistants,
+                    nb_planified: details.nb_planified ?? undefined,
+                    nb_registered: details.nb_registered ?? undefined,
+                    is_projet: details.is_projet ?? undefined,
+                    allow_token: details.allow_token ?? undefined,
+                    project_title: details.project_title || undefined,
+                    instance_location: details.instance_location || undefined,
+                    nb_hours: details.nb_hours || undefined,
+                    module_title: details.module_title || undefined,
+                    begin: details.begin || undefined,
+                    end_register: details.end_register || undefined,
+                    deadline: details.deadline || undefined,
+            };
+            });
+        } catch (error) {
+            console.error(
+                "[EpitechApi] Error enriching activities with details:",
+                error,
+            );
+            console.error("Error details:", (error as any)?.message);
+            // Return original activities without enrichment on error
+            return activities;
         }
     }
 
@@ -566,7 +678,10 @@ class EpitechApiService {
                 dateStr,
             );
 
-            return activities;
+            // Enrich activities with details (subtitle, description, etc.)
+            const enriched = await this.enrichActivitiesWithDetails(activities);
+
+            return enriched;
         } catch (error: any) {
             console.error(
                 "Get today activities error:",

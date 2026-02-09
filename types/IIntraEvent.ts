@@ -32,6 +32,7 @@ export interface IIntraEvent {
     codeacti: string;
     codeevent: string;
     acti_title: string;
+    title_module?: string;
     type_code: string;
     start: string;
     end: string;
@@ -50,5 +51,26 @@ export interface IIntraEvent {
         title: string;
         type: string;
     }[];
+    assistants?: {
+        login: string;
+        picture: string;
+        title: string;
+        type: string;
+    }[] | null;
     total_students_registered?: number;
+
+    // Fields from activity detail endpoint
+    description?: string;
+    event_subtitle?: string;
+    nb_planified?: number;
+    nb_registered?: number;
+    is_projet?: boolean;
+    allow_token?: boolean;
+    project_title?: string;
+    instance_location?: string;
+    nb_hours?: string;
+    module_title?: string;
+    begin?: string;
+    end_register?: string;
+    deadline?: string;
 }

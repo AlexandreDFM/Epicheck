@@ -31,13 +31,13 @@ export default function RdvDetailsScreen() {
     const route = useRoute<RdvDetailsRouteProp>();
     const { event } = route.params;
 
-    const [registrations, setRegistrations] = useState<IRegistration[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [statusMessage, setStatusMessage] = useState("Fetching data...");
     const [projectName, setProjectName] = useState<string>("");
     const [projectLoading, setProjectLoading] = useState(true);
     const [activityData, setActivityData] = useState<any>(null);
+    const [statusMessage, setStatusMessage] = useState("Fetching data...");
+    const [registrations, setRegistrations] = useState<IRegistration[]>([]);
 
     useEffect(() => {
         fetchRdvData();
