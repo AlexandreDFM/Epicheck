@@ -641,10 +641,10 @@ export default function ActivitiesScreen() {
                                                             >
                                                                 {event
                                                                     .event_subtitle
-                                                                    .length > 20
+                                                                    .length > 40
                                                                     ? event.event_subtitle.substring(
                                                                           0,
-                                                                          20,
+                                                                          40,
                                                                       ) + "..."
                                                                     : event.event_subtitle}
                                                             </Text>
@@ -666,7 +666,7 @@ export default function ActivitiesScreen() {
                                                                 name="clock-circle"
                                                                 size={12}
                                                             />{" "}
-                                                            {startTime} -{" "}
+                                                            {startTime}{" - "}
                                                             {endTime}
                                                         </Text>
                                                     </View>
@@ -837,9 +837,12 @@ export default function ActivitiesScreen() {
                                                                     }}
                                                                 >
                                                                     {
+                                                                        p && p.title
+                                                                            ?
                                                                         p.title.split(
                                                                             " ",
                                                                         )[0]
+                                                                            : "Teacher"
                                                                     }
                                                                 </Text>
                                                             </View>
@@ -956,9 +959,12 @@ export default function ActivitiesScreen() {
                                                                     }}
                                                                 >
                                                                     {
+                                                                        a && a.title
+                                                                            ?
                                                                         a.title.split(
                                                                             " ",
                                                                         )[0]
+                                                                            : "Assistant"
                                                                     }
                                                                 </Text>
                                                             </View>
