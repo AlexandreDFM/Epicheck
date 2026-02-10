@@ -1,78 +1,82 @@
 {
-    "expo": {
-        "name": "EpiCheck",
-        "slug": "EpiCheck",
-        "version": "1.1.0",
-        "orientation": "portrait",
-        "icon": "./assets/icon.png",
-        "userInterfaceStyle": "automatic",
-        "splash": {
-            "image": "./assets/splash-icon.png",
-            "backgroundColor": "#232323",
-            "dark": {
-                "image": "./assets/splash-icon.png",
-                "backgroundColor": "#000000"
-            }
-        },
-        "ios": {
-            "buildNumber": "2",
-            "supportsTablet": true,
-            "bundleIdentifier": "com.hownee.epicheck.app",
-            "userInterfaceStyle": "automatic",
-            "infoPlist": {
-                "NSCameraUsageDescription": "This app requires camera access to scan QR codes for presence checking."
-            }
-        },
-        "android": {
-            "adaptiveIcon": {
-                "foregroundImage": "./assets/adaptive-icon.png",
-                "backgroundColor": "#ffffff",
-                "dark": {
-                    "foregroundImage": "./assets/adaptive-icon.png",
-                    "backgroundColor": "#000000"
-                }
-            },
-            "userInterfaceStyle": "automatic",
-            "package": "com.hownee.epicheck.app",
-            "versionCode": 2,
-            "permissions": [
-                "android.permission.CAMERA",
-                "android.permission.NFC",
-                "android.permission.READ_EXTERNAL_STORAGE",
-                "android.permission.WRITE_EXTERNAL_STORAGE"
-            ],
-            "intentFilters": [
-                {
-                    "action": "android.nfc.action.NDEF_DISCOVERED",
-                    "category": ["android.intent.category.DEFAULT"]
-                }
-            ]
-        },
-        "web": {
-            "favicon": "./assets/favicon.png",
-            "bundler": "metro"
-        },
-        "plugins": [
-            [
-                "expo-camera",
-                {
-                    "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to scan QR codes."
-                }
-            ],
-            "expo-audio",
-            [
-                "expo-font",
-                {
-                    "fonts": [
-                        "./assets/fonts/Anton-Regular.ttf",
-                        "./assets/fonts/IBMPlexSans-Regular.ttf",
-                        "./assets/fonts/IBMPlexSans-Bold.ttf",
-                        "./assets/fonts/IBMPlexSans-SemiBold.ttf",
-                        "./assets/fonts/IBMPlexSans-Italic.ttf"
-                    ]
-                }
-            ]
-        ],
-        "scheme": "epicheck"
-    }
+  "expo": {
+    "name": "EpiCheck",
+    "slug": "EpiCheck",
+    "version": "1.1.5",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "backgroundColor": "#232323",
+      "dark": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#000000"
+      }
+    },
+    "ios": {
+      "buildNumber": "3",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hownee.epicheck.app",
+      "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires camera access to scan QR codes for presence checking."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff",
+        "dark": {
+          "foregroundImage": "./assets/adaptive-icon.png",
+          "backgroundColor": "#000000"
+        }
+      },
+      "userInterfaceStyle": "automatic",
+      "package": "com.hownee.epicheck.app",
+      "versionCode": 3,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.NFC",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
+      "intentFilters": [
+        {
+          "action": "android.nfc.action.NDEF_DISCOVERED",
+          "category": [
+            "android.intent.category.DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to scan QR codes."
+        }
+      ],
+      "expo-audio",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Anton-Regular.ttf",
+            "./assets/fonts/IBMPlexSans-Regular.ttf",
+            "./assets/fonts/IBMPlexSans-Bold.ttf",
+            "./assets/fonts/IBMPlexSans-SemiBold.ttf",
+            "./assets/fonts/IBMPlexSans-Italic.ttf"
+          ]
+        }
+      ],
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "scheme": "epicheck"
+  }
 }
