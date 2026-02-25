@@ -109,7 +109,13 @@ export default function ActivitiesScreen() {
                 setLoading(true);
                 const data = await epitechApi.getActivitiesForDate(date);
                 console.log("Activities loaded:", data.length, "events");
-                setActivities(data);
+                // Sort activities chronologically by start time
+                const sorted = [...data].sort(
+                    (a, b) =>
+                        new Date(a.start).getTime() -
+                        new Date(b.start).getTime(),
+                );
+                setActivities(sorted);
             } catch (error: any) {
                 console.error("Load activities error:", error);
                 console.error(
