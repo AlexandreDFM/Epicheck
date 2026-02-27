@@ -43,12 +43,13 @@ import Toast from "react-native-toast-message";
 import epitechApi from "../services/epitechApi";
 import QRScanner from "../components/QRScanner";
 import NFCScanner from "../components/NFCScanner";
+import MultiQRScanner from "../components/MultiQRScanner";
 import { useTheme } from "../contexts/ThemeContext";
 import soundService from "../services/soundService";
 import type { IIntraEvent } from "../types/IIntraEvent";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { AntDesign, EvilIcons, Ionicons } from "@expo/vector-icons";
+import { AntDesign, EvilIcons, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 
@@ -74,6 +75,7 @@ export default function PresenceScreen() {
     const { underscore, color } = useColoredUnderscore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isRegisterMode, setIsRegisterMode] = useState(false);
+    const [isMultiScan, setIsMultiScan] = useState(false);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
 
@@ -188,6 +190,80 @@ export default function PresenceScreen() {
         }
     };
 
+    const handleMultiScanValidate = async (emails: string[]) => {
+        if (!event) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "No event selected. Please go back and select an activity first.",
+                position: "top",
+            });
+            return;
+        }
+
+        Toast.show({
+            type: "info",
+            text1: `Processing ${emails.length} student${emails.length > 1 ? "s" : ""}...`,
+            position: "top",
+        });
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const email of emails) {
+            try {
+                if (!email.includes("@")) {
+                    throw new Error("Invalid email format");
+                }
+
+                const checking = await epitechApi.isStudentRegisteredOnModule(
+                    email,
+                    event,
+                );
+                if (isRegisterMode && !checking) {
+                    await epitechApi.forceRegisterStudentModule(email, event);
+                    await epitechApi.forceRegisterStudentEvent(email, event);
+                } else if (isRegisterMode && checking) {
+                    await epitechApi.forceRegisterStudentEvent(email, event);
+                }
+
+                await epitechApi.markPresence(email, event);
+
+                const newStudent: Student = {
+                    email,
+                    timestamp: new Date().toLocaleTimeString(),
+                    status: "success",
+                };
+                setScannedStudents((prev) => [newStudent, ...prev]);
+                successCount++;
+            } catch (error: any) {
+                console.error("Error marking presence for", email, error);
+
+                const newStudent: Student = {
+                    email,
+                    timestamp: new Date().toLocaleTimeString(),
+                    status: "error",
+                };
+                setScannedStudents((prev) => [newStudent, ...prev]);
+                errorCount++;
+            }
+        }
+
+        // Play sound based on overall result
+        if (errorCount === 0) {
+            soundService.playSuccessSound();
+        } else {
+            soundService.playErrorSound();
+        }
+
+        Toast.show({
+            type: errorCount === 0 ? "success" : "error",
+            text1: `Batch complete: ${successCount} success, ${errorCount} failed`,
+            text2: errorCount > 0 ? "Check the scan list for details" : undefined,
+            position: "top",
+        });
+    };
+
     const handleLogout = () => {
         Alert.alert("Logout", "Are you sure you want to logout?", [
             { text: "Cancel", style: "cancel" },
@@ -269,6 +345,20 @@ export default function PresenceScreen() {
                             )}
                         </View>
                     </View>
+                    <TouchableOpacity
+                        onPress={() => setIsMultiScan((prev) => !prev)}
+                        className={`ml-2 border px-4 py-2 ${
+                            isMultiScan
+                                ? "border-green-400 bg-green-500/30"
+                                : "border-white/30 bg-white/20"
+                        }`}
+                    >
+                        <MaterialCommunityIcons
+                            name="qrcode-scan"
+                            size={24}
+                            color={isMultiScan ? "#4ade80" : "white"}
+                        />
+                    </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => handleRegisterModeToggle()}
                         className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
@@ -363,9 +453,31 @@ export default function PresenceScreen() {
                 </View>
             </View>
 
+            {/* Multi-scan indicator */}
+            {isMultiScan && (
+                <View className="flex-row items-center justify-center bg-green-500/20 py-1.5">
+                    <MaterialCommunityIcons
+                        name="qrcode-scan"
+                        size={14}
+                        color="#4ade80"
+                    />
+                    <Text
+                        className="ml-2 text-xs text-green-400"
+                        style={{ fontFamily: "IBMPlexSansSemiBold" }}
+                    >
+                        MULTI-SCAN ACTIVE — Point at multiple QR codes
+                    </Text>
+                </View>
+            )}
+
             {/* Scanner */}
             <View className="flex-1 bg-black">
-                {scanMode === "qr" ? (
+                {isMultiScan ? (
+                    <MultiQRScanner
+                        onValidate={handleMultiScanValidate}
+                        isActive={!isProcessing}
+                    />
+                ) : scanMode === "qr" ? (
                     <QRScanner onScan={handleScan} isActive={!isProcessing} />
                 ) : (
                     <NFCScanner onScan={handleScan} isActive={!isProcessing} />
