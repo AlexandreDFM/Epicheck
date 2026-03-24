@@ -261,8 +261,7 @@ export default function PresenceScreen() {
                                     className="text-xs text-white/80"
                                     style={{ fontFamily: "IBMPlexSans" }}
                                 >
-                                    {event.type_code.toUpperCase()} -{" "}
-                                    {new Date(event.start).toLocaleDateString()}
+                                    {event.type_code.toUpperCase() + " - " + new Date(event.start).toLocaleDateString()}
                                 </Text>
                             )}
                             {!event && (
