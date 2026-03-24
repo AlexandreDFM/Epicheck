@@ -74,6 +74,7 @@ export default function PresenceScreen() {
     const { underscore, color } = useColoredUnderscore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isRegisterMode, setIsRegisterMode] = useState(false);
+    const [isCameraActive, setIsCameraActive] = useState(false);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
 
@@ -116,6 +117,10 @@ export default function PresenceScreen() {
                 },
             ],
         );
+    };
+
+    const handleCameraToggle = () => {
+        setIsCameraActive(!isCameraActive);
     };
 
     const handleScan = async (email: string) => {
@@ -235,11 +240,13 @@ export default function PresenceScreen() {
                         </TouchableOpacity>
                         <View className="flex-1">
                             <Text
-                                className="text-xl text-white"
+                                className="text-lg text-white"
                                 style={{ fontFamily: "Anton" }}
                             >
                                 {event ? (
-                                    event.acti_title
+                                    event.acti_title.length > 35 ? event.acti_title.substring(0, 32) +
+                                          "..."
+                                        : event.acti_title
                                 ) : (
                                     <Text>
                                         PRESENCE SCANNER
@@ -254,7 +261,7 @@ export default function PresenceScreen() {
                                     className="text-xs text-white/80"
                                     style={{ fontFamily: "IBMPlexSans" }}
                                 >
-                                    {event.type_code.toUpperCase()} •{" "}
+                                    {event.type_code.toUpperCase()} -{" "}
                                     {new Date(event.start).toLocaleDateString()}
                                 </Text>
                             )}
@@ -271,10 +278,14 @@ export default function PresenceScreen() {
                     </View>
                     <TouchableOpacity
                         onPress={() => handleRegisterModeToggle()}
-                        className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
+                        className="ml-2 border border-white/30 bg-white/20 px-2 py-2"
                     >
                         {isRegisterMode ? (
-                            <Ionicons name="person" size={24} color="rgba(50,255,50,0.75)" />
+                            <Ionicons
+                                name="person"
+                                size={24}
+                                color="rgba(50,255,50,0.75)"
+                            />
                         ) : (
                             <Ionicons
                                 name="people-circle-outline"
@@ -284,14 +295,22 @@ export default function PresenceScreen() {
                         )}
                     </TouchableOpacity>
                     <TouchableOpacity
-                        onPress={handleLogout}
-                        className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
+                        onPress={handleCameraToggle}
+                        className="ml-2 border border-white/30 bg-white/20 px-2 py-2"
                     >
-                        <Ionicons
-                            name="log-out-outline"
-                            size={24}
-                            color="white"
-                        />
+                        {isCameraActive ? (
+                            <Ionicons
+                                name="videocam"
+                                size={24}
+                                color="rgba(50,255,50,0.75)"
+                            />
+                        ) : (
+                            <Ionicons
+                                name="videocam-off"
+                                size={24}
+                                color="rgba(255,50,0,0.76)"
+                            />
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -366,9 +385,15 @@ export default function PresenceScreen() {
             {/* Scanner */}
             <View className="flex-1 bg-black">
                 {scanMode === "qr" ? (
-                    <QRScanner onScan={handleScan} isActive={!isProcessing} />
+                    <QRScanner
+                        onScan={handleScan}
+                        isActive={isCameraActive && !isProcessing}
+                    />
                 ) : (
-                    <NFCScanner onScan={handleScan} isActive={!isProcessing} />
+                    <NFCScanner
+                        onScan={handleScan}
+                        isActive={isCameraActive && !isProcessing}
+                    />
                 )}
             </View>
 
