@@ -510,6 +510,54 @@ class IntraApiService {
     }
 
     /**
+     * Mark multiple students as present in a single batch request
+     * Uses the native batch support of the updatePresence endpoint
+     */
+    async markStudentsPresentBatch(
+        event: IIntraEvent,
+        studentLogins: string[],
+    ): Promise<void> {
+        if (studentLogins.length === 0) return;
+
+        const presences: IPresenceUpdate[] = studentLogins.map((login) => ({
+            login,
+            present: "present",
+        }));
+
+        if (__DEV__) {
+            console.log(
+                `📦 Batch marking ${presences.length} students as present`,
+            );
+        }
+
+        return this.updatePresence(event, presences);
+    }
+
+    /**
+     * Mark multiple students as absent in a single batch request
+     * Uses the native batch support of the updatePresence endpoint
+     */
+    async markStudentsAbsentBatch(
+        event: IIntraEvent,
+        studentLogins: string[],
+    ): Promise<void> {
+        if (studentLogins.length === 0) return;
+
+        const presences: IPresenceUpdate[] = studentLogins.map((login) => ({
+            login,
+            present: "absent",
+        }));
+
+        if (__DEV__) {
+            console.log(
+                `📦 Batch marking ${presences.length} students as absent`,
+            );
+        }
+
+        return this.updatePresence(event, presences);
+    }
+
+    /**
      * Get student login from email
      * Epitech emails are typically: firstname.lastname@epitech.eu
      * Login is typically: firstname.lastname

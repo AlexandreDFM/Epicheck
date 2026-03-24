@@ -55,7 +55,7 @@ import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
 interface Student {
     email: string;
     timestamp: string;
-    status: "success" | "error";
+    status: "success" | "error" | "pending";
 }
 
 type RootStackParamList = {
@@ -74,6 +74,7 @@ export default function PresenceScreen() {
     const { underscore, color } = useColoredUnderscore();
     const [isProcessing, setIsProcessing] = useState(false);
     const [isRegisterMode, setIsRegisterMode] = useState(false);
+    const [isBatchMode, setIsBatchMode] = useState(true);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
 
@@ -118,69 +119,183 @@ export default function PresenceScreen() {
         );
     };
 
+    const pendingCount = scannedStudents.filter(
+        (s) => s.status === "pending",
+    ).length;
+
     const handleScan = async (email: string) => {
-        if (isProcessing) return;
+        // Validate email format
+        if (!email.includes("@")) {
+            soundService.playErrorSound();
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Invalid email format",
+                position: "top",
+            });
+            return;
+        }
+
+        // Check if we have an event context
+        if (!event) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "No event selected. Please go back and select an activity first.",
+                position: "top",
+            });
+            return;
+        }
+
+        // Prevent duplicate scans
+        if (
+            scannedStudents.some(
+                (s) =>
+                    s.email === email &&
+                    (s.status === "pending" || s.status === "success"),
+            )
+        ) {
+            soundService.playErrorSound();
+            Toast.show({
+                type: "info",
+                text1: "Already scanned",
+                text2: `${email} is already in the list`,
+                position: "top",
+            });
+            return;
+        }
+
+        if (isBatchMode) {
+            // Batch mode: just add to queue as pending, no API call yet
+            soundService.playSuccessSound();
+            const newStudent: Student = {
+                email,
+                timestamp: new Date().toLocaleTimeString(),
+                status: "pending",
+            };
+            setScannedStudents((prev) => [newStudent, ...prev]);
+        } else {
+            // One-by-one mode: immediate API call (original behavior)
+            if (isProcessing) return;
+            setIsProcessing(true);
+
+            try {
+                // Register student via API if in register mode
+                const checking =
+                    await epitechApi.isStudentRegisteredOnModule(
+                        email,
+                        event,
+                    );
+                if (isRegisterMode && !checking) {
+                    await epitechApi.forceRegisterStudentModule(
+                        email,
+                        event,
+                    );
+                    await epitechApi.forceRegisterStudentEvent(email, event);
+                } else if (isRegisterMode && checking) {
+                    await epitechApi.forceRegisterStudentEvent(email, event);
+                }
+
+                // Mark presence via API with event context
+                await epitechApi.markPresence(email, event);
+
+                soundService.playSuccessSound();
+                const newStudent: Student = {
+                    email,
+                    timestamp: new Date().toLocaleTimeString(),
+                    status: "success",
+                };
+                setScannedStudents((prev) => [newStudent, ...prev]);
+            } catch (error: any) {
+                console.error("Error marking presence:", error);
+                soundService.playErrorSound();
+                const newStudent: Student = {
+                    email,
+                    timestamp: new Date().toLocaleTimeString(),
+                    status: "error",
+                };
+                setScannedStudents((prev) => [newStudent, ...prev]);
+                Toast.show({
+                    type: "error",
+                    text1: "Error",
+                    text2: error.message || "Failed to mark presence",
+                    position: "top",
+                });
+            } finally {
+                setIsProcessing(false);
+            }
+        }
+    };
+
+    const handleBatchSend = async () => {
+        if (!event || isProcessing) return;
+
+        const pendingEmails = scannedStudents
+            .filter((s) => s.status === "pending")
+            .map((s) => s.email);
+
+        if (pendingEmails.length === 0) {
+            Toast.show({
+                type: "info",
+                text1: "Nothing to send",
+                text2: "No pending students to mark",
+                position: "top",
+            });
+            return;
+        }
 
         setIsProcessing(true);
 
         try {
-            // Validate email format
-            if (!email.includes("@")) {
-                throw new Error("Invalid email format");
-            }
-
-            // Check if we have an event context
-            if (!event) {
-                throw new Error(
-                    "No event selected. Please go back and select an activity first.",
-                );
-            }
-
-            // Register student via API if in register mode
-            const checking = await epitechApi.isStudentRegisteredOnModule(
-                email,
+            const results = await epitechApi.markPresenceBatch(
+                pendingEmails,
                 event,
+                { registerMode: isRegisterMode },
             );
-            if (isRegisterMode && !checking) {
-                await epitechApi.forceRegisterStudentModule(email, event);
-                await epitechApi.forceRegisterStudentEvent(email, event);
-            } else if (isRegisterMode && checking) {
-                await epitechApi.forceRegisterStudentEvent(email, event);
+
+            // Update student statuses based on results
+            setScannedStudents((prev) =>
+                prev.map((student) => {
+                    if (student.status !== "pending") return student;
+                    const result = results.find(
+                        (r) => r.email === student.email,
+                    );
+                    if (!result) return student;
+                    return {
+                        ...student,
+                        status: result.success ? "success" : "error",
+                        timestamp: new Date().toLocaleTimeString(),
+                    };
+                }),
+            );
+
+            const successCount = results.filter((r) => r.success).length;
+            const errorCount = results.filter((r) => !r.success).length;
+
+            if (errorCount === 0) {
+                soundService.playSuccessSound();
+                Toast.show({
+                    type: "success",
+                    text1: "Batch Complete",
+                    text2: `${successCount} student${successCount !== 1 ? "s" : ""} marked present`,
+                    position: "top",
+                });
+            } else {
+                soundService.playErrorSound();
+                Toast.show({
+                    type: "error",
+                    text1: "Batch Partial",
+                    text2: `${successCount} success, ${errorCount} failed`,
+                    position: "top",
+                });
             }
-
-            // Mark presence via API with event context
-            await epitechApi.markPresence(email, event);
-
-            // Play success sound
-            soundService.playSuccessSound();
-
-            // Add to scanned list
-            const newStudent: Student = {
-                email,
-                timestamp: new Date().toLocaleTimeString(),
-                status: "success",
-            };
-
-            setScannedStudents((prev) => [newStudent, ...prev]);
         } catch (error: any) {
-            console.error("Error marking presence:", error);
-
-            // Play error sound
+            console.error("Batch send error:", error);
             soundService.playErrorSound();
-
-            // Add to scanned list with error status
-            const newStudent: Student = {
-                email,
-                timestamp: new Date().toLocaleTimeString(),
-                status: "error",
-            };
-
-            setScannedStudents((prev) => [newStudent, ...prev]);
-
             Toast.show({
                 type: "error",
-                text1: "Error",
-                text2: error.message || "Failed to mark presence",
+                text1: "Batch Failed",
+                text2: error.message || "Failed to send batch",
                 position: "top",
             });
         } finally {
@@ -284,6 +399,20 @@ export default function PresenceScreen() {
                         )}
                     </TouchableOpacity>
                     <TouchableOpacity
+                        onPress={() => setIsBatchMode(!isBatchMode)}
+                        className={`ml-2 border px-4 py-2 ${
+                            isBatchMode
+                                ? "border-green-400/50 bg-green-500/30"
+                                : "border-white/30 bg-white/20"
+                        }`}
+                    >
+                        <Ionicons
+                            name={isBatchMode ? "layers" : "arrow-forward-circle-outline"}
+                            size={24}
+                            color={isBatchMode ? "rgba(50,255,50,0.85)" : "white"}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                         onPress={handleLogout}
                         className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
                     >
@@ -379,29 +508,58 @@ export default function PresenceScreen() {
                 <View className="flex-row items-center justify-between px-4 py-3">
                     <View>
                         <Text className="text-base text-primary">
-                            Recent Scans
+                            {isBatchMode ? "Batch Queue" : "Recent Scans"}
                         </Text>
                         <Text
                             className="text-xs text-text-tertiary"
                             style={{ fontFamily: "IBMPlexSans" }}
                         >
                             {scannedStudents.length} student
-                            {scannedStudents.length !== 1 ? "s" : ""} checked
+                            {scannedStudents.length !== 1 ? "s" : ""}{" "}
+                            {isBatchMode && pendingCount > 0
+                                ? `(${pendingCount} pending)`
+                                : "checked"}
                         </Text>
                     </View>
-                    {scannedStudents.length > 0 && (
-                        <TouchableOpacity
-                            onPress={clearHistory}
-                            className="border border-status-error px-3 py-1.5"
-                        >
-                            <Text
-                                className="text-sm text-status-error"
-                                style={{ fontFamily: "IBMPlexSansSemiBold" }}
+                    <View className="flex-row items-center gap-2">
+                        {isBatchMode && pendingCount > 0 && (
+                            <TouchableOpacity
+                                onPress={handleBatchSend}
+                                disabled={isProcessing}
+                                className={`border px-4 py-1.5 ${
+                                    isProcessing
+                                        ? "border-text-disabled bg-text-disabled"
+                                        : "border-status-success bg-status-success"
+                                }`}
                             >
-                                Clear All
-                            </Text>
-                        </TouchableOpacity>
-                    )}
+                                <Text
+                                    className="text-sm text-white"
+                                    style={{
+                                        fontFamily: "IBMPlexSansSemiBold",
+                                    }}
+                                >
+                                    {isProcessing
+                                        ? "Sending..."
+                                        : `Send (${pendingCount})`}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                        {scannedStudents.length > 0 && (
+                            <TouchableOpacity
+                                onPress={clearHistory}
+                                className="border border-status-error px-3 py-1.5"
+                            >
+                                <Text
+                                    className="text-sm text-status-error"
+                                    style={{
+                                        fontFamily: "IBMPlexSansSemiBold",
+                                    }}
+                                >
+                                    Clear All
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
                 <View className="mx-12 border-b border-primary" />
                 <ScrollView className="h-auto max-h-32 px-4 py-2">
@@ -427,7 +585,9 @@ export default function PresenceScreen() {
                                 className={`mb-2 border p-3.5 ${
                                     student.status === "success"
                                         ? "border-status-success"
-                                        : "border-status-error"
+                                        : student.status === "pending"
+                                          ? "border-status-warning"
+                                          : "border-status-error"
                                 }`}
                             >
                                 <View className="flex-row items-center justify-between">
@@ -437,14 +597,20 @@ export default function PresenceScreen() {
                                                 className={`mr-2 h-2 w-2 ${
                                                     student.status === "success"
                                                         ? "bg-status-success"
-                                                        : "bg-status-error"
+                                                        : student.status ===
+                                                            "pending"
+                                                          ? "bg-status-warning"
+                                                          : "bg-status-error"
                                                 }`}
                                             />
                                             <Text
                                                 className={`text-sm ${
                                                     student.status === "success"
                                                         ? "text-status-success"
-                                                        : "text-status-error"
+                                                        : student.status ===
+                                                            "pending"
+                                                          ? "text-status-warning"
+                                                          : "text-status-error"
                                                 }`}
                                                 numberOfLines={1}
                                                 style={{
@@ -463,7 +629,9 @@ export default function PresenceScreen() {
                                         >
                                             {student.status === "success"
                                                 ? "Presence marked"
-                                                : "Failed to mark"}
+                                                : student.status === "pending"
+                                                  ? "Pending — waiting for batch send"
+                                                  : "Failed to mark"}
                                         </Text>
                                     </View>
                                     <Text
