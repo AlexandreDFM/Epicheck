@@ -4,9 +4,9 @@
 * @AlexandreDFM
 
 # Specific component owners
-/src/components/ @AlexandreDFM
-/src/screens/ @AlexandreDFM
-/src/services/ @AlexandreDFM
+/components/ @AlexandreDFM
+/screens/ @AlexandreDFM
+/services/ @AlexandreDFM
 
 # Documentation
 /docs/ @AlexandreDFM
