@@ -111,95 +111,46 @@ class EpitechApiService {
         event?: IIntraEvent,
     ): Promise<any> {
         try {
-            console.log("Marking presence for:", studentEmail);
-            console.log("Event:", event ? event.acti_title : "No event");
-
-            // Get login from email
+            if (__DEV__) {
+                console.log("Marking presence for:", studentEmail);
+                console.log("Event:", event ? event.acti_title : "No event");
+            }
             const login = intraApi.getLoginFromEmail(studentEmail);
-            console.log("Extracted login:", login);
+            if (__DEV__) {
+                console.log("Extracted login:", login);
+            }
 
             if (!event) {
-                // If no event provided, we can't mark presence on Intranet
                 throw new Error(
                     "Event context required to mark presence. Please select an activity first.",
                 );
             }
 
-            // First, check if student is registered for this event
-            console.log("📋 Checking if student is registered for event...");
+            // Fetch registered students and resolve login
+            if (__DEV__) {
+                console.log("📋 Checking if student is registered for event...");
+            }
             const registeredStudents =
                 await intraApi.getRegisteredStudents(event);
-            console.log(
-                `📋 Found ${registeredStudents.length} registered students`,
-            );
-
-            // Log first few students for debugging
-            console.log("📋 Sample registered students:");
-            registeredStudents.slice(0, 3).forEach((s) => {
+            if (__DEV__) {
                 console.log(
-                    `  - login: "${s.login}", email: "${s.email}", title: "${s.title}"`,
+                    `📋 Found ${registeredStudents.length} registered students`,
                 );
-            });
+            }
 
-            // Find the student in the registered list
-            // The Intranet API sometimes returns email in the login field
-            console.log(
-                `📋 Searching for: login="${login}" OR email="${studentEmail}"`,
+            const actualLogin = this.findStudentLogin(
+                studentEmail,
+                registeredStudents,
             );
-            const student = registeredStudents.find((s) => {
-                // Try exact match on login
-                if (s.login === login) {
-                    console.log(
-                        `✓ Match found: s.login === login ("${s.login}" === "${login}")`,
-                    );
-                    return true;
-                }
-                // Try exact match on email
-                if (s.login === studentEmail) {
-                    console.log(
-                        `✓ Match found: s.login === studentEmail ("${s.login}" === "${studentEmail}")`,
-                    );
-                    return true;
-                }
-                if (s.email === studentEmail) {
-                    console.log(
-                        `✓ Match found: s.email === studentEmail ("${s.email}" === "${studentEmail}")`,
-                    );
-                    return true;
-                }
-                // Try login with @epitech.eu
-                if (s.login === `${login}@epitech.eu`) {
-                    console.log(
-                        `✓ Match found: s.login === login@epitech.eu ("${s.login}" === "${login}@epitech.eu")`,
-                    );
-                    return true;
-                }
-                // Try removing @epitech.eu from student login
-                const studentLoginWithoutDomain = s.login?.split("@")[0];
-                if (studentLoginWithoutDomain === login) {
-                    console.log(
-                        `✓ Match found: s.login split === login ("${studentLoginWithoutDomain}" === "${login}")`,
-                    );
-                    return true;
-                }
-                return false;
-            });
 
-            if (!student) {
-                console.error("Student not found in registered list");
-                console.error(
-                    "Looking for login:",
-                    login,
-                    "or email:",
-                    studentEmail,
-                );
-                console.error(
-                    "All registered students:",
-                    registeredStudents.map((s) => ({
-                        login: s.login,
-                        email: s.email,
-                    })),
-                );
+            if (!actualLogin) {
+                if (__DEV__) {
+                    console.error(
+                        "Student not found in registered list:",
+                        studentEmail,
+                    );
+                    console.log("Registered students:", registeredStudents);
+                }
                 throw new Error(
                     `Student not found in registered list.\n\n` +
                         `Scanned: ${studentEmail}\n` +
@@ -209,26 +160,20 @@ class EpitechApiService {
                 );
             }
 
-            console.log("✅ Student found in registered list:", student.login);
+            if (__DEV__) {
+                console.log(
+                    "✅ Using login for marking:",
+                    actualLogin,
+                );
+            }
 
-            // IMPORTANT: Use the login EXACTLY as it appears in the registered list
-            // The Intranet expects the same format it provides
-            const actualLogin = student.login;
-            console.log(
-                "✅ Using login for marking (unchanged from registered list):",
-                actualLogin,
-            );
-
-            // Mark presence on Intranet for the specific event
-            console.log(
-                "📤 Calling intraApi.markStudentPresent with login:",
-                actualLogin,
-            );
             await intraApi.markStudentPresent(event, actualLogin);
 
-            console.log(
-                `✓ Marked ${actualLogin} present for event: ${event.acti_title}`,
-            );
+            if (__DEV__) {
+                console.log(
+                    `✓ Marked ${actualLogin} present for event: ${event.acti_title}`,
+                );
+            }
 
             return {
                 success: true,
@@ -238,15 +183,190 @@ class EpitechApiService {
                 timestamp: new Date().toISOString(),
             };
         } catch (error: any) {
-            console.error(
-                "Mark presence error:",
-                error.response?.data || error.message,
-            );
+            if (__DEV__) {
+                console.error(
+                    "Mark presence error:",
+                    error.response?.data || error.message,
+                );
+            }
             throw new Error(
                 error.response?.data?.message ||
                     error.message ||
                     "Failed to mark presence",
             );
+        }
+    }
+
+    /**
+     * Resolve a student email to the exact login from the registered list.
+     * Returns null if the student is not found.
+     */
+    private findStudentLogin(
+        studentEmail: string,
+        registeredStudents: { login: string; email?: string }[],
+    ): string | null {
+        const login = intraApi.getLoginFromEmail(studentEmail);
+
+        const student = registeredStudents.find((s) => {
+            if (s.login === login) return true;
+            if (s.login === studentEmail) return true;
+            if (s.email === studentEmail) return true;
+            if (s.login === `${login}@epitech.eu`) return true;
+            const studentLoginWithoutDomain = s.login?.split("@")[0];
+            if (studentLoginWithoutDomain === login) return true;
+            return false;
+        });
+
+        return student ? student.login : null;
+    }
+
+    /**
+     * Mark multiple students as present in a single batch request.
+     * Fetches the registered student list only ONCE, resolves all logins,
+     * optionally handles force-registration, then sends a single batch call.
+     *
+     * Returns per-student results with success/error status.
+     */
+    async markPresenceBatch(
+        studentEmails: string[],
+        event: IIntraEvent,
+        options?: { registerMode?: boolean },
+    ): Promise<
+        {
+            email: string;
+            login: string | null;
+            success: boolean;
+            error?: string;
+        }[]
+    > {
+        if (!event) {
+            throw new Error(
+                "Event context required to mark presence. Please select an activity first.",
+            );
+        }
+
+        const results: {
+            email: string;
+            login: string | null;
+            success: boolean;
+            error?: string;
+        }[] = [];
+
+        try {
+            // 1. Fetch registered students ONCE
+            if (__DEV__) {
+                console.log(
+                    `📦 Batch: fetching registered students for ${event.acti_title}`,
+                );
+            }
+
+            const registeredStudents =
+                await intraApi.getRegisteredStudents(event);
+
+            // 2. If register mode, also fetch module registered students once
+            let moduleRegisteredStudents: { login: string; email?: string }[] =
+                [];
+            if (options?.registerMode) {
+                moduleRegisteredStudents =
+                    await intraApi.getModuleRegisteredStudents(
+                        event.scolaryear,
+                        event.codemodule,
+                        event.codeinstance,
+                    );
+            }
+
+            // 3. Resolve logins and handle registrations
+            const loginsToMark: string[] = [];
+            let currentRegistered = [...registeredStudents];
+
+            for (const email of studentEmails) {
+                try {
+                    let resolvedLogin = this.findStudentLogin(
+                        email,
+                        currentRegistered,
+                    );
+
+                    // Handle register mode: register student if not in event
+                    if (!resolvedLogin && options?.registerMode) {
+                        const isOnModule = this.findStudentLogin(
+                            email,
+                            moduleRegisteredStudents,
+                        );
+
+                        if (!isOnModule) {
+                            // Register to module first
+                            await intraApi.forceRegisterStudentModule(
+                                email,
+                                event,
+                            );
+                        }
+
+                        // Register to event
+                        await intraApi.forceRegisterStudentEvent(event, email);
+
+                        // Re-fetch registered students to get updated list
+                        currentRegistered =
+                            await intraApi.getRegisteredStudents(event);
+                        resolvedLogin = this.findStudentLogin(
+                            email,
+                            currentRegistered,
+                        );
+                    }
+
+                    if (!resolvedLogin) {
+                        results.push({
+                            email,
+                            login: null,
+                            success: false,
+                            error: `Student not found in registered list for: ${event.acti_title}`,
+                        });
+                        continue;
+                    }
+
+                    loginsToMark.push(resolvedLogin);
+                    results.push({
+                        email,
+                        login: resolvedLogin,
+                        success: true,
+                    });
+                } catch (regError: any) {
+                    results.push({
+                        email,
+                        login: null,
+                        success: false,
+                        error: regError.message || "Registration failed",
+                    });
+                }
+            }
+
+            // 4. Send ONE batch request for all resolved logins
+            if (loginsToMark.length > 0) {
+                if (__DEV__) {
+                    console.log(
+                        `📦 Batch: marking ${loginsToMark.length} students present in one request`,
+                    );
+                }
+                await intraApi.markStudentsPresentBatch(event, loginsToMark);
+                if (__DEV__) {
+                    console.log(`✓ Batch presence update successful`);
+                }
+            }
+
+            return results;
+        } catch (error: any) {
+            if (__DEV__) {
+                console.error(
+                    "Batch mark presence error:",
+                    error.response?.data || error.message,
+                );
+            }
+            // If the batch call itself fails, mark all as failed
+            return studentEmails.map((email) => ({
+                email,
+                login: null,
+                success: false,
+                error: error.message || "Batch presence update failed",
+            }));
         }
     }
 
