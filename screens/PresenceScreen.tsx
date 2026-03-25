@@ -37,7 +37,6 @@ import {
 // import scanStore from "../services/scanStore";
 // import office365Auth from "../services/office365Auth";
 
-import intraApi from "../services/intraApi";
 import { useState, useEffect } from "react";
 import Toast from "react-native-toast-message";
 import epitechApi from "../services/epitechApi";
@@ -46,11 +45,11 @@ import NFCScanner from "../components/NFCScanner";
 import { useTheme } from "../contexts/ThemeContext";
 import soundService from "../services/soundService";
 import type { IIntraEvent } from "../types/IIntraEvent";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { AntDesign, EvilIcons, Ionicons } from "@expo/vector-icons";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 interface Student {
     email: string;
@@ -72,9 +71,10 @@ export default function PresenceScreen() {
     const { isDark } = useTheme();
     const navigation = useNavigation<NavigationProp>();
     const { underscore, color } = useColoredUnderscore();
+    const [isBatchMode, setIsBatchMode] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isRegisterMode, setIsRegisterMode] = useState(false);
-    const [isBatchMode, setIsBatchMode] = useState(true);
+    const [isCameraActive, setIsCameraActive] = useState(false);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
 
@@ -119,6 +119,9 @@ export default function PresenceScreen() {
         );
     };
 
+    const handleCameraToggle = () => {
+        setIsCameraActive((prev) => !prev);
+    };
     const pendingCount = scannedStudents.filter(
         (s) => s.status === "pending",
     ).length;
@@ -181,16 +184,12 @@ export default function PresenceScreen() {
 
             try {
                 // Register student via API if in register mode
-                const checking =
-                    await epitechApi.isStudentRegisteredOnModule(
-                        email,
-                        event,
-                    );
+                const checking = await epitechApi.isStudentRegisteredOnModule(
+                    email,
+                    event,
+                );
                 if (isRegisterMode && !checking) {
-                    await epitechApi.forceRegisterStudentModule(
-                        email,
-                        event,
-                    );
+                    await epitechApi.forceRegisterStudentModule(email, event);
                     await epitechApi.forceRegisterStudentEvent(email, event);
                 } else if (isRegisterMode && checking) {
                     await epitechApi.forceRegisterStudentEvent(email, event);
@@ -303,26 +302,6 @@ export default function PresenceScreen() {
         }
     };
 
-    const handleLogout = () => {
-        Alert.alert("Logout", "Are you sure you want to logout?", [
-            { text: "Cancel", style: "cancel" },
-            {
-                text: "Logout",
-                style: "destructive",
-                onPress: async () => {
-                    // Only logout from Intranet (Office365 kept for later if needed)
-                    await intraApi.logout();
-                    epitechApi.logout();
-                    // Reset navigation stack to Login
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: "Login" }],
-                    });
-                },
-            },
-        ]);
-    };
-
     const clearHistory = () => {
         setScannedStudents([]);
         Toast.show({
@@ -350,11 +329,16 @@ export default function PresenceScreen() {
                         </TouchableOpacity>
                         <View className="flex-1">
                             <Text
-                                className="text-xl text-white"
+                                className="text-lg text-white"
                                 style={{ fontFamily: "Anton" }}
                             >
                                 {event ? (
-                                    event.acti_title
+                                    event.acti_title.length > 35 ? (
+                                        event.acti_title.substring(0, 32) +
+                                        "..."
+                                    ) : (
+                                        event.acti_title
+                                    )
                                 ) : (
                                     <Text>
                                         PRESENCE SCANNER
@@ -369,8 +353,11 @@ export default function PresenceScreen() {
                                     className="text-xs text-white/80"
                                     style={{ fontFamily: "IBMPlexSans" }}
                                 >
-                                    {event.type_code.toUpperCase()} •{" "}
-                                    {new Date(event.start).toLocaleDateString()}
+                                    {event.type_code.toUpperCase() +
+                                        " - " +
+                                        new Date(
+                                            event.start,
+                                        ).toLocaleDateString()}
                                 </Text>
                             )}
                             {!event && (
@@ -386,40 +373,54 @@ export default function PresenceScreen() {
                     </View>
                     <TouchableOpacity
                         onPress={() => handleRegisterModeToggle()}
-                        className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
+                        className={`ml-2 border px-2 py-2 ${isRegisterMode ? "border-purple-400/50 bg-purple-500/30" : "border-yellow-500/50 bg-yellow-500/30"}`}
                     >
                         {isRegisterMode ? (
-                            <Ionicons name="person" size={24} color="rgba(50,255,50,0.75)" />
+                            <Ionicons
+                                name="person"
+                                size={24}
+                                color="rgba(192,132,252,0.75)"
+                            />
                         ) : (
                             <Ionicons
                                 name="people-circle-outline"
                                 size={24}
-                                color="rgba(255,50,0,0.76)"
+                                color="rgba(234,179,8,0.76)"
+                            />
+                        )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleCameraToggle}
+                        className={`ml-2 border px-2 py-2 ${isCameraActive ? "border-green-400/50 bg-green-500/30" : "border-red-400/50 bg-red-500/30"}`}
+                    >
+                        {isCameraActive ? (
+                            <Ionicons
+                                name="videocam"
+                                size={24}
+                                color="rgba(50,255,50,0.75)"
+                            />
+                        ) : (
+                            <Ionicons
+                                name="videocam-off"
+                                size={24}
+                                color="rgba(248,113,113,0.76)"
                             />
                         )}
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setIsBatchMode(!isBatchMode)}
-                        className={`ml-2 border px-4 py-2 ${
+                        className={`ml-2 border px-2 py-2 ${
                             isBatchMode
                                 ? "border-green-400/50 bg-green-500/30"
                                 : "border-white/30 bg-white/20"
                         }`}
                     >
                         <Ionicons
-                            name={isBatchMode ? "layers" : "arrow-forward-circle-outline"}
+                            name={isBatchMode ? "layers" : "layers-outline"}
                             size={24}
-                            color={isBatchMode ? "rgba(50,255,50,0.85)" : "white"}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={handleLogout}
-                        className="ml-2 border border-white/30 bg-white/20 px-4 py-2"
-                    >
-                        <Ionicons
-                            name="log-out-outline"
-                            size={24}
-                            color="white"
+                            color={
+                                isBatchMode ? "rgba(50,255,50,0.85)" : "white"
+                            }
                         />
                     </TouchableOpacity>
                 </View>
@@ -495,9 +496,15 @@ export default function PresenceScreen() {
             {/* Scanner */}
             <View className="flex-1 bg-black">
                 {scanMode === "qr" ? (
-                    <QRScanner onScan={handleScan} isActive={!isProcessing} />
+                    <QRScanner
+                        onScan={handleScan}
+                        isActive={isCameraActive && !isProcessing}
+                    />
                 ) : (
-                    <NFCScanner onScan={handleScan} isActive={!isProcessing} />
+                    <NFCScanner
+                        onScan={handleScan}
+                        isActive={isCameraActive && !isProcessing}
+                    />
                 )}
             </View>
 
@@ -522,47 +529,44 @@ export default function PresenceScreen() {
                         </Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                        {isBatchMode && pendingCount > 0 && (
-                            <TouchableOpacity
-                                onPress={handleBatchSend}
-                                disabled={isProcessing}
-                                className={`border px-4 py-1.5 ${
-                                    isProcessing
-                                        ? "border-text-disabled bg-text-disabled"
-                                        : "border-status-success bg-status-success"
-                                }`}
+                        <TouchableOpacity
+                            disabled={isProcessing || !(isBatchMode && pendingCount > 0)}
+                            onPress={handleBatchSend}
+                            className={`border px-4 py-1.5 ${
+                                isProcessing || !(isBatchMode && pendingCount > 0)
+                                    ? "border-text-disabled bg-text-disabled"
+                                    : "border-status-success bg-status-success"
+                            }`}
+                        >
+                            <Text
+                                className="text-sm text-white"
+                                style={{
+                                    fontFamily: "IBMPlexSansSemiBold",
+                                }}
                             >
-                                <Text
-                                    className="text-sm text-white"
-                                    style={{
-                                        fontFamily: "IBMPlexSansSemiBold",
-                                    }}
-                                >
-                                    {isProcessing
-                                        ? "Sending..."
-                                        : `Send (${pendingCount})`}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                        {scannedStudents.length > 0 && (
-                            <TouchableOpacity
-                                onPress={clearHistory}
-                                className="border border-status-error px-3 py-1.5"
+                                {isProcessing
+                                    ? "Sending..."
+                                    : `Send (${pendingCount})`}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            disabled={!(scannedStudents.length > 0)}
+                            onPress={clearHistory}
+                            className={`border ${scannedStudents.length > 0 ? "border-status-error" : "border-gray-500"} px-3 py-1.5`}
+                        >
+                            <Text
+                                className={`text-sm ${scannedStudents.length > 0 ? "text-status-error" : "text-gray-500"}`}
+                                style={{
+                                    fontFamily: "IBMPlexSansSemiBold",
+                                }}
                             >
-                                <Text
-                                    className="text-sm text-status-error"
-                                    style={{
-                                        fontFamily: "IBMPlexSansSemiBold",
-                                    }}
-                                >
-                                    Clear All
-                                </Text>
-                            </TouchableOpacity>
-                        )}
+                                Clear All
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
                 <View className="mx-12 border-b border-primary" />
-                <ScrollView className="h-auto max-h-32 px-4 py-2">
+                <ScrollView className="h-auto max-h-32 min-h-32 px-4 py-2">
                     {scannedStudents.length === 0 ? (
                         <View className="items-center py-8">
                             <Text
@@ -581,43 +585,43 @@ export default function PresenceScreen() {
                     ) : (
                         scannedStudents.map((student, index) => (
                             <View
-                                key={index}
+                                key={`${student.email}-${student.timestamp}`}
                                 className={`mb-2 border p-3.5 ${
                                     student.status === "success"
-                                        ? "border-status-success"
-                                        : student.status === "pending"
-                                          ? "border-status-warning"
-                                          : "border-status-error"
-                                }`}
-                            >
+                                    ? "border-status-success"
+                                    : student.status === "pending"
+                                    ? "border-status-warning"
+                                    : "border-status-error"
+                                    }`}
+                                    >
                                 <View className="flex-row items-center justify-between">
                                     <View className="mr-2 flex-1">
                                         <View className="flex-row items-center">
                                             <View
                                                 className={`mr-2 h-2 w-2 ${
                                                     student.status === "success"
-                                                        ? "bg-status-success"
-                                                        : student.status ===
-                                                            "pending"
-                                                          ? "bg-status-warning"
-                                                          : "bg-status-error"
-                                                }`}
-                                            />
+                                                    ? "bg-status-success"
+                                                    : student.status ===
+                                                    "pending"
+                                                    ? "bg-status-warning"
+                                                    : "bg-status-error"
+                                                    }`}
+                                                    />
                                             <Text
                                                 className={`text-sm ${
                                                     student.status === "success"
-                                                        ? "text-status-success"
-                                                        : student.status ===
-                                                            "pending"
-                                                          ? "text-status-warning"
-                                                          : "text-status-error"
-                                                }`}
-                                                numberOfLines={1}
-                                                style={{
-                                                    fontFamily:
+                                                    ? "text-status-success"
+                                                    : student.status ===
+                                                    "pending"
+                                                    ? "text-status-warning"
+                                                    : "text-status-error"
+                                                    }`}
+                                                    numberOfLines={1}
+                                                    style={{
+                                                        fontFamily:
                                                         "IBMPlexSansSemiBold",
-                                                }}
-                                            >
+                                                    }}
+                                                    >
                                                 {student.email}
                                             </Text>
                                         </View>
