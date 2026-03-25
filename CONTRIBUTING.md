@@ -198,9 +198,11 @@ small screens due to incorrect flex layout.
    pnpm run test
    ```
 3. **Build the project**:
-   ```bash
-   pnpm run build
-   ```
+    - Run the appropriate build script(s) corresponding at your situation with:
+        ```bash
+        pnpm run <build-script-name>
+        ```
+    - The options available are `build:ios`, `build:ios:local`, `build:android:debug`, `build:android:release` and `build:apk`.
 4. **Update documentation** if needed
 5. **Add tests** for new features or bug fixes
 
