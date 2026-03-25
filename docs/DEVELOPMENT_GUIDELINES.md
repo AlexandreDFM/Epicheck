@@ -122,13 +122,11 @@ open ios/EpiCheck.xcworkspace
 
 ```bash
 pnpm run lint              # Run ESLint
-pnpm run lint:fix          # Fix linting issues
 pnpm run format            # Format with Prettier
-pnpm run type-check        # Run TypeScript type checking
-pnpm run test              # Run tests
 pnpm run test:watch        # Run tests in watch mode
 pnpm run build:web         # Build for web
 pnpm run build:android     # Build APK
+# For the full, up-to-date list of scripts, see the root package.json
 ```
 
 ---
