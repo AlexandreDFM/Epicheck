@@ -120,7 +120,7 @@ export default function PresenceScreen() {
     };
 
     const handleCameraToggle = () => {
-        setIsCameraActive(!isCameraActive);
+        setIsCameraActive((prev) => !prev);
     };
     const pendingCount = scannedStudents.filter(
         (s) => s.status === "pending",
