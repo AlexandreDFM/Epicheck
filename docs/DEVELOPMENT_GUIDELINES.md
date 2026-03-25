@@ -139,9 +139,9 @@ pnpm run build:android     # Build APK
 
 ```typescript
 // MyComponent.tsx
-import React from 'react';
-import { View, Text } from 'react-native';
-import styles from './MyComponent.styles';
+import React from "react";
+import { View, Text } from "react-native";
+import styles from "./MyComponent.styles";
 
 interface MyComponentProps {
   title: string;
