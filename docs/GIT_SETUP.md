@@ -25,13 +25,14 @@ Complete setup guide to get the project running on a local machine after cloning
 | Tool          | Minimum Version | Install                                                    |
 | ------------- | --------------- | ---------------------------------------------------------- |
 | **Git**       | 2.30+           | `brew install git` or [git-scm.com](https://git-scm.com/) |
-| **Node.js**   | 18 LTS+         | Via **nvm** (recommended) — see below                      |
+| **Node.js**   | 22+ (LTS)       | Via **nvm** (recommended) — see below                      |
 | **pnpm**      | 9+              | `corepack enable && corepack prepare pnpm@latest`          |
 | **Xcode**     | 15+ (macOS)     | Mac App Store (for iOS builds)                             |
 | **CocoaPods** | 1.14+ (macOS)   | `sudo gem install cocoapods`                               |
 | **JDK**       | 17 (Android)    | `brew install openjdk@17`                                  |
 | **Android Studio** | Latest     | [developer.android.com](https://developer.android.com/studio) |
 
+After cloning the repository, run `nvm install && nvm use` in the project root to use the Node.js version defined in the `.nvmrc` file.
 > **Note:** For **web-only** development, only Git, Node.js, and pnpm are required.
 
 ---
