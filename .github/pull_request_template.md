@@ -56,6 +56,6 @@ Any special deployment instructions or configurations needed?
 ---
 
 **Before submitting:**
-- Ensure branch is up-to-date with `main`
+- Ensure branch is up-to-date with `develop`
 - All CI checks pass
 - PR title follows conventional commits format
