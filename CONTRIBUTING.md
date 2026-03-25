@@ -258,14 +258,15 @@ small screens due to incorrect flex layout.
 ### File Structure
 
 ```
-src/
+EpiCheck/
+├── assets/        # Images, fonts, sounds, and static resources
 ├── components/    # Reusable UI components
+├── contexts/      # React contexts
+├── hooks/         # Custom React hooks
 ├── screens/       # Screen/page components
 ├── services/      # API calls and external services
-├── utils/         # Utility functions
 ├── types/         # TypeScript types and interfaces
-├── hooks/         # Custom React hooks
-└── contexts/      # React contexts
+└── utils/         # Utility functions
 ```
 
 ### Naming Conventions
