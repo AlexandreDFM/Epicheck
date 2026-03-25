@@ -69,8 +69,8 @@ corepack enable && corepack prepare pnpm@latest
 pnpm install
 
 # Set up environment
-cp .env.example .env.local
-# Edit .env.local with your configuration
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
 ---
