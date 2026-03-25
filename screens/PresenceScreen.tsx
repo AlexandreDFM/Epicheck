@@ -585,7 +585,7 @@ export default function PresenceScreen() {
                     ) : (
                         scannedStudents.map((student, index) => (
                             <View
-                                key={index}
+                                key={`${student.email}-${student.timestamp}`}
                                 className={`mb-2 border p-3.5 ${
                                     student.status === "success"
                                     ? "border-status-success"
