@@ -248,7 +248,7 @@ small screens due to incorrect flex layout.
 
 ### React/React Native
 
-- Functional components with hooks (no class components)
+- Prefer functional components with hooks; class components are allowed only for error boundaries
 - Memoize components when appropriate (`React.memo`)
 - Use descriptive component names
 - Colocate styles with components
