@@ -525,6 +525,7 @@ export default function ActivitiesScreen() {
                             if (__DEV__) {
                                 console.log(`Event: ${event.acti_title}`);
                                 console.log(`Type: ${event.type_code}`);
+                                console.log(`Event Type Title: ${event.type_title}`);
                                 console.log(`Rights:`, event.rights);
                                 console.log(
                                     `Has prof_inst:`,
@@ -573,7 +574,7 @@ export default function ActivitiesScreen() {
                                             return;
                                         }
                                         if (
-                                            event.type_title === "Follow-up" &&
+                                            (event.type_title === "Follow-up" || event.type_title === "Defense" || event.type_title === "Review") &&
                                             event.rights?.includes(
                                                 "force_register",
                                             ) !== false
