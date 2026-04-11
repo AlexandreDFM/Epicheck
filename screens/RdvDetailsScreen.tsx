@@ -12,22 +12,33 @@ import {
     TouchableOpacity,
     Linking,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import intraApi from "../services/intraApi";
-import { IIntraEvent } from "../types/IIntraEvent";
+import {
+    useNavigation,
+    useRoute,
+    RouteProp,
+    NavigationProp,
+} from "@react-navigation/native";
+
 import { useEffect, useState } from "react";
+import intraApi from "../services/intraApi";
+import { Ionicons } from "@expo/vector-icons";
+import Toast from "react-native-toast-message";
+import jenkinsApi from "../services/jenkinsApi";
+import { IIntraEvent } from "../types/IIntraEvent";
+import jenkinsService from "../services/jenkinsService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import rdvService, { IRegistration } from "../services/rdvService";
-import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 
 type RootStackParamList = {
     RdvDetails: { event: IIntraEvent };
+    RdvMark: { event: IIntraEvent };
 };
 
-type RdvDetailsRouteProp = RouteProp<RootStackParamList, "RdvDetails">;
+type RdvDetailsRouteProp = RouteProp<RootStackParamList>;
+type RdvDetailsNavigationProp = NavigationProp<RootStackParamList>;
 
 export default function RdvDetailsScreen() {
-    const navigation = useNavigation();
+    const navigation = useNavigation<RdvDetailsNavigationProp>();
     const route = useRoute<RdvDetailsRouteProp>();
     const { event } = route.params;
 
@@ -35,13 +46,68 @@ export default function RdvDetailsScreen() {
     const [error, setError] = useState<string | null>(null);
     const [projectName, setProjectName] = useState<string>("");
     const [projectLoading, setProjectLoading] = useState(true);
-    const [activityData, setActivityData] = useState<any>(null);
     const [statusMessage, setStatusMessage] = useState("Fetching data...");
     const [registrations, setRegistrations] = useState<IRegistration[]>([]);
+    const [hasJenkinsCredentials, setHasJenkinsCredentials] = useState(false);
+    const [jenkinsBuildInfo, setJenkinsBuildInfo] = useState<
+        Record<string, any>
+    >({});
+    const [jenkinsLoadingLogins, setJenkinsLoadingLogins] = useState<
+        Set<string>
+    >(new Set());
+    const [jenkinsTeamBuildInfo, setJenkinsTeamBuildInfo] = useState<
+        Record<string, any>
+    >({});
+    const [jenkinsTeamLoadingIds, setJenkinsTeamLoadingIds] = useState<
+        Set<string>
+    >(new Set());
 
     useEffect(() => {
         fetchRdvData();
+        checkJenkinsCredentials();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    /**
+     * Fetch Jenkins build info when project name and credentials are ready
+     */
+    useEffect(() => {
+        if (
+            hasJenkinsCredentials &&
+            projectName &&
+            registrations.length > 0 &&
+            !projectLoading
+        ) {
+            console.log(
+                "[RdvDetails] Fetching Jenkins build info for all registrations",
+            );
+
+            registrations.forEach((registration) => {
+                if (registration.type === "group") {
+                    // Fetch team-level build info for groups
+                    const teamId = registration.members
+                        .map((m) => m.login)
+                        .join("_");
+                    if (!jenkinsTeamBuildInfo[teamId]) {
+                        fetchJenkinsTeamBuildInfo(registration);
+                    }
+                } else {
+                    // Fetch individual build info for single registrations
+                    registration.members.forEach((member) => {
+                        if (!jenkinsBuildInfo[member.login]) {
+                            fetchJenkinsBuildInfo(member.login);
+                        }
+                    });
+                }
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        hasJenkinsCredentials,
+        projectName,
+        registrations.length,
+        projectLoading,
+    ]);
 
     /**
      * Fetch RDV registrations and project info using API
@@ -139,9 +205,7 @@ export default function RdvDetailsScreen() {
 
             // Optionally fetch full activity details for additional info
             try {
-                const activityDetails =
-                    await intraApi.getActivityDetails(event);
-                setActivityData(activityDetails);
+                await intraApi.getActivityDetails(event);
                 console.log("[RdvDetails] Activity details loaded");
             } catch (activityError) {
                 console.warn(
@@ -156,32 +220,290 @@ export default function RdvDetailsScreen() {
             setProjectLoading(false);
         }
     };
+
+    /**
+     * Check if Jenkins credentials are configured
+     */
+    const checkJenkinsCredentials = async () => {
+        try {
+            const has = await jenkinsService.hasCredentials();
+            setHasJenkinsCredentials(has);
+            console.log("[RdvDetails] Jenkins credentials available:", has);
+        } catch (error) {
+            console.error(
+                "[RdvDetails] Error checking Jenkins credentials:",
+                error,
+            );
+            setHasJenkinsCredentials(false);
+        }
+    };
+
+    /**
+     * Constructs Jenkins job path for a given student login
+     */
+    const getJenkinsJobPath = (login: string): string => {
+        const moduleCode = event.codemodule.toUpperCase();
+        const moduleBase = moduleCode.split("-").slice(0, -1).join("-");
+        const year = event.scolaryear;
+        const instance = event.codeinstance;
+        const cleanLogin = login.replace("@epitech.eu", "");
+
+        return `/view/${moduleBase}/job/${moduleCode}/job/${projectName}/job/${year}/job/${instance}/job/${cleanLogin}`;
+    };
+
+    /**
+     * Constructs Jenkins job path for a team with assembled member logins
+     */
+    const getJenkinsTeamJobPath = (item: IRegistration): string => {
+        const year = event.scolaryear;
+        const instance = event.codeinstance;
+        const moduleCode = event.codemodule.toUpperCase();
+        const moduleBase = moduleCode.split("-").slice(0, -1).join("-");
+
+        const teamChief = item.master.login?.replace("@epitech.eu", "");
+
+        const cleanedMembers = item.members.reduce<string[]>((acc, m) => {
+            if (m.login === item.master.login) return acc;
+            else return [...acc, m.login.replace("@epitech.eu", "")];
+        }, []);
+
+        console.log("[RdvDetails] Team chief for Jenkins path:", teamChief);
+        console.log(
+            "[RdvDetails] Team members for Jenkins path:",
+            cleanedMembers,
+        );
+
+        const teamMembersWithoutChief =
+            cleanedMembers.length > 0 ? `${cleanedMembers.join("_")}` : "";
+
+        return `/view/${moduleBase}/job/${moduleCode}/job/${projectName}/job/${year}/job/${instance}/job/${teamChief}${teamMembersWithoutChief ? `_${teamMembersWithoutChief}` : ""}`;
+    };
+
     /**
      * Constructs Jenkins URL for a given student login
      * Pattern: https://jenkins.epitest.eu/view/{MODULE}/job/{MODULE}/job/{PROJECT_NAME}/job/{YEAR}/job/{INSTANCE}/job/{LOGIN}/
      */
     const getJenkinsUrl = (login: string): string => {
-        // Extract module code (e.g., "G-PSU-100" from the codemodule)
-        const moduleCode = event.codemodule.toUpperCase();
-        // Extract module base without number (e.g., "G-PSU" from "G-PSU-100")
-        const moduleBase = moduleCode.split("-").slice(0, 2).join("-");
-        // Year
-        const year = event.scolaryear;
-        // Instance (e.g., "NCE-1-1")
-        const instance = event.codeinstance;
-
-        console.log("[RdvDetails] Jenkins URL params:", {
-            moduleBase,
-            moduleCode,
-            projectName,
-            year,
-            instance,
-            login,
-        });
-
-        return `https://jenkins.epitest.eu/view/${moduleBase}/job/${moduleCode}/job/${projectName}/job/${year}/job/${instance}/job/${login.replace("@epitech.eu", "")}/`;
+        const baseUrl = "https://jenkins.epitest.eu";
+        const jobPath = getJenkinsJobPath(login);
+        return `${baseUrl}${jobPath}`;
     };
 
+    /**
+     * Constructs Jenkins URL for a team with assembled member logins
+     */
+    const getJenkinsTeamUrl = (item: IRegistration): string => {
+        const baseUrl = "https://jenkins.epitest.eu";
+        const jobPath = getJenkinsTeamJobPath(item);
+        return `${baseUrl}${jobPath}`;
+    };
+
+    /**
+     * Fetch Jenkins build information for a student
+     */
+    const fetchJenkinsBuildInfo = async (login: string) => {
+        if (!hasJenkinsCredentials || !projectName) {
+            return null;
+        }
+
+        try {
+            const loadingSet = new Set(jenkinsLoadingLogins);
+            loadingSet.add(login);
+            setJenkinsLoadingLogins(loadingSet);
+
+            const jobPath = getJenkinsJobPath(login);
+            const buildInfo = await jenkinsApi.getLastBuild(jobPath);
+
+            setJenkinsBuildInfo((prev) => ({
+                ...prev,
+                [login]: buildInfo,
+            }));
+
+            console.log(
+                `[RdvDetails] ✓ Build info fetched for ${login}:`,
+                buildInfo,
+            );
+
+            const newSet = new Set(jenkinsLoadingLogins);
+            newSet.delete(login);
+            setJenkinsLoadingLogins(newSet);
+
+            return buildInfo;
+        } catch (error: any) {
+            console.warn(
+                `[RdvDetails] Failed to fetch Jenkins build info for ${login}:`,
+                error.message,
+            );
+
+            const newSet = new Set(jenkinsLoadingLogins);
+            newSet.delete(login);
+            setJenkinsLoadingLogins(newSet);
+
+            return null;
+        }
+    };
+
+    /**
+     * Fetch Jenkins team build information
+     */
+    const fetchJenkinsTeamBuildInfo = async (item: IRegistration) => {
+        if (!hasJenkinsCredentials || !projectName) {
+            return null;
+        }
+
+        try {
+            const teamId = item.members.map((m) => m.login).join("_");
+            const loadingSet = new Set(jenkinsTeamLoadingIds);
+            loadingSet.add(teamId);
+            setJenkinsTeamLoadingIds(loadingSet);
+
+            const jobPath = getJenkinsTeamJobPath(item);
+            const buildInfo = await jenkinsApi.getLastBuild(jobPath);
+
+            setJenkinsTeamBuildInfo((prev) => ({
+                ...prev,
+                [teamId]: buildInfo,
+            }));
+
+            console.log(
+                `[RdvDetails] ✓ Team build info fetched for ${teamId}:`,
+                buildInfo,
+            );
+
+            const newSet = new Set(jenkinsTeamLoadingIds);
+            newSet.delete(teamId);
+            setJenkinsTeamLoadingIds(newSet);
+
+            return buildInfo;
+        } catch (error: any) {
+            console.warn(
+                `[RdvDetails] Failed to fetch Jenkins team build info:`,
+                error.message,
+            );
+
+            const newSet = new Set(jenkinsTeamLoadingIds);
+            newSet.delete(item.members.map((m) => m.login).join("_"));
+            setJenkinsTeamLoadingIds(newSet);
+
+            return null;
+        }
+    };
+
+    /**
+     * Constructs Jenkins build trigger URL
+     */
+    const getJenkinsBuildTriggerUrl = (login: string): string => {
+        const jobPath = getJenkinsJobPath(login);
+        const baseUrl = "https://jenkins.epitest.eu";
+        return `${baseUrl}${jobPath}/build?delay=0sec`;
+    };
+
+    /**
+     * Trigger a Jenkins build for testing
+     */
+    const triggerJenkinsBuild = async (login: string) => {
+        if (!hasJenkinsCredentials || !projectName) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Jenkins credentials not configured",
+                position: "top",
+            });
+            return;
+        }
+
+        try {
+            const buildUrl = getJenkinsBuildTriggerUrl(login);
+            console.log("[RdvDetails] Triggering Jenkins build:", buildUrl);
+
+            // Get auth header for the request
+            const authHeader = await jenkinsService.getAuthHeader();
+            const baseUrl = await jenkinsService.getBaseUrl();
+
+            // Fetch Jenkins-Crumb token
+            let crumbToken = "";
+            try {
+                const crumbUrl = `${baseUrl}/crumbIssuer/api/json`;
+                const crumbResponse = await fetch(crumbUrl, {
+                    method: "GET",
+                    headers: {
+                        Authorization: authHeader,
+                    },
+                });
+                if (crumbResponse.ok) {
+                    const crumbData = await crumbResponse.json();
+                    crumbToken = crumbData.crumb || "";
+                    console.log("[RdvDetails] ✓ Jenkins-Crumb fetched");
+                }
+            } catch (crumbError) {
+                console.warn(
+                    "[RdvDetails] Failed to fetch Jenkins-Crumb:",
+                    crumbError,
+                );
+            }
+
+            // Build parameters
+            const parameters = [
+                { name: "VISIBILITY", value: "Private" },
+                { name: "DELIVERY", value: "Git" },
+                { name: "FORCE", value: false },
+                { name: "CHECKOUT_DELIVERY_DATETIME", value: "" },
+            ];
+
+            const headers: Record<string, string> = {
+                Authorization: authHeader,
+                "Content-Type": "application/x-www-form-urlencoded",
+            };
+
+            // Add Jenkins-Crumb if available
+            if (crumbToken) {
+                headers["Jenkins-Crumb"] = crumbToken;
+            }
+
+            // Build form data for parameters
+            const formData = new URLSearchParams();
+            parameters.forEach((param) => {
+                formData.append(param.name, String(param.value));
+            });
+
+            const response = await fetch(buildUrl, {
+                method: "POST",
+                headers,
+                body: formData.toString(),
+            });
+
+            if (
+                response.ok ||
+                response.status === 201 ||
+                response.status === 303
+            ) {
+                Toast.show({
+                    type: "success",
+                    text1: "Build started",
+                    text2: `Build triggered for ${login}`,
+                    position: "top",
+                });
+                console.log("[RdvDetails] ✓ Build triggered successfully");
+            } else {
+                throw new Error(`Jenkins returned status ${response.status}`);
+            }
+        } catch (error: any) {
+            console.error(
+                "[RdvDetails] Failed to trigger Jenkins build:",
+                error,
+            );
+            Toast.show({
+                type: "error",
+                text1: "Build failed",
+                text2: error.message || "Failed to trigger build",
+                position: "top",
+            });
+        }
+    };
+
+    /**
+     * Open Jenkins in browser
+     */
     const openJenkins = (login: string) => {
         if (!projectName) {
             console.warn(
@@ -195,13 +517,97 @@ export default function RdvDetailsScreen() {
             console.error("[RdvDetails] Failed to open Jenkins URL:", err);
         });
     };
-    const renderRegistration = ({ item }: { item: IRegistration }) => {
-        const isGroup = item.type === "group";
-        const title = isGroup
-            ? `Groupe (${item.members.length} membres)`
-            : item.members[0].title;
 
-        const logins = item.members.map((m) => m.login).join(", ");
+    /**
+     * Open Jenkins build page
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const openJenkinsBuild = async (login: string) => {
+        if (!projectName) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Project name not loaded yet",
+                position: "top",
+            });
+            return;
+        }
+
+        // If build info not cached, fetch it first
+        let buildInfo = jenkinsBuildInfo[login];
+        if (!buildInfo) {
+            buildInfo = await fetchJenkinsBuildInfo(login);
+        }
+
+        if (!buildInfo || !buildInfo.url) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Could not fetch build information",
+                position: "top",
+            });
+            return;
+        }
+
+        Linking.openURL(buildInfo.url).catch((err) => {
+            console.error("[RdvDetails] Failed to open Jenkins build:", err);
+        });
+    };
+
+    /**
+     * Get build status badge color
+     */
+    const getBuildStatusColor = (
+        status: string,
+    ): { bg: string; text: string } => {
+        switch (status?.toUpperCase()) {
+            case "SUCCESS":
+                return { bg: "bg-green-100", text: "text-green-700" };
+            case "FAILURE":
+                return { bg: "bg-red-100", text: "text-red-700" };
+            case "UNSTABLE":
+                return { bg: "bg-yellow-100", text: "text-yellow-700" };
+            case "ABORTED":
+                return { bg: "bg-gray-100", text: "text-gray-700" };
+            default:
+                return { bg: "bg-blue-100", text: "text-blue-700" };
+        }
+    };
+
+    const getrdvdate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString("fr-FR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const renderRegistration = ({ item }: { item: IRegistration }) => {
+        const title = `${item.title}`;
+        const logins = item.members
+            .map((m) => {
+                const words = m.login
+                    .replace(/@.*/, "")
+                    .replace(/[-\.]/g, " ")
+                    .split(" ")
+                    .map(
+                        (word) =>
+                            word.charAt(0).toUpperCase() +
+                            word.slice(1).toLowerCase(),
+                    );
+
+                // Make the last word uppercase
+                if (words.length > 0) {
+                    words[words.length - 1] =
+                        words[words.length - 1].toUpperCase();
+                }
+
+                return words.join(" ");
+            })
+            .join(", ");
 
         // Affiche la note du slot si présente, sinon le statut du slot, sinon fallback sur le statut du premier membre
         const getStatusOrNote = (item: any) => {
@@ -220,7 +626,7 @@ export default function RdvDetailsScreen() {
                 if (member.present === "present") return "Présent";
                 if (member.present === "absent") return "Absent";
             }
-            return "Non renseigné";
+            return "N/A";
         };
 
         const mainStatus = getStatusOrNote(item);
@@ -234,60 +640,97 @@ export default function RdvDetailsScreen() {
         } else if (mainStatus === "Absent") {
             badgeColor = "bg-red-100";
             textColor = "text-red-700";
-        } else if (mainStatus && mainStatus !== "Non renseigné") {
+        } else if (mainStatus && mainStatus !== "N/A") {
             badgeColor = "bg-blue-100";
             textColor = "text-blue-700";
         }
 
         return (
-            <View className="border-tertiary/20 mb-3 border border-white bg-primary-dark p-4">
+            <View className="border-tertiary/20 mb-3 border border-white p-4">
+                {/* Avatar */}
                 <View className="flex-row items-center">
-                    {/* Avatar */}
-                    <View className="mr-4">
-                        {isGroup ? (
-                            <View className="h-10 w-10 items-center justify-center bg-primary">
-                                <Text className="font-bold text-white">G</Text>
-                            </View>
-                        ) : item.members[0].picture ? (
-                            (() => {
-                                // Try to use miniview version if .bmp
-                                const original = item.members[0].picture;
-                                let miniview = original;
-                                console.log("Original picture URL:", original);
-                                if (original && original.endsWith(".bmp")) {
-                                    // /file/userprofil/xxx.bmp => /file/userprofil/profilview/xxx.jpg
-                                    const match = original.match(
-                                        /\/file\/userprofil\/(.+)\.bmp$/,
-                                    );
-                                    if (match && match[1]) {
-                                        miniview = `/file/userprofil/profilview/${match[1]}.jpg`;
-                                        console.log(
-                                            "Using miniview picture URL:",
-                                            miniview,
+                    <View className="flex-1">
+                        <View className="flex-row items-center">
+                            {item.members.length > 0 ? (
+                                item.members.map((member, idx) => {
+                                    const original = member.picture;
+                                    let miniview = original;
+                                    if (original && original.endsWith(".bmp")) {
+                                        const match = original.match(
+                                            /\/file\/userprofil\/(.+)\.bmp$/,
                                         );
+                                        if (match && match[1])
+                                            miniview = `/file/userprofil/profilview/${match[1]}.jpg`;
                                     }
-                                }
-                                return (
-                                    <Image
-                                        source={{
-                                            uri: `https://intra.epitech.eu${miniview}`,
-                                        }}
-                                        className="h-10 w-10 rounded-full bg-black"
-                                    />
-                                );
-                            })()
-                        ) : (
-                            <View className="h-10 w-10 items-center justify-center bg-primary">
-                                <Text className="font-bold text-white">
-                                    {item.members[0].login
-                                        .substring(0, 2)
-                                        .toUpperCase()}
-                                </Text>
-                            </View>
-                        )}
+                                    return miniview ? (
+                                        <Image
+                                            key={member.login}
+                                            source={{
+                                                uri: `https://intra.epitech.eu${miniview}`,
+                                            }}
+                                            className={`h-10 w-10 rounded-full border-2 border-primary bg-black`}
+                                        />
+                                    ) : (
+                                        <View
+                                            key={member.login}
+                                            className={`h-10 w-10 items-center justify-center rounded-full bg-primary`}
+                                        >
+                                            <Text className="text-xs font-bold text-white">
+                                                {member.login
+                                                    .substring(0, 1)
+                                                    .toUpperCase()}
+                                            </Text>
+                                        </View>
+                                    );
+                                })
+                            ) : (
+                                <View className="h-10 w-10 items-center justify-center bg-primary">
+                                    <Text className="font-bold text-white">
+                                        {item.members[0].login
+                                            .substring(0, 2)
+                                            .toUpperCase()}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                     </View>
+                    {/* Status/Note Badge */}
+                    <View
+                        className={`border border-primary p-2 ${badgeColor} ml-2`}
+                    >
+                        <Text className={`text-xs font-bold ${textColor}`}>
+                            {mainStatus}
+                        </Text>
+                    </View>
+                    {/* Jenkins URL Button */}
+                    <TouchableOpacity
+                        className="ml-2 rounded bg-primary p-2"
+                        onPress={() => {
+                            if (hasJenkinsCredentials)
+                                fetchJenkinsTeamBuildInfo(item);
+                            const teamUrl = getJenkinsTeamUrl(item);
+                            Linking.openURL(teamUrl).catch((err) => {
+                                console.error(
+                                    "[RdvDetails] Failed to open Jenkins URL:",
+                                    err,
+                                );
+                            });
+                        }}
+                    >
+                        <Ionicons name="link-outline" size={16} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() =>
+                            triggerJenkinsBuild(item.members[0].login)
+                        }
+                        className="ml-2 rounded bg-green-500 p-2"
+                    >
+                        <Ionicons name="play-outline" size={16} color="white" />
+                    </TouchableOpacity>
+                </View>
 
-                    {/* Info */}
+                {/* Info */}
+                <View className="flex-row items-center">
                     <View className="flex-1">
                         <Text
                             className="text-base font-semibold text-primary"
@@ -298,96 +741,150 @@ export default function RdvDetailsScreen() {
                         <Text
                             className="text-xs text-text-tertiary"
                             style={{ fontFamily: "IBMPlexSans" }}
-                            numberOfLines={2}
+                            numberOfLines={3}
                         >
                             {logins}
-                        </Text>
-                        {item.date && (
-                            <Text
-                                className="mt-1 text-xs text-text-tertiary"
-                                style={{ fontFamily: "IBMPlexSans" }}
-                            >
-                                {item.date}
-                            </Text>
-                        )}
-                    </View>
-
-                    {/* Status/Note Badge */}
-                    <View
-                        className={`border border-primary px-3 py-1 ${badgeColor} ml-2`}
-                    >
-                        <Text className={`text-xs font-bold ${textColor}`}>
-                            {mainStatus}
                         </Text>
                     </View>
                 </View>
 
-                {/* Jenkins Buttons for each member */}
-                {!isGroup && item.members.length === 1 && projectName && (
-                    <View className="mt-3">
-                        <TouchableOpacity
-                            onPress={() => openJenkins(item.members[0].login)}
-                            className="flex-row items-center justify-center rounded bg-primary px-4 py-2"
-                        >
-                            <Ionicons
-                                name="build-outline"
-                                size={16}
-                                color="white"
-                            />
-                            <Text
-                                className="ml-2 text-sm font-bold text-white"
-                                style={{ fontFamily: "IBMPlexSansSemiBold" }}
-                            >
-                                Open Jenkins
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-                {!isGroup && item.members.length === 1 && projectLoading && (
-                    <View className="mt-3 border-t border-gray-100 pt-3">
-                        <View className="flex-row items-center justify-center rounded bg-gray-300 px-4 py-2">
-                            <ActivityIndicator size="small" color="#666" />
-                            <Text
-                                className="ml-2 text-sm text-gray-600"
-                                style={{ fontFamily: "IBMPlexSans" }}
-                            >
-                                Loading Jenkins...
-                            </Text>
-                        </View>
-                    </View>
-                )}
+                <View className="mt-2 flex-row items-center justify-center space-x-4">
+                    {(() => {
+                        const teamId = item.members
+                            .map((m) => m.login)
+                            .join("_");
+                        const teamBuildInfo = jenkinsTeamBuildInfo[teamId];
+                        const isTeamLoading = jenkinsTeamLoadingIds.has(teamId);
 
-                {/* For groups, show Jenkins buttons for each member */}
-                {isGroup && projectName && (
-                    <View className="mt-3 border-t pt-3">
-                        <Text
-                            className="mb-2 text-xs font-semibold text-gray-600"
-                            style={{ fontFamily: "IBMPlexSansSemiBold" }}
-                        >
-                            Jenkins Links:
-                        </Text>
-                        {item.members.map((member, idx) => (
-                            <TouchableOpacity
-                                key={member.login}
-                                onPress={() => openJenkins(member.login)}
-                                className={`flex-row items-center justify-between rounded px-3 py-2 ${idx > 0 ? "mt-2" : ""}`}
-                            >
-                                <Text
-                                    className="flex-1 text-sm text-blue-900"
-                                    style={{ fontFamily: "IBMPlexSans" }}
+                        if (hasJenkinsCredentials && teamBuildInfo) {
+                            // Show build status when available
+                            const { bg, text } = getBuildStatusColor(
+                                teamBuildInfo.status,
+                            );
+                            return (
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        Linking.openURL(
+                                            teamBuildInfo.url,
+                                        ).catch((err) => {
+                                            console.error(
+                                                "[RdvDetails] Failed to open Jenkins build:",
+                                                err,
+                                            );
+                                        });
+                                    }}
+                                    className={`flex-row items-center justify-between rounded px-4 py-3 ${bg}`}
                                 >
-                                    {member.login}
-                                </Text>
-                                <Ionicons
-                                    name="build-outline"
-                                    size={16}
-                                    color="#1e40af"
-                                />
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-                {isGroup && projectLoading && (
+                                    <View className="flex-1">
+                                        <Text
+                                            className={`text-sm font-semibold ${text}`}
+                                            style={{
+                                                fontFamily:
+                                                    "IBMPlexSansSemiBold",
+                                            }}
+                                        >
+                                            Build: {teamBuildInfo.displayName}
+                                        </Text>
+                                        <Text
+                                            className={`text-xs ${text}`}
+                                            style={{
+                                                fontFamily: "IBMPlexSans",
+                                            }}
+                                        >
+                                            Status: {teamBuildInfo.status}
+                                        </Text>
+                                    </View>
+                                    <Ionicons
+                                        name="open-outline"
+                                        size={16}
+                                        color={
+                                            text === "text-green-700"
+                                                ? "#15803d"
+                                                : text === "text-red-700"
+                                                  ? "#dc2626"
+                                                  : text === "text-yellow-700"
+                                                    ? "#ca8a04"
+                                                    : "#374151"
+                                        }
+                                    />
+                                </TouchableOpacity>
+                            );
+                        } else if (hasJenkinsCredentials && isTeamLoading) {
+                            // Show loading indicator while fetching
+                            return (
+                                <View className="flex-row items-center justify-center rounded bg-blue-100 px-4 py-3">
+                                    <ActivityIndicator
+                                        size="small"
+                                        color="#1e40af"
+                                    />
+                                    <Text
+                                        className="ml-2 text-sm text-blue-700"
+                                        style={{
+                                            fontFamily: "IBMPlexSans",
+                                        }}
+                                    >
+                                        Fetching build info...
+                                    </Text>
+                                </View>
+                            );
+                        } else {
+                            // Fallback to regular Jenkins link
+                            return (
+                                <TouchableOpacity
+                                    onPress={async () => {
+                                        let url = `${await jenkinsService.getBaseUrl()}/job/${item.master.login.replace("@epitech.eu", "")}${item.members.length > 0 ? `_${item.members.map((member) => member.login.replace("@epitech.eu", "")).join('_')}` : ''}`;
+                                        console.log("[RdvDetails] Opening Jenkins URL:", url);
+                                        window.open(
+                                            url,
+                                            "_blank",
+                                        )
+                                    }}
+                                    className="flex-row items-center justify-center rounded bg-primary px-4 py-3"
+                                >
+                                    <Ionicons
+                                        name="open-outline"
+                                        size={16}
+                                        color="white"
+                                    />
+                                    <Text
+                                        className="ml-2 text-sm font-bold text-white"
+                                        style={{
+                                            fontFamily: "IBMPlexSansSemiBold",
+                                        }}
+                                    >
+                                        View Jenkins
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        }
+                    })()}
+                    <TouchableOpacity
+                        onPress={() =>
+                            navigation.navigate("RdvMark", { event })
+                        }
+                        className="flex-row items-center justify-center rounded bg-primary px-4 py-3"
+                    >
+                        <Ionicons
+                            name="bookmark-outline"
+                            size={16}
+                            color="white"
+                        />
+                        <Text
+                            className="ml-2 text-sm font-bold text-white"
+                            style={{
+                                fontFamily: "IBMPlexSansSemiBold",
+                            }}
+                        >
+                            {hasJenkinsCredentials
+                                ? "View Build"
+                                : "Noter"}
+                            {" - "}
+                            {getrdvdate(item.date ? item.date : event.start)}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {projectLoading && (
                     <View className="mt-3 border-t border-gray-100 pt-3">
                         <View className="flex-row items-center justify-center rounded px-4 py-2">
                             <ActivityIndicator size="small" color="#666" />
@@ -430,6 +927,12 @@ export default function RdvDetailsScreen() {
                         {projectLoading ? "Loading..." : projectName}
                     </Text>
                 </View>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    className="rounded bg-green-500 p-2"
+                >
+                    <Ionicons name="play-outline" size={24} color="white" />
+                </TouchableOpacity>
             </View>
 
             {loading ? (
