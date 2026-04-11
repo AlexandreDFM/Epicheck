@@ -32,16 +32,17 @@ import AppText from "./components/AppText";
 import { StatusBar } from "expo-status-bar";
 import LoginScreen from "./screens/LoginScreen";
 import * as SplashScreen from "expo-splash-screen";
+import RdvMarkScreen from "./screens/RdvMarkScreen";
 import PresenceScreen from "./screens/PresenceScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import type { IIntraEvent } from "./types/IIntraEvent";
+import RdvDetailsScreen from "./screens/RdvDetailsScreen";
 import ActivitiesScreen from "./screens/ActivitiesScreen";
 import { NavigationContainer } from "@react-navigation/native";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { setDefaultFontFamily } from "./utils/setDefaultFontFamily";
 import ManualAttendanceScreen from "./screens/ManualAttendanceScreen";
-import RdvDetailsScreen from "./screens/RdvDetailsScreen";
 import Toast, { BaseToast, ErrorToast } from "react-native-toast-message";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
@@ -55,6 +56,7 @@ type RootStackParamList = {
     ManualAttendance: { event?: IIntraEvent };
     Settings: undefined;
     RdvDetails: { event: IIntraEvent };
+    RdvMark: { event: IIntraEvent };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -147,6 +149,7 @@ function AppNavigator() {
                     component={ManualAttendanceScreen}
                 />
                 <Stack.Screen name="RdvDetails" component={RdvDetailsScreen} />
+                <Stack.Screen name="RdvMark" component={RdvMarkScreen} />
                 <Stack.Screen name="Settings" component={SettingsScreen} />
             </Stack.Navigator>
             <StatusBar style={isDark ? "light" : "dark"} />
