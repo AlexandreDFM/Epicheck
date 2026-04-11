@@ -7,7 +7,9 @@ import { IIntraStudent } from "../types/IIntraStudent";
 
 export interface IRegistration {
     id: string;
+    title?: string;
     type: "individual" | "group";
+    master: IIntraStudent;
     members: IIntraStudent[];
     date?: string;
     note?: number | string | null;
@@ -93,6 +95,15 @@ class RdvService {
                         }
                     }
 
+                    // 4. Team name as title if it's a group
+                    let title: string | undefined = undefined;
+                    if (members.length > 1) {
+                        title =
+                            slot.title || `Groupe (${members.length} membres)`;
+                    } else if (members.length === 1) {
+                        title = members[0].title;
+                    }
+
                     // Only add if we found members
                     if (members.length > 0) {
                         registrations.push({
@@ -100,7 +111,9 @@ class RdvService {
                                 ? slot.id.toString()
                                 : `slot-${Math.random()}`,
                             type: members.length > 1 ? "group" : "individual",
+                            master: this.mapMemberToStudent(slot.master),
                             members: members,
+                            title: title,
                             date: slot.date,
                             note: slot.note,
                             status: slot.status,

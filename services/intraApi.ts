@@ -622,8 +622,8 @@ class IntraApiService {
         // Handles: "[B1][MUL]  MyRadar" -> "MyRadar"
         let cleanName = projectTitle.replace(/\[[^\]]*\]/g, "").trim();
 
-        // Convert to lowercase and remove spaces/special chars and underscores
-        cleanName = cleanName.toLowerCase().replace(/[\s_]+/g, "");
+        // Convert to lowercase and remove spaces/special chars, underscores, and hyphens
+        cleanName = cleanName.toLowerCase().replace(/[\s_\-]+/g, "");
 
         console.log("[IntraApi] ✓ Extracted clean project name:", cleanName);
         return cleanName;
@@ -852,6 +852,63 @@ class IntraApiService {
                     error.message ||
                     "Failed to force register student",
             );
+        }
+    }
+
+    /**
+     * Get bareme marks for a group
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}/?format=json
+     */
+    async getBaremeMarks(
+        event: IIntraEvent,
+        groupName: string,
+    ): Promise<any> {
+        try {
+            const codeActi = event.codeacti.startsWith("acti-")
+                ? event.codeacti
+                : `acti-${event.codeacti}`;
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}`;
+
+            console.log("[IntraApi] Fetching bareme marks:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ Bareme data received");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to fetch bareme marks:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch bareme marks");
+        }
+    }
+
+    /**
+     * Save bareme marks for a group
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}/ (POST)
+     */
+    async saveBaremeMarks(
+        event: IIntraEvent,
+        groupName: string,
+        marksData: any,
+    ): Promise<any> {
+        try {
+            const codeActi = event.codeacti.startsWith("acti-")
+                ? event.codeacti
+                : `acti-${event.codeacti}`;
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}`;
+
+            console.log("[IntraApi] Saving bareme marks:", endpoint);
+            const data = await this.makeRequest(endpoint, "POST", marksData);
+            console.log("[IntraApi] ✓ Bareme marks saved");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to save bareme marks:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to save bareme marks");
         }
     }
 }
