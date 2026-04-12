@@ -112,9 +112,25 @@ prebuild_android() {
 apply_optimizations() {
     log_info "Application des optimisations Gradle..."
 
-    if [ -f "android.gradle.properties.template" ]; then
-        cat android.gradle.properties.template >> android/gradle.properties
-        log_success "Optimisations appliquées"
+    local template_file="android.gradle.properties.template"
+    local target_file="android/gradle.properties"
+    local marker_begin="# BEGIN EPICHECK GRADLE OPTIMIZATIONS"
+    local marker_end="# END EPICHECK GRADLE OPTIMIZATIONS"
+
+    if [ -f "$template_file" ]; then
+        touch "$target_file"
+
+        if grep -Fq "$marker_begin" "$target_file"; then
+            log_info "Optimisations Gradle déjà présentes, aucune duplication ajoutée"
+        else
+            {
+                echo ""
+                echo "$marker_begin"
+                cat "$template_file"
+                echo "$marker_end"
+            } >> "$target_file"
+            log_success "Optimisations appliquées"
+        fi
     else
         log_warning "Template gradle.properties non trouvé"
     fi
