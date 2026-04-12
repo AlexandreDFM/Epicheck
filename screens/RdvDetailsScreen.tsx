@@ -55,6 +55,9 @@ export default function RdvDetailsScreen() {
     const [statusMessage, setStatusMessage] = useState("Fetching data...");
     const [registrations, setRegistrations] = useState<IRegistration[]>([]);
     const [hasJenkinsCredentials, setHasJenkinsCredentials] = useState(false);
+    const [jenkinsProjectExists, setJenkinsProjectExists] = useState<
+        boolean | null
+    >(null); // null = not checked yet
     const [jenkinsBuildInfo, setJenkinsBuildInfo] = useState<
         Record<string, any>
     >({});
@@ -84,7 +87,9 @@ export default function RdvDetailsScreen() {
     }, []);
 
     /**
-     * Fetch Jenkins build info when project name and credentials are ready
+     * Check if the Jenkins project exists, then fetch build info for each
+     * registration. A single probe to the instance-level job path avoids
+     * spamming dozens of 404s when an activity has no Jenkins tests at all.
      */
     useEffect(() => {
         if (
@@ -93,28 +98,53 @@ export default function RdvDetailsScreen() {
             registrations.length > 0 &&
             !projectLoading
         ) {
-            console.log(
-                "[RdvDetails] Fetching Jenkins build info for all registrations",
-            );
+            const checkAndFetch = async () => {
+                // Probe the project-level job once
+                try {
+                    const moduleCode = event.codemodule.toUpperCase();
+                    const moduleBase = moduleCode
+                        .split("-")
+                        .slice(0, -1)
+                        .join("-");
+                    const projectPath = `/view/${moduleBase}/job/${moduleCode}/job/${projectName}/job/${event.scolaryear}/job/${event.codeinstance}`;
 
-            registrations.forEach((registration) => {
-                if (registration.type === "group") {
-                    // Fetch team-level build info for groups
-                    const teamId = registration.members
-                        .map((m) => m.login)
-                        .join("_");
-                    if (!jenkinsTeamBuildInfo[teamId]) {
-                        fetchJenkinsTeamBuildInfo(registration);
-                    }
-                } else {
-                    // Fetch individual build info for single registrations
-                    registration.members.forEach((member) => {
-                        if (!jenkinsBuildInfo[member.login]) {
-                            fetchJenkinsBuildInfo(member.login);
-                        }
-                    });
+                    await jenkinsApi.getJobInfo(projectPath);
+                    setJenkinsProjectExists(true);
+                    console.log(
+                        "[RdvDetails] ✓ Jenkins project exists:",
+                        projectPath,
+                    );
+                } catch {
+                    console.log(
+                        "[RdvDetails] Jenkins project not found — disabling Jenkins features",
+                    );
+                    setJenkinsProjectExists(false);
+                    return; // Don't fetch individual builds
                 }
-            });
+
+                // Project exists → fetch individual build info
+                console.log(
+                    "[RdvDetails] Fetching Jenkins build info for all registrations",
+                );
+                registrations.forEach((registration) => {
+                    if (registration.type === "group") {
+                        const teamId = registration.members
+                            .map((m) => m.login)
+                            .join("_");
+                        if (!jenkinsTeamBuildInfo[teamId]) {
+                            fetchJenkinsTeamBuildInfo(registration);
+                        }
+                    } else {
+                        registration.members.forEach((member) => {
+                            if (!jenkinsBuildInfo[member.login]) {
+                                fetchJenkinsBuildInfo(member.login);
+                            }
+                        });
+                    }
+                });
+            };
+
+            checkAndFetch();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
@@ -425,19 +455,132 @@ export default function RdvDetailsScreen() {
     };
 
     /**
-     * Constructs Jenkins build trigger URL
+     * Core build trigger — posts to a Jenkins job path with the correct
+     * form body (flat fields + json payload + crumb).
+     * Throws on failure so callers can handle errors.
      */
-    const getJenkinsBuildTriggerUrl = (login: string): string => {
-        const jobPath = getJenkinsJobPath(login);
-        const baseUrl = "https://jenkins.epitest.eu";
-        return `${baseUrl}${jobPath}/build?delay=0sec`;
+    const triggerBuildByJobPath = async (jobPath: string): Promise<void> => {
+        const authHeader = await jenkinsService.getAuthHeader();
+        const baseUrl = await jenkinsService.getBaseUrl();
+        const buildUrl = `${baseUrl}${jobPath}/build?delay=0sec`;
+
+        console.log("[RdvDetails] Triggering Jenkins build:", buildUrl);
+
+        // Fetch Jenkins-Crumb token (required for CSRF protection)
+        let crumbToken = "";
+        try {
+            const crumbUrl = `${baseUrl}/crumbIssuer/api/json`;
+            const crumbResponse = await fetch(crumbUrl, {
+                method: "GET",
+                headers: { Authorization: authHeader },
+            });
+            if (crumbResponse.ok) {
+                const crumbData = await crumbResponse.json();
+                crumbToken = crumbData.crumb || "";
+                console.log("[RdvDetails] ✓ Jenkins-Crumb fetched");
+            } else {
+                console.warn(
+                    "[RdvDetails] Crumb fetch returned:",
+                    crumbResponse.status,
+                );
+            }
+        } catch (crumbError) {
+            console.warn(
+                "[RdvDetails] Failed to fetch Jenkins-Crumb:",
+                crumbError,
+            );
+        }
+
+        // Parameters matching the Jenkins job configuration
+        const parameters: { name: string; value: string | boolean }[] = [
+            { name: "VISIBILITY", value: "Private" },
+            { name: "DELIVERY", value: "Git" },
+            { name: "FORCE", value: false },
+            { name: "CHECKOUT_DELIVERY_DATETIME", value: "" },
+        ];
+
+        // ── Build the body exactly like the Jenkins browser form ──
+        const parts: string[] = [];
+
+        // 1. Flat form fields: name=X&value=Y pairs
+        parameters.forEach((param) => {
+            parts.push(`name=${encodeURIComponent(param.name)}`);
+            if (param.value !== false) {
+                parts.push(`value=${encodeURIComponent(String(param.value))}`);
+            }
+        });
+
+        // 2. Hidden form fields
+        parts.push("statusCode=303");
+        parts.push("redirectTo=.");
+
+        // 3. Jenkins-Crumb as flat field
+        if (crumbToken) {
+            parts.push(`Jenkins-Crumb=${encodeURIComponent(crumbToken)}`);
+        }
+
+        // 4. The critical `json` field — without this Jenkins returns 400
+        const jsonPayload: Record<string, any> = {
+            parameter: parameters.map((p) => ({
+                name: p.name,
+                value: p.value,
+            })),
+            statusCode: "303",
+            redirectTo: ".",
+        };
+        if (crumbToken) {
+            jsonPayload["Jenkins-Crumb"] = crumbToken;
+        }
+        parts.push(`json=${encodeURIComponent(JSON.stringify(jsonPayload))}`);
+
+        const body = parts.join("&");
+
+        const headers: Record<string, string> = {
+            Authorization: authHeader,
+            "Content-Type": "application/x-www-form-urlencoded",
+        };
+        if (crumbToken) {
+            headers["Jenkins-Crumb"] = crumbToken;
+        }
+
+        const response = await fetch(buildUrl, {
+            method: "POST",
+            headers,
+            body,
+            redirect: "manual",
+        });
+
+        if (
+            response.ok ||
+            response.status === 201 ||
+            response.status === 302 ||
+            response.status === 303
+        ) {
+            console.log(
+                "[RdvDetails] ✓ Build triggered (status:",
+                response.status,
+                ")",
+            );
+        } else {
+            const text = await response.text().catch(() => "");
+            console.error(
+                "[RdvDetails] Jenkins trigger response:",
+                response.status,
+                text.substring(0, 500),
+            );
+            throw new Error(`Jenkins returned status ${response.status}`);
+        }
     };
 
     /**
-     * Trigger a Jenkins build for testing
+     * Trigger a Jenkins build for a single student login.
      */
     const triggerJenkinsBuild = async (login: string) => {
-        if (!hasJenkinsCredentials || !projectName) {
+        if (
+            !hasJenkinsCredentials ||
+            !projectName ||
+            jenkinsProjectExists === false
+        ) {
             Toast.show({
                 type: "error",
                 text1: "Error",
@@ -448,80 +591,14 @@ export default function RdvDetailsScreen() {
         }
 
         try {
-            const buildUrl = getJenkinsBuildTriggerUrl(login);
-            console.log("[RdvDetails] Triggering Jenkins build:", buildUrl);
-
-            // Get auth header for the request
-            const authHeader = await jenkinsService.getAuthHeader();
-            const baseUrl = await jenkinsService.getBaseUrl();
-
-            // Fetch Jenkins-Crumb token
-            let crumbToken = "";
-            try {
-                const crumbUrl = `${baseUrl}/crumbIssuer/api/json`;
-                const crumbResponse = await fetch(crumbUrl, {
-                    method: "GET",
-                    headers: {
-                        Authorization: authHeader,
-                    },
-                });
-                if (crumbResponse.ok) {
-                    const crumbData = await crumbResponse.json();
-                    crumbToken = crumbData.crumb || "";
-                    console.log("[RdvDetails] ✓ Jenkins-Crumb fetched");
-                }
-            } catch (crumbError) {
-                console.warn(
-                    "[RdvDetails] Failed to fetch Jenkins-Crumb:",
-                    crumbError,
-                );
-            }
-
-            // Build parameters
-            const parameters = [
-                { name: "VISIBILITY", value: "Private" },
-                { name: "DELIVERY", value: "Git" },
-                { name: "FORCE", value: false },
-                { name: "CHECKOUT_DELIVERY_DATETIME", value: "" },
-            ];
-
-            const headers: Record<string, string> = {
-                Authorization: authHeader,
-                "Content-Type": "application/x-www-form-urlencoded",
-            };
-
-            // Add Jenkins-Crumb if available
-            if (crumbToken) {
-                headers["Jenkins-Crumb"] = crumbToken;
-            }
-
-            // Build form data for parameters
-            const formData = new URLSearchParams();
-            parameters.forEach((param) => {
-                formData.append(param.name, String(param.value));
+            const jobPath = getJenkinsJobPath(login);
+            await triggerBuildByJobPath(jobPath);
+            Toast.show({
+                type: "success",
+                text1: "Build started",
+                text2: `Build triggered for ${login}`,
+                position: "top",
             });
-
-            const response = await fetch(buildUrl, {
-                method: "POST",
-                headers,
-                body: formData.toString(),
-            });
-
-            if (
-                response.ok ||
-                response.status === 201 ||
-                response.status === 303
-            ) {
-                Toast.show({
-                    type: "success",
-                    text1: "Build started",
-                    text2: `Build triggered for ${login}`,
-                    position: "top",
-                });
-                console.log("[RdvDetails] ✓ Build triggered successfully");
-            } else {
-                throw new Error(`Jenkins returned status ${response.status}`);
-            }
         } catch (error: any) {
             console.error(
                 "[RdvDetails] Failed to trigger Jenkins build:",
@@ -534,6 +611,93 @@ export default function RdvDetailsScreen() {
                 position: "top",
             });
         }
+    };
+
+    /**
+     * Trigger Jenkins builds for ALL registrations in the activity.
+     * Groups use the team job path, individuals use the single login path.
+     * Builds are triggered sequentially with a small delay to avoid
+     * overwhelming the Jenkins server.
+     */
+    const [triggeringAllBuilds, setTriggeringAllBuilds] = useState(false);
+
+    const triggerAllBuilds = async () => {
+        if (
+            !hasJenkinsCredentials ||
+            !projectName ||
+            jenkinsProjectExists === false
+        ) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Jenkins credentials not configured",
+                position: "top",
+            });
+            return;
+        }
+
+        if (registrations.length === 0) {
+            Toast.show({
+                type: "info",
+                text1: "No registrations",
+                text2: "No groups or students to trigger builds for",
+                position: "top",
+            });
+            return;
+        }
+
+        setTriggeringAllBuilds(true);
+        let successCount = 0;
+        let failCount = 0;
+
+        Toast.show({
+            type: "info",
+            text1: "Triggering builds…",
+            text2: `0 / ${registrations.length}`,
+            position: "top",
+            visibilityTime: 1500,
+        });
+
+        for (const registration of registrations) {
+            try {
+                const jobPath =
+                    registration.type === "group"
+                        ? getJenkinsTeamJobPath(registration)
+                        : getJenkinsJobPath(registration.master.login);
+
+                await triggerBuildByJobPath(jobPath);
+                successCount++;
+            } catch (error: any) {
+                failCount++;
+                console.warn(
+                    `[RdvDetails] Build trigger failed for ${registration.master.login}:`,
+                    error.message,
+                );
+            }
+
+            // Small delay between requests to avoid hammering Jenkins
+            if (
+                registrations.indexOf(registration) <
+                registrations.length - 1
+            ) {
+                await new Promise((resolve) => setTimeout(resolve, 800));
+            }
+        }
+
+        setTriggeringAllBuilds(false);
+
+        Toast.show({
+            type:
+                failCount === 0
+                    ? "success"
+                    : successCount > 0
+                      ? "info"
+                      : "error",
+            text1: "All builds triggered",
+            text2: `✓ ${successCount} succeeded${failCount > 0 ? `, ✗ ${failCount} failed` : ""}`,
+            position: "top",
+            visibilityTime: 4000,
+        });
     };
 
     /**
@@ -634,7 +798,7 @@ export default function RdvDetailsScreen() {
                 visible={visible}
                 animationType="slide"
                 transparent={false}
-                backdropColor={isDark ? "#242424" : "#FFFFFF" }
+                backdropColor={isDark ? "#242424" : "#FFFFFF"}
                 onRequestClose={() =>
                     setNoteModal({ visible: false, note: null })
                 }
@@ -647,17 +811,17 @@ export default function RdvDetailsScreen() {
                                 setNoteModal({ visible: false, note: null })
                             }
                             className="mr-3 p-2"
-                            >
+                        >
                             <Ionicons
                                 name="arrow-back"
                                 size={24}
                                 color="white"
-                                />
+                            />
                         </TouchableOpacity>
                         <Text
                             className="flex-1 text-xl font-bold text-white"
                             style={{ fontFamily: "Anton" }}
-                            >
+                        >
                             {allNotes ? "TOUTES LES NOTES" : "NOTATION"}
                         </Text>
                     </View>
@@ -982,7 +1146,8 @@ export default function RdvDetailsScreen() {
                     )}
                     {/* Jenkins URL Button */}
                     <TouchableOpacity
-                        className="ml-2 bg-primary p-2"
+                        disabled={jenkinsProjectExists === false}
+                        className={`ml-2 p-2 ${jenkinsProjectExists === false ? "bg-gray-400" : "bg-primary"}`}
                         onPress={() => {
                             if (hasJenkinsCredentials)
                                 fetchJenkinsTeamBuildInfo(item);
@@ -998,10 +1163,11 @@ export default function RdvDetailsScreen() {
                         <Ionicons name="link-outline" size={16} color="white" />
                     </TouchableOpacity>
                     <TouchableOpacity
+                        disabled={jenkinsProjectExists === false}
                         onPress={() =>
                             triggerJenkinsBuild(item.members[0].login)
                         }
-                        className="ml-2 bg-green-500 p-2"
+                        className={`ml-2 p-2 ${jenkinsProjectExists === false ? "bg-gray-400" : "bg-green-500"}`}
                     >
                         <Ionicons name="play-outline" size={16} color="white" />
                     </TouchableOpacity>
@@ -1034,7 +1200,26 @@ export default function RdvDetailsScreen() {
                         const teamBuildInfo = jenkinsTeamBuildInfo[teamId];
                         const isTeamLoading = jenkinsTeamLoadingIds.has(teamId);
 
-                        if (hasJenkinsCredentials && teamBuildInfo) {
+                        if (jenkinsProjectExists === false) {
+                            // Project doesn't exist on Jenkins — greyed out
+                            return (
+                                <View className="flex-row items-center justify-center bg-gray-100 px-4 py-3">
+                                    <Ionicons
+                                        name="close-circle-outline"
+                                        size={16}
+                                        color="#9ca3af"
+                                    />
+                                    <Text
+                                        className="ml-2 text-sm text-gray-400"
+                                        style={{
+                                            fontFamily: "IBMPlexSans",
+                                        }}
+                                    >
+                                        No Jenkins tests
+                                    </Text>
+                                </View>
+                            );
+                        } else if (hasJenkinsCredentials && teamBuildInfo) {
                             // Show build status when available
                             const { bg, text } = getBuildStatusColor(
                                 teamBuildInfo.status,
@@ -1189,7 +1374,7 @@ export default function RdvDetailsScreen() {
         <SafeAreaView className="flex-1">
             {renderNoteModal()}
             {/* Header */}
-            <View className="flex-row items-center bg-primary p-4 gap-x-2">
+            <View className="flex-row items-center gap-x-2 bg-primary p-4">
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
                     className="p-2"
@@ -1222,17 +1407,30 @@ export default function RdvDetailsScreen() {
                     }}
                     className="bg-tertiary p-2"
                 >
-                    <Ionicons
-                        name="bar-chart"
-                        size={24}
-                        color="white"
-                    />
+                    <Ionicons name="bar-chart" size={24} color="white" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    className="bg-green-500 p-2"
+                    onPress={triggerAllBuilds}
+                    disabled={
+                        triggeringAllBuilds ||
+                        !hasJenkinsCredentials ||
+                        !projectName ||
+                        jenkinsProjectExists === false
+                    }
+                    className={`p-2 ${
+                        triggeringAllBuilds ||
+                        !hasJenkinsCredentials ||
+                        !projectName ||
+                        jenkinsProjectExists === false
+                            ? "bg-gray-400"
+                            : "bg-green-500"
+                    }`}
                 >
-                    <Ionicons name="play-outline" size={24} color="white" />
+                    {triggeringAllBuilds ? (
+                        <ActivityIndicator size={24} color="white" />
+                    ) : (
+                        <Ionicons name="play-outline" size={24} color="white" />
+                    )}
                 </TouchableOpacity>
             </View>
 
