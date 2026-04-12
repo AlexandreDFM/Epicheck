@@ -142,16 +142,19 @@ build_and_install() {
 
     # Determine package manager and use it to run expo
     if [ -f "pnpm-lock.yaml" ]; then
-        pnpm exec -- expo run:android --variant debug
+        if pnpm exec -- expo run:android --variant debug; then
+            log_success "Installation réussie!"
+        else
+            log_error "L'installation a échoué"
+            exit 1
+        fi
     else
-        npm exec -- expo run:android --variant debug
-    fi
-
-    if [ $? -eq 0 ]; then
-        log_success "Installation réussie!"
-    else
-        log_error "L'installation a échoué"
-        exit 1
+        if npm exec -- expo run:android --variant debug; then
+            log_success "Installation réussie!"
+        else
+            log_error "L'installation a échoué"
+            exit 1
+        fi
     fi
 }
 
