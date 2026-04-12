@@ -1265,7 +1265,7 @@ export default function RdvDetailsScreen() {
     };
 
     const renderRegistration = ({ item }: { item: IRegistration }) => {
-        const firstMember = item.members[0];
+        const firstMember = item.members?.[0];
         const memberCount = Array.isArray(item.members) ? item.members.length : 0;
         const title =
             item.title?.trim() ||
@@ -1275,7 +1275,7 @@ export default function RdvDetailsScreen() {
                   item.master.title ||
                   firstMember?.login ||
                   item.master.login ||
-                  "Registration sans titre");
+                  "Inscription sans titre");
         const logins = item.members
             .map((m) => {
                 const words = m.login
