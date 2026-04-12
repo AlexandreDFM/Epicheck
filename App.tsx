@@ -56,7 +56,7 @@ type RootStackParamList = {
     ManualAttendance: { event?: IIntraEvent };
     Settings: undefined;
     RdvDetails: { event: IIntraEvent };
-    RdvMark: { event: IIntraEvent };
+    RdvMark: { event: IIntraEvent; masterLogin: string; groupName: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
