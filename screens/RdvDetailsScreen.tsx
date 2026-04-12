@@ -1265,7 +1265,14 @@ export default function RdvDetailsScreen() {
     };
 
     const renderRegistration = ({ item }: { item: IRegistration }) => {
-        const title = `${item.title}`;
+        const title =
+            item.title?.trim() ||
+            (item.type === "group"
+                ? `Groupe (${item.members.length} membres)`
+                : item.members[0]?.title ||
+                  item.master.title ||
+                  item.members[0]?.login ||
+                  item.master.login);
         const logins = item.members
             .map((m) => {
                 const words = m.login
