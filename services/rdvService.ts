@@ -64,9 +64,9 @@ class RdvService {
             return [];
         }
 
-        rawData.slots.forEach((block: any) => {
+        rawData.slots.forEach((block: any, blockIndex: number) => {
             if (block.slots && Array.isArray(block.slots)) {
-                block.slots.forEach((slot: any) => {
+                block.slots.forEach((slot: any, slotIndex: number) => {
                     const members: IIntraStudent[] = [];
 
                     // 1. Check for members (Team/Group)
@@ -107,10 +107,10 @@ class RdvService {
 
                     // Only add if we found members
                     if (members.length > 0) {
+                        const masterLogin =
+                            slot.master?.login ?? members[0]?.login ?? "";
                         registrations.push({
-                            id: slot.id
-                                ? slot.id.toString()
-                                : `slot-${Math.random()}`,
+                            id: `${blockIndex}-${slotIndex}-${slot.id ?? "s"}-${masterLogin}`,
                             type: members.length > 1 ? "group" : "individual",
                             master: this.mapMemberToStudent(slot.master),
                             members: members,
