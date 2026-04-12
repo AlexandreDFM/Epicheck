@@ -280,8 +280,8 @@ export default function SettingsScreen() {
                 jenkinsBaseUrl.trim() || "https://jenkins.epitest.eu",
             );
 
-            // Validate credentials by making a test API call
-            const isValid = await jenkinsApi.getJobInfo("/");
+            // Validate credentials using the dedicated service method
+            await jenkinsService.validateCredentials();
             setHasJenkinsCredentials(true);
 
             Toast.show({
