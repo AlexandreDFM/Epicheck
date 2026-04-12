@@ -91,8 +91,10 @@
         --color-primary-light: 96 165 250; /* #60A5FA */
 
         /* Secondary and Tertiary Colors (optional, can be used for accents) */
+        --color-secondary: 255 69 0; /* Deep Orange #FF4500 */
         --color-secondary-dark: 255 69 0; /* #FF4500 */
         --color-secondary-light: 255 160 122; /* #FFA07A */
+        --color-tertiary: 171 71 188; /* Purple #AB47BC */
         --color-tertiary-dark: 171 71 188; /* #AB47BC */
         --color-tertiary-light: 206 147 216; /* #CE93D8 */
 
