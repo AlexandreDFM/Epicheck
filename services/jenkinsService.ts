@@ -6,6 +6,8 @@
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
+export const JENKINS_DEFAULT_BASE_URL = "https://jenkins.epitest.eu";
+
 const JENKINS_USERNAME_KEY = "jenkins_username";
 const JENKINS_TOKEN_KEY = "jenkins_token";
 const JENKINS_BASE_URL_KEY = "jenkins_base_url";
@@ -37,7 +39,7 @@ const storage = {
 class JenkinsService {
     private jenkinsUsername: string | null = null;
     private jenkinsToken: string | null = null;
-    private jenkinsBaseUrl: string = "https://jenkins.epitest.eu";
+    private jenkinsBaseUrl: string = JENKINS_DEFAULT_BASE_URL;
 
     /**
      * Store Jenkins credentials securely
@@ -45,7 +47,7 @@ class JenkinsService {
     async setCredentials(
         username: string,
         token: string,
-        baseUrl: string = "https://jenkins.epitest.eu",
+        baseUrl: string = JENKINS_DEFAULT_BASE_URL,
     ): Promise<void> {
         try {
             if (!username || !token) {
@@ -79,9 +81,8 @@ class JenkinsService {
     }> {
         try {
             if (!this.jenkinsUsername) {
-                this.jenkinsUsername = await storage.getItem(
-                    JENKINS_USERNAME_KEY,
-                );
+                this.jenkinsUsername =
+                    await storage.getItem(JENKINS_USERNAME_KEY);
             }
             if (!this.jenkinsToken) {
                 this.jenkinsToken = await storage.getItem(JENKINS_TOKEN_KEY);
@@ -98,7 +99,10 @@ class JenkinsService {
                 baseUrl: this.jenkinsBaseUrl,
             };
         } catch (error) {
-            console.error("[JenkinsService] Error retrieving credentials:", error);
+            console.error(
+                "[JenkinsService] Error retrieving credentials:",
+                error,
+            );
             return {
                 username: null,
                 token: null,
@@ -115,7 +119,10 @@ class JenkinsService {
             const { username, token } = await this.getCredentials();
             return !!username && !!token;
         } catch (error) {
-            console.error("[JenkinsService] Error checking credentials:", error);
+            console.error(
+                "[JenkinsService] Error checking credentials:",
+                error,
+            );
             return false;
         }
     }
@@ -134,7 +141,10 @@ class JenkinsService {
 
             console.log("[JenkinsService] ✓ Jenkins credentials cleared");
         } catch (error) {
-            console.error("[JenkinsService] Error clearing credentials:", error);
+            console.error(
+                "[JenkinsService] Error clearing credentials:",
+                error,
+            );
             throw error;
         }
     }
@@ -191,7 +201,10 @@ class JenkinsService {
             );
             return response.status === 200;
         } catch (error) {
-            console.error("[JenkinsService] Credentials validation failed:", error);
+            console.error(
+                "[JenkinsService] Credentials validation failed:",
+                error,
+            );
             return false;
         }
     }
