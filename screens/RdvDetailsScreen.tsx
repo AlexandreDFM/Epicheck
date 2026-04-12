@@ -6,18 +6,20 @@
 import {
     View,
     Text,
-    FlatList,
-    ActivityIndicator,
-    Image,
-    TouchableOpacity,
-    Linking,
     Modal,
+    Image,
+    Switch,
+    Linking,
+    FlatList,
+    TextInput,
     ScrollView,
+    TouchableOpacity,
+    ActivityIndicator,
 } from "react-native";
 import {
-    useNavigation,
     useRoute,
     RouteProp,
+    useNavigation,
     NavigationProp,
 } from "@react-navigation/native";
 
@@ -27,11 +29,11 @@ import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
 import jenkinsApi from "../services/jenkinsApi";
 import { IIntraEvent } from "../types/IIntraEvent";
+import { useTheme } from "../contexts/ThemeContext";
+import { IActivityNote } from "../types/IActivityNote";
 import jenkinsService from "../services/jenkinsService";
 import { SafeAreaView } from "react-native-safe-area-context";
 import rdvService, { IRegistration } from "../services/rdvService";
-import { IActivityNote } from "../types/IActivityNote";
-import { useTheme } from "../contexts/ThemeContext";
 
 type RootStackParamList = {
     RdvDetails: { event: IIntraEvent };
@@ -79,6 +81,20 @@ export default function RdvDetailsScreen() {
         note: IActivityNote | null;
         allNotes?: IActivityNote[];
     }>({ visible: false, note: null });
+
+    // Jenkins build configuration
+    const [jenkinsConfig, setJenkinsConfig] = useState({
+        visibility: "Private" as "Private" | "Public",
+        delivery: "Git" as "Git" | "Ramassage" | "Bttf",
+        force: false,
+        checkoutDatetime: "",
+    });
+    const [jenkinsBuildModal, setJenkinsBuildModal] = useState<{
+        visible: boolean;
+        mode: "single" | "all";
+        jobPath?: string;
+        label?: string; // display name for toast after trigger
+    }>({ visible: false, mode: "all" });
 
     useEffect(() => {
         fetchRdvData();
@@ -459,7 +475,10 @@ export default function RdvDetailsScreen() {
      * form body (flat fields + json payload + crumb).
      * Throws on failure so callers can handle errors.
      */
-    const triggerBuildByJobPath = async (jobPath: string): Promise<void> => {
+    const triggerBuildByJobPath = async (
+        jobPath: string,
+        config: typeof jenkinsConfig = jenkinsConfig,
+    ): Promise<void> => {
         const authHeader = await jenkinsService.getAuthHeader();
         const baseUrl = await jenkinsService.getBaseUrl();
         const buildUrl = `${baseUrl}${jobPath}/build?delay=0sec`;
@@ -491,12 +510,15 @@ export default function RdvDetailsScreen() {
             );
         }
 
-        // Parameters matching the Jenkins job configuration
+        // Parameters from user configuration
         const parameters: { name: string; value: string | boolean }[] = [
-            { name: "VISIBILITY", value: "Private" },
-            { name: "DELIVERY", value: "Git" },
-            { name: "FORCE", value: false },
-            { name: "CHECKOUT_DELIVERY_DATETIME", value: "" },
+            { name: "VISIBILITY", value: config.visibility },
+            { name: "DELIVERY", value: config.delivery },
+            { name: "FORCE", value: config.force },
+            {
+                name: "CHECKOUT_DELIVERY_DATETIME",
+                value: config.checkoutDatetime,
+            },
         ];
 
         // ── Build the body exactly like the Jenkins browser form ──
@@ -573,51 +595,7 @@ export default function RdvDetailsScreen() {
     };
 
     /**
-     * Trigger a Jenkins build for a single student login.
-     */
-    const triggerJenkinsBuild = async (login: string) => {
-        if (
-            !hasJenkinsCredentials ||
-            !projectName ||
-            jenkinsProjectExists === false
-        ) {
-            Toast.show({
-                type: "error",
-                text1: "Error",
-                text2: "Jenkins credentials not configured",
-                position: "top",
-            });
-            return;
-        }
-
-        try {
-            const jobPath = getJenkinsJobPath(login);
-            await triggerBuildByJobPath(jobPath);
-            Toast.show({
-                type: "success",
-                text1: "Build started",
-                text2: `Build triggered for ${login}`,
-                position: "top",
-            });
-        } catch (error: any) {
-            console.error(
-                "[RdvDetails] Failed to trigger Jenkins build:",
-                error,
-            );
-            Toast.show({
-                type: "error",
-                text1: "Build failed",
-                text2: error.message || "Failed to trigger build",
-                position: "top",
-            });
-        }
-    };
-
-    /**
      * Trigger Jenkins builds for ALL registrations in the activity.
-     * Groups use the team job path, individuals use the single login path.
-     * Builds are triggered sequentially with a small delay to avoid
-     * overwhelming the Jenkins server.
      */
     const [triggeringAllBuilds, setTriggeringAllBuilds] = useState(false);
 
@@ -665,7 +643,7 @@ export default function RdvDetailsScreen() {
                         ? getJenkinsTeamJobPath(registration)
                         : getJenkinsJobPath(registration.master.login);
 
-                await triggerBuildByJobPath(jobPath);
+                await triggerBuildByJobPath(jobPath, jenkinsConfig);
                 successCount++;
             } catch (error: any) {
                 failCount++;
@@ -675,7 +653,6 @@ export default function RdvDetailsScreen() {
                 );
             }
 
-            // Small delay between requests to avoid hammering Jenkins
             if (
                 registrations.indexOf(registration) <
                 registrations.length - 1
@@ -698,6 +675,294 @@ export default function RdvDetailsScreen() {
             position: "top",
             visibilityTime: 4000,
         });
+    };
+
+    /**
+     * Called when user confirms the build config modal.
+     */
+    const handleBuildModalConfirm = async () => {
+        const { mode, jobPath, label } = jenkinsBuildModal;
+        setJenkinsBuildModal((prev) => ({ ...prev, visible: false }));
+
+        if (mode === "single" && jobPath) {
+            try {
+                await triggerBuildByJobPath(jobPath, jenkinsConfig);
+                Toast.show({
+                    type: "success",
+                    text1: "Build started",
+                    text2: `Build triggered for ${label ?? "job"}`,
+                    position: "top",
+                });
+            } catch (error: any) {
+                Toast.show({
+                    type: "error",
+                    text1: "Build failed",
+                    text2: error.message || "Failed to trigger build",
+                    position: "top",
+                });
+            }
+        } else {
+            await triggerAllBuilds();
+        }
+    };
+
+    /**
+     * Render the Jenkins build configuration modal.
+     */
+    const renderJenkinsBuildModal = () => {
+        if (!jenkinsBuildModal.visible) return null;
+
+        const visibilityOptions: ("Private" | "Public")[] = [
+            "Private",
+            "Public",
+        ];
+        const deliveryOptions: ("Git" | "Ramassage" | "Bttf")[] = [
+            "Git",
+            "Ramassage",
+            "Bttf",
+        ];
+
+        return (
+            <Modal
+                visible
+                animationType="slide"
+                transparent={false}
+                backdropColor={isDark ? "#242424" : "#FFFFFF"}
+                onRequestClose={() =>
+                    setJenkinsBuildModal((prev) => ({
+                        ...prev,
+                        visible: false,
+                    }))
+                }
+            >
+                <SafeAreaView className="flex-1">
+                    {/* Header */}
+                    <View className="flex-row items-center bg-primary px-4 py-4">
+                        <TouchableOpacity
+                            onPress={() =>
+                                setJenkinsBuildModal((prev) => ({
+                                    ...prev,
+                                    visible: false,
+                                }))
+                            }
+                            className="mr-3 p-2"
+                        >
+                            <Ionicons
+                                name="arrow-back"
+                                size={24}
+                                color="white"
+                            />
+                        </TouchableOpacity>
+                        <View className="flex-1">
+                            <Text
+                                className="text-xl font-bold text-white"
+                                style={{ fontFamily: "Anton" }}
+                            >
+                                BUILD CONFIGURATION
+                            </Text>
+                            <Text className="text-xs text-white/80">
+                                {jenkinsBuildModal.mode === "all"
+                                    ? `All registrations (${registrations.length})`
+                                    : (jenkinsBuildModal.label ??
+                                      "Single build")}
+                            </Text>
+                        </View>
+                    </View>
+
+                    <ScrollView className="flex-1 p-4">
+                        {/* VISIBILITY */}
+                        <View className="mb-6">
+                            <Text className="mb-1 text-xs font-semibold uppercase text-text-tertiary">
+                                Visibility
+                            </Text>
+                            <Text className="mb-3 text-xs text-text-tertiary">
+                                Private: not visible for students on
+                                my.epitech.eu{"\n"}Public: visible for students
+                            </Text>
+                            <View className="flex-row gap-2">
+                                {visibilityOptions.map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt}
+                                        onPress={() =>
+                                            setJenkinsConfig((prev) => ({
+                                                ...prev,
+                                                visibility: opt,
+                                            }))
+                                        }
+                                        className={`flex-1 items-center py-3 ${
+                                            jenkinsConfig.visibility === opt
+                                                ? "bg-primary"
+                                                : "border-2 border-gray-300 bg-gray-100"
+                                        }`}
+                                    >
+                                        <Text
+                                            className={`text-sm font-semibold ${
+                                                jenkinsConfig.visibility === opt
+                                                    ? "text-white"
+                                                    : "text-gray-700"
+                                            }`}
+                                        >
+                                            {opt}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* DELIVERY */}
+                        <View className="mb-6">
+                            <Text className="mb-2 text-xs font-semibold uppercase text-text-tertiary">
+                                Delivery
+                            </Text>
+                            <Text className="mb-3 text-xs text-text-tertiary">
+                                Git: latest commit (follow-ups){"\n"}Ramassage:
+                                last commit before delivery date{"\n"}Bttf:
+                                latest commit (bttf grading)
+                            </Text>
+                            <View className="flex-row gap-2">
+                                {deliveryOptions.map((opt) => (
+                                    <TouchableOpacity
+                                        key={opt}
+                                        onPress={() =>
+                                            setJenkinsConfig((prev) => ({
+                                                ...prev,
+                                                delivery: opt,
+                                            }))
+                                        }
+                                        className={`flex-1 items-center py-3 ${
+                                            jenkinsConfig.delivery === opt
+                                                ? "bg-primary"
+                                                : "border-2 border-gray-300 bg-gray-100"
+                                        }`}
+                                    >
+                                        <Text
+                                            className={`text-sm font-semibold ${
+                                                jenkinsConfig.delivery === opt
+                                                    ? "text-white"
+                                                    : "text-gray-700"
+                                            }`}
+                                        >
+                                            {opt}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* FORCE */}
+                        <View className="mb-6">
+                            <View className="flex-row items-center justify-between border border-gray-300 px-4 py-3">
+                                <View className="mr-4 flex-1">
+                                    <Text className="text-sm font-semibold text-text-tertiary">
+                                        Force
+                                    </Text>
+                                    <Text className="mt-1 text-xs text-text-tertiary">
+                                        Always run all tests even if no source
+                                        changes
+                                    </Text>
+                                </View>
+                                <Switch
+                                    value={jenkinsConfig.force}
+                                    onValueChange={(val) =>
+                                        setJenkinsConfig((prev) => ({
+                                            ...prev,
+                                            force: val,
+                                        }))
+                                    }
+                                    trackColor={{
+                                        false: "#d1d5db",
+                                        true: "#0ea5e9",
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        {/* CHECKOUT_DELIVERY_DATETIME */}
+                        <View className="mb-6">
+                            <Text className="mb-2 text-xs font-semibold uppercase text-text-tertiary">
+                                Checkout Datetime (optional)
+                            </Text>
+                            <Text className="mb-3 text-xs text-text-tertiary">
+                                ISO 8601 format, e.g. 2025-04-23T16:31:34Z
+                                {"\n"}Leave empty for default behaviour
+                            </Text>
+                            <View className="flex-row items-center border border-gray-300 px-3 py-2">
+                                <TextInput
+                                    className="flex-1 text-sm text-text-secondary"
+                                    style={{ fontFamily: "IBMPlexSans" }}
+                                    placeholder="Not set (default)"
+                                    placeholderTextColor="#9ca3af"
+                                    value={jenkinsConfig.checkoutDatetime}
+                                    onChangeText={(val) =>
+                                        setJenkinsConfig((prev) => ({
+                                            ...prev,
+                                            checkoutDatetime: val,
+                                        }))
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                                {jenkinsConfig.checkoutDatetime ? (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            setJenkinsConfig((prev) => ({
+                                                ...prev,
+                                                checkoutDatetime: "",
+                                            }))
+                                        }
+                                        className="ml-2 p-1"
+                                    >
+                                        <Ionicons
+                                            name="close-circle"
+                                            size={20}
+                                            color="#9ca3af"
+                                        />
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+                        </View>
+                    </ScrollView>
+
+                    {/* Bottom action */}
+                    <View className="p-4">
+                        <TouchableOpacity
+                            onPress={handleBuildModalConfirm}
+                            disabled={triggeringAllBuilds}
+                            className={`flex-row items-center justify-center rounded py-4 ${
+                                triggeringAllBuilds
+                                    ? "bg-gray-400"
+                                    : "bg-green-500"
+                            }`}
+                        >
+                            {triggeringAllBuilds ? (
+                                <>
+                                    <ActivityIndicator
+                                        size="small"
+                                        color="white"
+                                    />
+                                    <Text className="ml-2 font-bold text-white">
+                                        Triggering…
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Ionicons
+                                        name="play"
+                                        size={20}
+                                        color="white"
+                                    />
+                                    <Text className="ml-2 font-bold text-white">
+                                        {jenkinsBuildModal.mode === "all"
+                                            ? `Build All (${registrations.length})`
+                                            : "Build"}
+                                    </Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
+            </Modal>
+        );
     };
 
     /**
@@ -832,13 +1097,13 @@ export default function RdvDetailsScreen() {
                             allNotes.map((n, idx) => (
                                 <View
                                     key={idx}
-                                    className="mb-3 border border-primary p-4"
+                                    className="mb-2 gap-y-2 border border-primary p-4"
                                 >
-                                    <View className="mb-2 flex-row items-center justify-between">
+                                    <View className="flex-row items-center justify-between">
                                         <Text className="font-semibold text-primary">
                                             {n.title ?? n.login}
                                         </Text>
-                                        <View className="rounded bg-primary px-3 py-1">
+                                        <View className="bg-primary p-3">
                                             <Text className="font-bold text-white">
                                                 {formatNote(n)}
                                             </Text>
@@ -853,13 +1118,13 @@ export default function RdvDetailsScreen() {
                                                 .join(", ");
                                         if (!correctorDisplay) return null;
                                         return (
-                                            <Text className="text-xs text-text-tertiary">
+                                            <Text className="text-tertiary mt-2 text-xs">
                                                 Correcteur : {correctorDisplay}
                                             </Text>
                                         );
                                     })()}
                                     {n.comment ? (
-                                        <Text className="mt-1 text-xs text-text-tertiary">
+                                        <Text className="text-xs text-text-tertiary">
                                             {n.comment}
                                         </Text>
                                     ) : null}
@@ -869,11 +1134,11 @@ export default function RdvDetailsScreen() {
                             // Single group detail view
                             <View className="gap-y-4">
                                 {/* Note finale */}
-                                <View className="border border-primary p-4">
-                                    <Text className="mb-1 text-xs font-semibold uppercase text-text-tertiary">
+                                <View className="flex-row items-center justify-between border border-primary p-4">
+                                    <Text className="text-lg font-bold uppercase text-primary">
                                         Note finale
                                     </Text>
-                                    <Text className="text-3xl font-bold text-primary">
+                                    <Text className="text-tertiary text-3xl font-bold">
                                         {formatNote(note)}
                                     </Text>
                                 </View>
@@ -888,11 +1153,11 @@ export default function RdvDetailsScreen() {
                                             .join(", ");
                                     if (!correctorDisplay) return null;
                                     return (
-                                        <View className="border border-primary p-4">
-                                            <Text className="mb-1 text-xs font-semibold uppercase text-text-tertiary">
+                                        <View className="flex-row items-center justify-between border border-primary p-4">
+                                            <Text className="text-md font-bold uppercase text-primary">
                                                 Correcteur
                                             </Text>
-                                            <Text className="text-sm text-primary">
+                                            <Text className="text-md text-tertiary font-bold">
                                                 {correctorDisplay}
                                             </Text>
                                         </View>
@@ -901,11 +1166,11 @@ export default function RdvDetailsScreen() {
 
                                 {/* Date */}
                                 {(note.correction_date ?? note.date) && (
-                                    <View className="border border-primary p-4">
-                                        <Text className="mb-1 text-xs font-semibold uppercase text-text-tertiary">
+                                    <View className="flex-row items-center justify-between border border-primary p-4">
+                                        <Text className="text-md font-bold uppercase text-primary">
                                             Date de correction
                                         </Text>
-                                        <Text className="text-sm text-primary">
+                                        <Text className="text-md text-tertiary font-bold">
                                             {note.correction_date ?? note.date}
                                         </Text>
                                     </View>
@@ -914,10 +1179,10 @@ export default function RdvDetailsScreen() {
                                 {/* Commentaire général */}
                                 {note.comment && (
                                     <View className="border border-primary p-4">
-                                        <Text className="mb-1 text-xs font-semibold uppercase text-text-tertiary">
+                                        <Text className="mb-2 text-md font-semibold uppercase text-primary">
                                             Commentaire
                                         </Text>
-                                        <Text className="text-sm text-primary">
+                                        <Text className="text-sm text-text-tertiary">
                                             {note.comment}
                                         </Text>
                                     </View>
@@ -926,7 +1191,7 @@ export default function RdvDetailsScreen() {
                                 {/* Critères */}
                                 {note.notes && note.notes.length > 0 && (
                                     <View className="border border-primary p-4">
-                                        <Text className="mb-3 text-xs font-semibold uppercase text-text-tertiary">
+                                        <Text className="mb-2 text-xs font-semibold uppercase text-text-tertiary">
                                             Critères
                                         </Text>
                                         {note.notes.map((criterion, idx) => (
@@ -1164,9 +1429,21 @@ export default function RdvDetailsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                         disabled={jenkinsProjectExists === false}
-                        onPress={() =>
-                            triggerJenkinsBuild(item.members[0].login)
-                        }
+                        onPress={() => {
+                            const jobPath =
+                                item.type === "group"
+                                    ? getJenkinsTeamJobPath(item)
+                                    : getJenkinsJobPath(item.members[0].login);
+                            const label =
+                                item.master.login?.replace("@epitech.eu", "") ??
+                                "job";
+                            setJenkinsBuildModal({
+                                visible: true,
+                                mode: "single",
+                                jobPath,
+                                label,
+                            });
+                        }}
                         className={`ml-2 p-2 ${jenkinsProjectExists === false ? "bg-gray-400" : "bg-green-500"}`}
                     >
                         <Ionicons name="play-outline" size={16} color="white" />
@@ -1192,7 +1469,7 @@ export default function RdvDetailsScreen() {
                     </View>
                 </View>
 
-                <View className="mt-2 flex-row items-center justify-center gap-x-4">
+                <View className="mt-2 flex-row items-center justify-center gap-x-2">
                     {(() => {
                         const teamId = item.members
                             .map((m) => m.login)
@@ -1203,7 +1480,7 @@ export default function RdvDetailsScreen() {
                         if (jenkinsProjectExists === false) {
                             // Project doesn't exist on Jenkins — greyed out
                             return (
-                                <View className="flex-row items-center justify-center bg-gray-100 px-4 py-3">
+                                <View className="flex-row items-center justify-center bg-gray-100 p-4">
                                     <Ionicons
                                         name="close-circle-outline"
                                         size={16}
@@ -1236,9 +1513,23 @@ export default function RdvDetailsScreen() {
                                             );
                                         });
                                     }}
-                                    className={`flex-row items-center justify-between px-4 py-3 ${bg}`}
+                                    className={`flex-row items-center justify-between p-4 ${bg}`}
                                 >
                                     <View className="flex-row items-center gap-x-2">
+                                        <Ionicons
+                                            name="open-outline"
+                                            size={16}
+                                            color={
+                                                text === "text-green-700"
+                                                    ? "#15803d"
+                                                    : text === "text-red-700"
+                                                      ? "#dc2626"
+                                                      : text ===
+                                                          "text-yellow-700"
+                                                        ? "#ca8a04"
+                                                        : "#374151"
+                                            }
+                                        />
                                         <Text
                                             className={`text-sm font-semibold ${text}`}
                                             style={{
@@ -1254,29 +1545,15 @@ export default function RdvDetailsScreen() {
                                                 fontFamily: "IBMPlexSans",
                                             }}
                                         >
-                                            Status: {teamBuildInfo.status}
+                                            {teamBuildInfo.status}
                                         </Text>
-                                        <Ionicons
-                                            name="open-outline"
-                                            size={16}
-                                            color={
-                                                text === "text-green-700"
-                                                    ? "#15803d"
-                                                    : text === "text-red-700"
-                                                      ? "#dc2626"
-                                                      : text ===
-                                                          "text-yellow-700"
-                                                        ? "#ca8a04"
-                                                        : "#374151"
-                                            }
-                                        />
                                     </View>
                                 </TouchableOpacity>
                             );
                         } else if (hasJenkinsCredentials && isTeamLoading) {
                             // Show loading indicator while fetching
                             return (
-                                <View className="flex-row items-center justify-center bg-blue-100 px-4 py-3">
+                                <View className="flex-row items-center justify-center bg-blue-100 p-4">
                                     <ActivityIndicator
                                         size="small"
                                         color="#1e40af"
@@ -1303,7 +1580,7 @@ export default function RdvDetailsScreen() {
                                         );
                                         window.open(url, "_blank");
                                     }}
-                                    className="flex-row items-center justify-center bg-primary px-4 py-3"
+                                    className="flex-row items-center justify-center bg-primary p-4"
                                 >
                                     <Ionicons
                                         name="open-outline"
@@ -1311,7 +1588,7 @@ export default function RdvDetailsScreen() {
                                         color="white"
                                     />
                                     <Text
-                                        className="ml-2 text-sm font-bold text-white"
+                                        className="text-sm font-bold text-white"
                                         style={{
                                             fontFamily: "IBMPlexSansSemiBold",
                                         }}
@@ -1322,36 +1599,43 @@ export default function RdvDetailsScreen() {
                             );
                         }
                     })()}
-                </View>
-
-                <TouchableOpacity
-                    onPress={() => {
-                        const groupName = rawRdvData
-                            ? rdvService.buildGroupName(
-                                  rawRdvData,
-                                  event,
-                                  item.master.login,
-                              )
-                            : `${event.codeinstance}-${item.master.login}`;
-                        navigation.navigate("RdvMark", {
-                            event,
-                            masterLogin: item.master.login,
-                            groupName,
-                        });
-                    }}
-                    className="mt-2 flex-row items-center justify-center bg-primary px-4 py-3"
-                >
-                    <Ionicons name="bookmark-outline" size={16} color="white" />
-                    <Text
-                        className="ml-2 text-sm font-bold text-white"
-                        style={{
-                            fontFamily: "IBMPlexSansSemiBold",
+                    <TouchableOpacity
+                        onPress={() => {
+                            const groupName = rawRdvData
+                                ? rdvService.buildGroupName(
+                                      rawRdvData,
+                                      event,
+                                      item.master.login,
+                                  )
+                                : `${event.codeinstance}-${item.master.login}`;
+                            navigation.navigate("RdvMark", {
+                                event,
+                                masterLogin: item.master.login,
+                                groupName,
+                            });
                         }}
+                        className="flex-row items-center justify-center bg-primary p-4"
                     >
-                        {"Noter - "}
-                        {getrdvdate(item.date ? item.date : event.start)}
-                    </Text>
-                </TouchableOpacity>
+                        <View className="flex-row items-center gap-x-2">
+                            <Ionicons
+                                name="bookmark-outline"
+                                size={16}
+                                color="white"
+                            />
+                            <Text
+                                className="text-sm font-bold text-white"
+                                style={{
+                                    fontFamily: "IBMPlexSansSemiBold",
+                                }}
+                            >
+                                {"Noter - "}
+                                {getrdvdate(
+                                    item.date ? item.date : event.start,
+                                )}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
 
                 {projectLoading && (
                     <View className="mt-3 border-t border-gray-100 pt-3">
@@ -1373,6 +1657,7 @@ export default function RdvDetailsScreen() {
     return (
         <SafeAreaView className="flex-1">
             {renderNoteModal()}
+            {renderJenkinsBuildModal()}
             {/* Header */}
             <View className="flex-row items-center gap-x-2 bg-primary p-4">
                 <TouchableOpacity
@@ -1410,7 +1695,12 @@ export default function RdvDetailsScreen() {
                     <Ionicons name="bar-chart" size={24} color="white" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                    onPress={triggerAllBuilds}
+                    onPress={() =>
+                        setJenkinsBuildModal({
+                            visible: true,
+                            mode: "all",
+                        })
+                    }
                     disabled={
                         triggeringAllBuilds ||
                         !hasJenkinsCredentials ||
