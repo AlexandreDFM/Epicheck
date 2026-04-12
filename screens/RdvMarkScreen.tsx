@@ -246,65 +246,69 @@ export default function RdvMarkScreen() {
 
                                     {/* Scale buttons */}
                                     <View className="mb-8 flex-row flex-wrap justify-center gap-2">
-                                        {question.scales.map((scale) => {
-                                            const isSelected =
-                                                Object.values(editedMarks)[0]
-                                                    ?.marks[question.id] ===
-                                                scale.name;
+                                        {question.scales.map(
+                                            (scale, scaleIdx) => {
+                                                const isSelected =
+                                                    Object.values(
+                                                        editedMarks,
+                                                    )[0]?.marks[question.id] ===
+                                                    scale.name;
 
-                                            return (
-                                                <TouchableOpacity
-                                                    key={scale.name}
-                                                    onPress={() => {
-                                                        const newMarks = {
-                                                            ...editedMarks,
-                                                        };
-                                                        baremeData.response.team.forEach(
-                                                            (member) => {
-                                                                if (
-                                                                    !newMarks[
-                                                                        member
-                                                                            .login
-                                                                    ]
-                                                                ) {
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={`${scaleIdx}-${scale.name}`}
+                                                        onPress={() => {
+                                                            const newMarks = {
+                                                                ...editedMarks,
+                                                            };
+                                                            baremeData.response.team.forEach(
+                                                                (member) => {
+                                                                    if (
+                                                                        !newMarks[
+                                                                            member
+                                                                                .login
+                                                                        ]
+                                                                    ) {
+                                                                        newMarks[
+                                                                            member.login
+                                                                        ] = {
+                                                                            login: member.login,
+                                                                            name: member.title,
+                                                                            marks: {},
+                                                                        };
+                                                                    }
                                                                     newMarks[
                                                                         member.login
-                                                                    ] = {
-                                                                        login: member.login,
-                                                                        name: member.title,
-                                                                        marks: {},
-                                                                    };
-                                                                }
-                                                                newMarks[
-                                                                    member.login
-                                                                ].marks[
-                                                                    question.id
-                                                                ] = scale.name;
-                                                            },
-                                                        );
-                                                        setEditedMarks(
-                                                            newMarks,
-                                                        );
-                                                    }}
-                                                    className={`w-14 px-3 py-2 ${
-                                                        isSelected
-                                                            ? "bg-primary"
-                                                            : "border-2 border-tertiary"
-                                                    }`}
-                                                >
-                                                    <Text
-                                                        className={`text-center text-xs font-semibold ${
+                                                                    ].marks[
+                                                                        question.id
+                                                                    ] =
+                                                                        scale.name;
+                                                                },
+                                                            );
+                                                            setEditedMarks(
+                                                                newMarks,
+                                                            );
+                                                        }}
+                                                        className={`w-14 px-3 py-2 ${
                                                             isSelected
-                                                                ? "text-white"
-                                                                : "text-text-tertiary"
+                                                                ? "bg-primary"
+                                                                : "border-2 border-tertiary"
                                                         }`}
-                                                        numberOfLines={1}
                                                     >
-                                                        {scale.name}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            );
-                                        })}
+                                                        <Text
+                                                            className={`text-center text-xs font-semibold ${
+                                                                isSelected
+                                                                    ? "text-white"
+                                                                    : "text-text-tertiary"
+                                                            }`}
+                                                            numberOfLines={1}
+                                                        >
+                                                            {scale.name}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                );
+                                            },
+                                        )}
                                     </View>
 
                                     {/* Criterion comment */}
