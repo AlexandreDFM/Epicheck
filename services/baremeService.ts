@@ -100,7 +100,7 @@ class BaremeService {
             const commentsResponse = commentsResult.value;
 
             // Populate criteria comments and pre-fill saved note values into initialMarks
-            commentsResponse.notes.forEach((note) => {
+            (commentsResponse.notes ?? []).forEach((note) => {
                 criteriaComments[note.name] = note.comment || "";
                 if (note.note !== "" && note.note != null) {
                     Object.keys(initialMarks).forEach((login) => {
@@ -110,7 +110,7 @@ class BaremeService {
             });
 
             // Populate individual star notes
-            commentsResponse.individuel.forEach((ind) => {
+            (commentsResponse.individuel ?? []).forEach((ind) => {
                 individuelNotes[ind.login] = ind.note || "";
             });
         } else {
