@@ -99,10 +99,28 @@ class IntraApiService {
         this.api.interceptors.response.use(
             (response) => response,
             (error) => {
+                if (!error.response) {
+                    // Network error or timeout — no HTTP response at all
+                    console.error("Intranet API Error (no response):");
+                    console.error("  Message:", error.message);
+                    console.error("  URL:", error.config?.url);
+                    return Promise.reject(error);
+                }
                 if (error.response.status === 403) {
-                    const message = "\tStatus:\t" + (error.response.status) + "\n\tURL:\t" + error.config?.url + (error.response.data.message ? "\n\tLog: " : "\n\tData:\t") + (error.response.data.message || error.response.data);
-                    console.warn("[IntraAPI] Access Forbidden. User may not have rights to access this resource:\n", message);
-                } else if (error.response) {
+                    const message =
+                        "\tStatus:\t" +
+                        error.response.status +
+                        "\n\tURL:\t" +
+                        error.config?.url +
+                        (error.response.data?.message
+                            ? "\n\tLog: "
+                            : "\n\tData:\t") +
+                        (error.response.data?.message || error.response.data);
+                    console.warn(
+                        "[IntraAPI] Access Forbidden. User may not have rights to access this resource:\n",
+                        message,
+                    );
+                } else {
                     console.error("Intranet API Error:");
                     console.error("  Status:", error.response.status);
                     console.error("  URL:", error.config?.url);
@@ -579,14 +597,21 @@ class IntraApiService {
     }
 
     /**
+     * Normalize a codeacti value to always include the "acti-" prefix
+     */
+    private normalizeCodeActi(event: IIntraEvent): string {
+        return event.codeacti.startsWith("acti-")
+            ? event.codeacti
+            : `acti-${event.codeacti}`;
+    }
+
+    /**
      * Get RDV registrations for an event
      * Endpoint: /module/{year}/{module}/{instance}/{acti}/rdv?format=json
      */
     async getRdvRegistrations(event: IIntraEvent): Promise<any> {
         try {
-            const codeActi = event.codeacti.startsWith("acti-")
-                ? event.codeacti
-                : `acti-${event.codeacti}`;
+            const codeActi = this.normalizeCodeActi(event);
 
             const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/rdv`;
 
@@ -622,8 +647,8 @@ class IntraApiService {
         // Handles: "[B1][MUL]  MyRadar" -> "MyRadar"
         let cleanName = projectTitle.replace(/\[[^\]]*\]/g, "").trim();
 
-        // Convert to lowercase and remove spaces/special chars and underscores
-        cleanName = cleanName.toLowerCase().replace(/[\s_]+/g, "");
+        // Convert to lowercase and remove spaces/special chars, underscores, and hyphens
+        cleanName = cleanName.toLowerCase().replace(/[\s_\-]+/g, "");
 
         console.log("[IntraApi] ✓ Extracted clean project name:", cleanName);
         return cleanName;
@@ -635,10 +660,8 @@ class IntraApiService {
      */
     async getProjectInfo(event: IIntraEvent): Promise<any> {
         try {
-            const activityName = event.codeacti.startsWith("acti-")
-                ? event.codeacti
-                : `acti-${event.codeacti}`;
-            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${activityName}/project`;
+            const codeActi = this.normalizeCodeActi(event);
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/project`;
 
             console.log("[IntraApi] Fetching project info:", endpoint);
             const data = await this.makeRequest(endpoint, "GET");
@@ -664,9 +687,7 @@ class IntraApiService {
      */
     async getActivityDetails(event: IIntraEvent): Promise<any> {
         try {
-            const codeActi = event.codeacti.startsWith("acti-")
-                ? event.codeacti
-                : `acti-${event.codeacti}`;
+            const codeActi = this.normalizeCodeActi(event);
 
             const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}`;
 
@@ -678,13 +699,16 @@ class IntraApiService {
             if (error.response?.status === 403) {
                 console.warn(
                     "[IntraApi] Access forbidden for activity details. User may not have rights to view this activity.\n\tStatus:\t" +
-                        (error.response.status) +
+                        error.response.status +
                         "\n\tURL:\t" +
                         error.config?.url +
                         (error.response.data.message
                             ? "\n\tLog: "
                             : "\n\tData:\t") +
-                            (error.response?.data.message || error.response?.data || error.message || "No additional error data"),
+                        (error.response?.data.message ||
+                            error.response?.data ||
+                            error.message ||
+                            "No additional error data"),
                 );
                 throw new Error(
                     "You don't have permission to view details of this activity.",
@@ -852,6 +876,165 @@ class IntraApiService {
                     error.message ||
                     "Failed to force register student",
             );
+        }
+    }
+
+    /**
+     * Get bareme marks for a group
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}?format=json
+     */
+    async getBaremeMarks(event: IIntraEvent, groupName: string): Promise<any> {
+        try {
+            const codeActi = this.normalizeCodeActi(event);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}?format=json`;
+
+            console.log("[IntraApi] Fetching bareme marks:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ Bareme data received");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to fetch bareme marks:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch bareme marks");
+        }
+    }
+
+    /**
+     * Save bareme marks for a group
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}/ (POST)
+     */
+    async saveBaremeMarks(
+        event: IIntraEvent,
+        groupName: string,
+        marksData: any,
+    ): Promise<any> {
+        try {
+            const codeActi = this.normalizeCodeActi(event);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}`;
+
+            console.log("[IntraApi] Saving bareme marks:", endpoint);
+            const data = await this.makeRequest(endpoint, "POST", marksData);
+            console.log("[IntraApi] ✓ Bareme marks saved");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to save bareme marks:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to save bareme marks");
+        }
+    }
+
+    /**
+     * Get bareme comments for a group
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}/comment
+     */
+    async getBaremeComments(
+        event: IIntraEvent,
+        groupName: string,
+    ): Promise<any> {
+        try {
+            const codeActi = this.normalizeCodeActi(event);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}/comment`;
+
+            console.log("[IntraApi] Fetching bareme comments:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ Bareme comments received");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to fetch bareme comments:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to fetch bareme comments");
+        }
+    }
+
+    /**
+     * Save bareme comments for a group
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}/comment (POST)
+     */
+    async saveBaremeComments(
+        event: IIntraEvent,
+        groupName: string,
+        commentsData: any,
+    ): Promise<any> {
+        try {
+            const codeActi = this.normalizeCodeActi(event);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}/comment`;
+
+            console.log("[IntraApi] Saving bareme comments:", endpoint);
+            const data = await this.makeRequest(endpoint, "POST", commentsData);
+            console.log("[IntraApi] ✓ Bareme comments saved");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to save bareme comments:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to save bareme comments");
+        }
+    }
+
+    /**
+     * Save all bareme data (marks + comments + individual notes) for a group.
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/bareme/{groupName}/save (POST)
+     * Body: application/x-www-form-urlencoded
+     *   notes[i][name], notes[i][note], notes[i][comment]
+     *   individuel[i][login], individuel[i][note], individuel[i][comment]
+     *   note_finale, group_status
+     */
+    async saveBareme(
+        event: IIntraEvent,
+        groupName: string,
+        body: string,
+    ): Promise<any> {
+        try {
+            const codeActi = this.normalizeCodeActi(event);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/bareme/${groupName}/save`;
+
+            console.log("[IntraApi] Saving bareme:", endpoint);
+            const data = await this.makeRequest(endpoint, "POST", body);
+            console.log("[IntraApi] ✓ Bareme saved");
+            return data;
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to save bareme:",
+                error.response?.data || error.message,
+            );
+            throw new Error("Failed to save bareme");
+        }
+    }
+
+    /**
+     * Get all notation grades for an activity.
+     * Endpoint: /module/{year}/{module}/{instance}/{acti}/note/?format=json
+     * Returns an array of note objects, one per graded group/student.
+     */
+    async getActivityNotes(event: IIntraEvent): Promise<any[]> {
+        try {
+            const codeActi = this.normalizeCodeActi(event);
+
+            const endpoint = `/module/${event.scolaryear}/${event.codemodule}/${event.codeinstance}/${codeActi}/note/`;
+
+            console.log("[IntraApi] Fetching activity notes:", endpoint);
+            const data = await this.makeRequest(endpoint, "GET");
+            console.log("[IntraApi] ✓ Activity notes received");
+            return Array.isArray(data) ? data : [];
+        } catch (error: any) {
+            console.error(
+                "[IntraApi] Failed to fetch activity notes:",
+                error.response?.data || error.message,
+            );
+            // Notes are non-critical — return empty array instead of throwing
+            return [];
         }
     }
 }

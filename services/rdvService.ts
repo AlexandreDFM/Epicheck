@@ -4,10 +4,13 @@
  */
 
 import { IIntraStudent } from "../types/IIntraStudent";
+import { IIntraEvent } from "../types/IIntraEvent";
 
 export interface IRegistration {
     id: string;
+    title?: string;
     type: "individual" | "group";
+    master: IIntraStudent;
     members: IIntraStudent[];
     date?: string;
     note?: number | string | null;
@@ -93,6 +96,15 @@ class RdvService {
                         }
                     }
 
+                    // 4. Team name as title if it's a group
+                    let title: string | undefined = undefined;
+                    if (members.length > 1) {
+                        title =
+                            slot.title || `Groupe (${members.length} membres)`;
+                    } else if (members.length === 1) {
+                        title = members[0].title;
+                    }
+
                     // Only add if we found members
                     if (members.length > 0) {
                         registrations.push({
@@ -100,7 +112,9 @@ class RdvService {
                                 ? slot.id.toString()
                                 : `slot-${Math.random()}`,
                             type: members.length > 1 ? "group" : "individual",
+                            master: this.mapMemberToStudent(slot.master),
                             members: members,
+                            title: title,
                             date: slot.date,
                             note: slot.note,
                             status: slot.status,
@@ -111,6 +125,58 @@ class RdvService {
         });
 
         return registrations;
+    }
+
+    /**
+     * Builds the group name used as identifier for bareme API calls.
+     * Replicates the Intranet's own slug logic:
+     *   1. Extract bracket codes [B4][C++] → "B4-C++"
+     *   2. Strip the visual " - " separator that Epitech puts between codes and title
+     *   3. Combine codes + title
+     *   4. Replace whitespace with hyphens
+     *   5. Strip any character that is not alphanumeric or a hyphen
+     *      (removes +, &, (, ), etc. — e.g. "C++" → "C")
+     *   6. Collapse consecutive hyphens into one
+     *   7. Trim leading / trailing hyphens
+     *
+     * Examples:
+     *   "[B4][C++] - Arcade"  → "B4-C-Arcade-LYN-4-1-login@epitech.eu"
+     *   "[G4][SEC] Hack & Juice" → "G4-SEC-Hack-Juice-LYN-4-1-login@epitech.eu"
+     */
+    buildGroupName(
+        rdvData: any,
+        event: IIntraEvent,
+        masterLogin: string,
+    ): string {
+        let projectName = "project";
+
+        if (rdvData?.project?.title) {
+            // Step 1: Extract the codes from brackets [B4][C++] → "B4-C++"
+            const brackets = rdvData.project.title.match(/\[([^\]]+)\]/g) || [];
+            const codes = brackets.map((b: string) => b.slice(1, -1)).join("-");
+
+            // Step 2: Remove brackets then strip any leading " - " separator
+            // e.g. "[B4][C++] - Arcade" → " - Arcade" → "Arcade"
+            const title = rdvData.project.title
+                .replace(/\[[^\]]*\]/g, "")
+                .replace(/^\s*-+\s*/, "")
+                .trim();
+
+            // Step 3: Combine codes + title
+            projectName =
+                codes && title
+                    ? `${codes}-${title}`
+                    : codes || title || "project";
+        }
+
+        // Step 4-7: Replicate Intranet slug normalization
+        const normalized = projectName
+            .replace(/\s+/g, "-") // spaces → hyphens
+            .replace(/[^a-zA-Z0-9-]/g, "") // strip special chars (+ & ( ) etc.)
+            .replace(/-{2,}/g, "-") // collapse ---  →  -
+            .replace(/^-+|-+$/g, ""); // trim leading/trailing hyphens
+
+        return `${normalized}-${event.codeinstance}-${masterLogin}`;
     }
 
     /**

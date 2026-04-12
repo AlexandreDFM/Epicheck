@@ -105,17 +105,25 @@ export default function ActivitiesScreen() {
     const loadActivities = useCallback(
         async (date: Date = selectedDate) => {
             try {
-                console.log("Loading activities...");
+                if (__DEV__) {
+                    console.log("Loading activities...");
+                }
                 setLoading(true);
                 const data = await epitechApi.getActivitiesForDate(date);
-                console.log("Activities loaded:", data.length, "events");
-                // Sort activities chronologically by start time
-                const sorted = [...data].sort(
-                    (a, b) =>
-                        new Date(a.start).getTime() -
-                        new Date(b.start).getTime(),
-                );
-                setActivities(sorted);
+                if (__DEV__) {
+                    console.log("Activities loaded:", data.length ? data.length : 0, "events");
+                }
+                if ((data.length ? data.length : 0) === 0) {
+                    setActivities([]);
+                } else {
+                    // Sort activities chronologically by start time
+                    const sorted = [...data].sort(
+                        (a, b) =>
+                            new Date(a.start).getTime() -
+                            new Date(b.start).getTime(),
+                    );
+                    setActivities(sorted);
+                }
             } catch (error: any) {
                 console.error("Load activities error:", error);
                 console.error(
@@ -525,6 +533,7 @@ export default function ActivitiesScreen() {
                             if (__DEV__) {
                                 console.log(`Event: ${event.acti_title}`);
                                 console.log(`Type: ${event.type_code}`);
+                                console.log(`Event Type Title: ${event.type_title}`);
                                 console.log(`Rights:`, event.rights);
                                 console.log(
                                     `Has prof_inst:`,
@@ -573,7 +582,7 @@ export default function ActivitiesScreen() {
                                             return;
                                         }
                                         if (
-                                            event.type_title === "Follow-up" &&
+                                            (event.type_title === "Follow-up" || event.type_title === "Defense" || event.type_title === "Review") &&
                                             event.rights?.includes(
                                                 "force_register",
                                             ) !== false
