@@ -1793,7 +1793,7 @@ export default function RdvDetailsScreen() {
                     <FlatList
                         data={registrations}
                         renderItem={renderRegistration}
-                        keyExtractor={(item) => item.id}
+                        keyExtractor={(item, index) => `${index}-${item.id}`}
                         contentContainerStyle={{
                             paddingBottom: 32,
                             paddingTop: 8,
