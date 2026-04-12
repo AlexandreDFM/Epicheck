@@ -38,7 +38,6 @@ import { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import intraAuth from "../services/intraAuth";
 import Toast from "react-native-toast-message";
-import jenkinsApi from "../services/jenkinsApi";
 import soundService from "../services/soundService";
 import { useTheme } from "../contexts/ThemeContext";
 import * as DocumentPicker from "expo-document-picker";
@@ -68,7 +67,9 @@ export default function SettingsScreen() {
     const [hasCustomSuccess, setHasCustomSuccess] = useState(false);
     const [isValidatingJenkins, setIsValidatingJenkins] = useState(false);
     const [hasJenkinsCredentials, setHasJenkinsCredentials] = useState(false);
-    const [jenkinsBaseUrl, setJenkinsBaseUrl] = useState("https://jenkins.epitest.eu");
+    const [jenkinsBaseUrl, setJenkinsBaseUrl] = useState(
+        "https://jenkins.epitest.eu",
+    );
 
     useEffect(() => {
         // Check if custom sounds are configured
@@ -247,12 +248,17 @@ export default function SettingsScreen() {
             if (has) {
                 const { username, token, baseUrl } =
                     await jenkinsService.getCredentials();
+                const finalBaseUrl = baseUrl || "https://jenkins.epitest.eu";
+
                 setJenkinsUsername(username || "");
                 setJenkinsToken(token || "");
-                setJenkinsBaseUrl(baseUrl || "https://jenkins.epitest.eu");
+                setJenkinsBaseUrl(finalBaseUrl);
             }
         } catch (error) {
-            console.error("[SettingsScreen] Error loading Jenkins credentials:", error);
+            console.error(
+                "[SettingsScreen] Error loading Jenkins credentials:",
+                error,
+            );
         }
     };
 
@@ -273,11 +279,14 @@ export default function SettingsScreen() {
         try {
             setIsValidatingJenkins(true);
 
+            const finalBaseUrl =
+                jenkinsBaseUrl.trim() || "https://jenkins.epitest.eu";
+
             // Save credentials
             await jenkinsService.setCredentials(
                 jenkinsUsername.trim(),
                 jenkinsToken.trim(),
-                jenkinsBaseUrl.trim() || "https://jenkins.epitest.eu",
+                finalBaseUrl,
             );
 
             // Validate credentials using the dedicated service method
@@ -291,7 +300,10 @@ export default function SettingsScreen() {
                 position: "top",
             });
         } catch (error: any) {
-            console.error("[SettingsScreen] Error saving Jenkins credentials:", error);
+            console.error(
+                "[SettingsScreen] Error saving Jenkins credentials:",
+                error,
+            );
             Toast.show({
                 type: "error",
                 text1: "Error",
@@ -329,7 +341,7 @@ export default function SettingsScreen() {
                                 text2: "Jenkins credentials cleared",
                                 position: "top",
                             });
-                        } catch (error) {
+                        } catch {
                             Toast.show({
                                 type: "error",
                                 text1: "Error",
@@ -668,7 +680,8 @@ export default function SettingsScreen() {
                             1. Login to your Jenkins instance{"\n"}
                             2. Click on your username (top right){"\n"}
                             3. Go to &quot;Configure&quot;{"\n"}
-                            4. Find &quot;API Token&quot; section and click &quot;Generate&quot;{"\n"}
+                            4. Find &quot;API Token&quot; section and click
+                            &quot;Generate&quot;{"\n"}
                             5. Copy the token and paste it here
                         </Text>
 
@@ -680,7 +693,7 @@ export default function SettingsScreen() {
                                     !jenkinsUsername.trim() ||
                                     !jenkinsToken.trim()
                                 }
-                                className={`flex-1 border border-status-success px-4 py-3 ${
+                                className={`flex-1 border ${ isValidatingJenkins ? "border-status-info" : "border-status-success"} p-4 ${
                                     isValidatingJenkins ||
                                     !jenkinsUsername.trim() ||
                                     !jenkinsToken.trim()
@@ -689,19 +702,17 @@ export default function SettingsScreen() {
                                 }`}
                             >
                                 <Text
-                                    className="text-center text-sm text-status-success"
+                                    className={`text-center text-sm ${isValidatingJenkins ? "text-status-info" : "text-status-success"}`}
                                     style={{ fontFamily: "IBMPlexSans" }}
                                 >
+                                    <Ionicons
+                                        name={isValidatingJenkins ?  "refresh" : "checkmark-circle"}
+                                        size={16}
+                                    />
                                     {isValidatingJenkins ? (
-                                        "Validating..."
+                                        " Validating..."
                                     ) : (
-                                        <>
-                                            <Ionicons
-                                                name="checkmark-circle"
-                                                size={16}
-                                            />
-                                            {" SAVE CREDENTIALS"}
-                                        </>
+                                        " SAVE"
                                     )}
                                 </Text>
                             </TouchableOpacity>
@@ -709,13 +720,14 @@ export default function SettingsScreen() {
                             {hasJenkinsCredentials && (
                                 <TouchableOpacity
                                     onPress={handleClearJenkinsCredentials}
-                                    className="flex-1 border border-status-error px-4 py-3"
+                                    className="flex-1 border border-status-error p-4"
                                 >
                                     <Text
                                         className="text-center text-sm text-status-error"
                                         style={{ fontFamily: "IBMPlexSans" }}
                                     >
-                                        <Ionicons name="trash" size={16} /> CLEAR
+                                        <Ionicons name="trash" size={16} />
+                                        {" CLEAR"}
                                     </Text>
                                 </TouchableOpacity>
                             )}

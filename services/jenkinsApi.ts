@@ -36,19 +36,24 @@ interface IJenkinsJob {
 }
 
 class JenkinsApiService {
-    /**
-     * Initialize API instance with current credentials
-     */
-    private async initializeApi(): Promise<AxiosInstance> {
-        const baseUrl = await jenkinsService.getBaseUrl();
-        const authHeader = await jenkinsService.getAuthHeader();
+    private readonly api: AxiosInstance;
 
-        return axios.create({
-            baseURL: baseUrl,
-            headers: {
-                Authorization: authHeader,
-                "Content-Type": "application/json",
-            },
+    constructor() {
+        this.api = axios.create({
+            headers: { "Content-Type": "application/json" },
+        });
+
+        /**
+         * Request interceptor — injects fresh baseURL + Authorization before
+         * every request. The instance is created once; credentials are never
+         * stale because they are read from jenkinsService on every call.
+         */
+        this.api.interceptors.request.use(async (config) => {
+            const baseUrl = await jenkinsService.getBaseUrl();
+            const authHeader = await jenkinsService.getAuthHeader();
+            config.baseURL = baseUrl;
+            config.headers.Authorization = authHeader;
+            return config;
         });
     }
 
@@ -57,8 +62,7 @@ class JenkinsApiService {
      */
     async getJobInfo(jobPath: string): Promise<IJenkinsJob> {
         try {
-            const api = await this.initializeApi();
-            const response = await api.get(`${jobPath}/api/json`);
+            const response = await this.api.get(`${jobPath}/api/json`);
 
             console.log(
                 "[JenkinsApi] ✓ Job info retrieved:",
@@ -81,8 +85,7 @@ class JenkinsApiService {
         buildNumber: number,
     ): Promise<IJenkinsBuild> {
         try {
-            const api = await this.initializeApi();
-            const response = await api.get(
+            const response = await this.api.get(
                 `${jobPath}/${buildNumber}/api/json`,
             );
 
@@ -113,9 +116,8 @@ class JenkinsApiService {
      */
     async getLastBuild(jobPath: string): Promise<IJenkinsBuild> {
         try {
-            const api = await this.initializeApi();
             console.log("[JenkinsApi] Fetching last build for job:", jobPath);
-            const response = await api.get(
+            const response = await this.api.get(
                 `${jobPath}/lastBuild/api/json?tree=number,result,timestamp,duration,displayName,url,description`,
             );
 
@@ -144,10 +146,11 @@ class JenkinsApiService {
     /**
      * Get last successful build information
      */
-    async getLastSuccessfulBuild(jobPath: string): Promise<IJenkinsBuild | null> {
+    async getLastSuccessfulBuild(
+        jobPath: string,
+    ): Promise<IJenkinsBuild | null> {
         try {
-            const api = await this.initializeApi();
-            const response = await api.get(
+            const response = await this.api.get(
                 `${jobPath}/lastSuccessfulBuild/api/json?tree=number,result,timestamp,duration,displayName,url,description`,
             );
 
@@ -182,8 +185,7 @@ class JenkinsApiService {
         buildNumber: number,
     ): Promise<string> {
         try {
-            const api = await this.initializeApi();
-            const response = await api.get(
+            const response = await this.api.get(
                 `${jobPath}/${buildNumber}/consoleText`,
             );
 
@@ -200,16 +202,17 @@ class JenkinsApiService {
     /**
      * Trigger a new build
      */
-    async triggerBuild(jobPath: string, parameters?: Record<string, string>): Promise<void> {
+    async triggerBuild(
+        jobPath: string,
+        parameters?: Record<string, string>,
+    ): Promise<void> {
         try {
-            const api = await this.initializeApi();
+            const url =
+                parameters && Object.keys(parameters).length > 0
+                    ? `${jobPath}/buildWithParameters`
+                    : `${jobPath}/build`;
 
-            let url = `${jobPath}/buildWithParameters`;
-            if (!parameters || Object.keys(parameters).length === 0) {
-                url = `${jobPath}/build`;
-            }
-
-            await api.post(url, null, {
+            await this.api.post(url, null, {
                 params: parameters || {},
             });
 
@@ -227,8 +230,9 @@ class JenkinsApiService {
      */
     async getQueueInfo(queueId: number): Promise<any> {
         try {
-            const api = await this.initializeApi();
-            const response = await api.get(`/queue/item/${queueId}/api/json`);
+            const response = await this.api.get(
+                `/queue/item/${queueId}/api/json`,
+            );
 
             console.log("[JenkinsApi] ✓ Queue info retrieved");
             return response.data;
