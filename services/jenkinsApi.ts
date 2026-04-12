@@ -36,28 +36,20 @@ interface IJenkinsJob {
 }
 
 class JenkinsApiService {
-    private api: AxiosInstance | null = null;
-
     /**
-     * Initialize API instance with credentials
+     * Initialize API instance with current credentials
      */
     private async initializeApi(): Promise<AxiosInstance> {
-        if (this.api) {
-            return this.api;
-        }
-
         const baseUrl = await jenkinsService.getBaseUrl();
         const authHeader = await jenkinsService.getAuthHeader();
 
-        this.api = axios.create({
+        return axios.create({
             baseURL: baseUrl,
             headers: {
                 Authorization: authHeader,
                 "Content-Type": "application/json",
             },
         });
-
-        return this.api;
     }
 
     /**
