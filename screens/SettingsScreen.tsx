@@ -41,7 +41,9 @@ import Toast from "react-native-toast-message";
 import soundService from "../services/soundService";
 import { useTheme } from "../contexts/ThemeContext";
 import * as DocumentPicker from "expo-document-picker";
-import jenkinsService from "../services/jenkinsService";
+import jenkinsService, {
+    JENKINS_DEFAULT_BASE_URL,
+} from "../services/jenkinsService";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -68,7 +70,7 @@ export default function SettingsScreen() {
     const [isValidatingJenkins, setIsValidatingJenkins] = useState(false);
     const [hasJenkinsCredentials, setHasJenkinsCredentials] = useState(false);
     const [jenkinsBaseUrl, setJenkinsBaseUrl] = useState(
-        "https://jenkins.epitest.eu",
+        JENKINS_DEFAULT_BASE_URL,
     );
 
     useEffect(() => {
@@ -248,7 +250,7 @@ export default function SettingsScreen() {
             if (has) {
                 const { username, token, baseUrl } =
                     await jenkinsService.getCredentials();
-                const finalBaseUrl = baseUrl || "https://jenkins.epitest.eu";
+                const finalBaseUrl = baseUrl || JENKINS_DEFAULT_BASE_URL;
 
                 setJenkinsUsername(username || "");
                 setJenkinsToken(token || "");
@@ -280,7 +282,7 @@ export default function SettingsScreen() {
             setIsValidatingJenkins(true);
 
             const finalBaseUrl =
-                jenkinsBaseUrl.trim() || "https://jenkins.epitest.eu";
+                jenkinsBaseUrl.trim() || JENKINS_DEFAULT_BASE_URL;
 
             // Save credentials
             await jenkinsService.setCredentials(
@@ -332,7 +334,7 @@ export default function SettingsScreen() {
                             await jenkinsService.clearCredentials();
                             setJenkinsUsername("");
                             setJenkinsToken("");
-                            setJenkinsBaseUrl("https://jenkins.epitest.eu");
+                            setJenkinsBaseUrl(JENKINS_DEFAULT_BASE_URL);
                             setHasJenkinsCredentials(false);
 
                             Toast.show({
@@ -693,7 +695,7 @@ export default function SettingsScreen() {
                                     !jenkinsUsername.trim() ||
                                     !jenkinsToken.trim()
                                 }
-                                className={`flex-1 border ${ isValidatingJenkins ? "border-status-info" : "border-status-success"} p-4 ${
+                                className={`flex-1 border ${isValidatingJenkins ? "border-status-info" : "border-status-success"} p-4 ${
                                     isValidatingJenkins ||
                                     !jenkinsUsername.trim() ||
                                     !jenkinsToken.trim()
@@ -706,14 +708,16 @@ export default function SettingsScreen() {
                                     style={{ fontFamily: "IBMPlexSans" }}
                                 >
                                     <Ionicons
-                                        name={isValidatingJenkins ?  "refresh" : "checkmark-circle"}
+                                        name={
+                                            isValidatingJenkins
+                                                ? "refresh"
+                                                : "checkmark-circle"
+                                        }
                                         size={16}
                                     />
-                                    {isValidatingJenkins ? (
-                                        " Validating..."
-                                    ) : (
-                                        " SAVE"
-                                    )}
+                                    {isValidatingJenkins
+                                        ? " Validating..."
+                                        : " SAVE"}
                                 </Text>
                             </TouchableOpacity>
 
