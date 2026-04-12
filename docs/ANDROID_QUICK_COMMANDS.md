@@ -37,7 +37,7 @@ npm run android
 ```bash
 # Redémarrer ADB
 adb kill-server
-adb server
+adb start-server
 adb devices
 ```
 
