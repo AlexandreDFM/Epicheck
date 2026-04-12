@@ -37,6 +37,14 @@
         --color-primary-dark: 0 151 167; /* #0097A7 */
         --color-primary-light: 0 229 255; /* #00E5FF */
 
+        /* Secondary and Tertiary Colors (optional, can be used for accents) */
+        --color-secondary: 255 87 34; /* Deep Orange #FF5722 */
+        --color-secondary-dark: 191 54 12; /* #BF360C */
+        --color-secondary-light: 255 138 101; /* #FF8A65 */
+        --color-tertiary: 156 39 176; /* Purple #9C27B0 */
+        --color-tertiary-dark: 123 31 162; /* #7B1FA2 */
+        --color-tertiary-light: 186 104 200; /* #BA68C8 */
+
         /* Background Colors */
         --color-background: 255 255 255; /* White */
         --color-background-secondary: 245 245 245; /* Light Gray */
@@ -81,6 +89,12 @@
         /* Brand Colors (slightly adjusted for dark mode) */
         --color-primary-dark: 29 78 216; /* #1D4ED8 */
         --color-primary-light: 96 165 250; /* #60A5FA */
+
+        /* Secondary and Tertiary Colors (optional, can be used for accents) */
+        --color-secondary-dark: 255 69 0; /* #FF4500 */
+        --color-secondary-light: 255 160 122; /* #FFA07A */
+        --color-tertiary-dark: 171 71 188; /* #AB47BC */
+        --color-tertiary-light: 206 147 216; /* #CE93D8 */
 
         /* Background Colors */
         --color-background: 17 24 39; /* Dark Navy #111827 */
