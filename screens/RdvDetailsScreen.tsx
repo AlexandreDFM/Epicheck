@@ -1578,7 +1578,7 @@ export default function RdvDetailsScreen() {
                                             "[RdvDetails] Opening Jenkins URL:",
                                             url,
                                         );
-                                        window.open(url, "_blank");
+                                        await Linking.openURL(url);
                                     }}
                                     className="flex-row items-center justify-center bg-primary p-4"
                                 >
