@@ -234,20 +234,21 @@ class BaremeService {
     }
 
     /**
-     * Format comments for submission to API
+     * Format comments for submission to API (URL-encoded string)
      */
     private formatCommentsForSubmission(
         commentsData: IBaremeCommentsSubmission,
-    ): FormData {
-        const formData = new FormData();
+    ): string {
+        const parts: string[] = [];
 
         // Add individual member comments
         if (commentsData.comments && Array.isArray(commentsData.comments)) {
             commentsData.comments.forEach((comment: any, index: number) => {
-                formData.append(`comments[${index}][login]`, comment.login);
-                formData.append(
-                    `comments[${index}][comment]`,
-                    comment.comment || "",
+                parts.push(
+                    `comments[${index}][login]=${encodeURIComponent(comment.login)}`,
+                );
+                parts.push(
+                    `comments[${index}][comment]=${encodeURIComponent(comment.comment || "")}`,
                 );
             });
         }
@@ -256,10 +257,11 @@ class BaremeService {
         if (commentsData.criteria && Array.isArray(commentsData.criteria)) {
             commentsData.criteria.forEach((criteria, index) => {
                 // Use the id as the criterion key (e.g., "Review-Testing-Policy")
-                formData.append(`criteria[${index}][name]`, criteria.id);
-                formData.append(
-                    `criteria[${index}][comment]`,
-                    criteria.comment || "",
+                parts.push(
+                    `criteria[${index}][name]=${encodeURIComponent(criteria.id)}`,
+                );
+                parts.push(
+                    `criteria[${index}][comment]=${encodeURIComponent(criteria.comment || "")}`,
                 );
             });
         }
@@ -267,12 +269,15 @@ class BaremeService {
         // Add individual member notes
         if (commentsData.individuel && Array.isArray(commentsData.individuel)) {
             commentsData.individuel.forEach((ind, index) => {
-                formData.append(`individuel[${index}][login]`, ind.login);
-                formData.append(`individuel[${index}][note]`, ind.note);
+                parts.push(
+                    `individuel[${index}][login]=${encodeURIComponent(ind.login)}`,
+                );
+                parts.push(
+                    `individuel[${index}][note]=${encodeURIComponent(ind.note)}`,
+                );
                 if (ind.comment) {
-                    formData.append(
-                        `individuel[${index}][comment]`,
-                        ind.comment,
+                    parts.push(
+                        `individuel[${index}][comment]=${encodeURIComponent(ind.comment)}`,
                     );
                 }
             });
@@ -280,36 +285,39 @@ class BaremeService {
 
         // Add general comment if present
         if (commentsData.general) {
-            formData.append("general", commentsData.general);
+            parts.push(`general=${encodeURIComponent(commentsData.general)}`);
         }
 
-        return formData;
+        return parts.join("&");
     }
 
     /**
-     * Format marks for submission to API
+     * Format marks for submission to API (URL-encoded string)
      */
-    private formatMarksForSubmission(marks: IBaremeMark[]): FormData {
-        const formData = new FormData();
+    private formatMarksForSubmission(marks: IBaremeMark[]): string {
+        const parts: string[] = [];
 
         marks.forEach((mark, index) => {
-            formData.append(`marks[${index}][login]`, mark.login);
+            parts.push(
+                `marks[${index}][login]=${encodeURIComponent(mark.login)}`,
+            );
             if (mark.comment) {
-                formData.append(`marks[${index}][comment]`, mark.comment);
+                parts.push(
+                    `marks[${index}][comment]=${encodeURIComponent(mark.comment)}`,
+                );
             }
 
             // Add individual scale marks
             Object.entries(mark.marks).forEach(([questionId, value]) => {
                 if (value !== null) {
-                    formData.append(
-                        `marks[${index}][marks][${questionId}]`,
-                        String(value),
+                    parts.push(
+                        `marks[${index}][marks][${questionId}]=${encodeURIComponent(String(value))}`,
                     );
                 }
             });
         });
 
-        return formData;
+        return parts.join("&");
     }
 
     /**
