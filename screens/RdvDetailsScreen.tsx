@@ -1266,10 +1266,11 @@ export default function RdvDetailsScreen() {
 
     const renderRegistration = ({ item }: { item: IRegistration }) => {
         const firstMember = item.members[0];
+        const memberCount = Array.isArray(item.members) ? item.members.length : 0;
         const title =
             item.title?.trim() ||
             (item.type === "group"
-                ? `Groupe (${item.members.length} membres)`
+                ? `Groupe (${memberCount} membres)`
                 : firstMember?.title ||
                   item.master.title ||
                   firstMember?.login ||
