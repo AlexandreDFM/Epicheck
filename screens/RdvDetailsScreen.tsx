@@ -1265,13 +1265,14 @@ export default function RdvDetailsScreen() {
     };
 
     const renderRegistration = ({ item }: { item: IRegistration }) => {
+        const firstMember = item.members[0];
         const title =
             item.title?.trim() ||
             (item.type === "group"
                 ? `Groupe (${item.members.length} membres)`
-                : item.members[0]?.title ||
+                : firstMember?.title ||
                   item.master.title ||
-                  item.members[0]?.login ||
+                  firstMember?.login ||
                   item.master.login ||
                   "Registration sans titre");
         const logins = item.members
