@@ -70,8 +70,59 @@ export interface IBaremeMark {
     comment?: string;
 }
 
+export interface IBaremeComment {
+    login: string;
+    name: string;
+    comment: string;
+}
+
+export interface IBaremeCriterionNote {
+    name: string; // criterion key e.g. "Review-Testing-Policy"
+    note: string; // the score e.g. "0"
+    comment: string; // the comment text
+}
+
+export interface IBaremeIndividuelNote {
+    note: string;
+    comment: string;
+    login: string;
+}
+
+export interface IBaremeCommentsResponse {
+    notes: IBaremeCriterionNote[];
+    individuel: IBaremeIndividuelNote[];
+    group_status: string;
+}
+
+export interface IBaremeCommentsSubmission {
+    comments?: { login: string; comment: string }[];
+    criteria?: { id: string; name: string; comment: string }[];
+    individuel?: { login: string; note: string; comment?: string }[];
+    general?: string;
+}
+
+export interface IBaremeSaveNote {
+    name: string; // criterion key e.g. "Follow-up-Progress"
+    note: string; // the score e.g. "40"
+    comment: string;
+}
+
+export interface IBaremeSavePayload {
+    notes: IBaremeSaveNote[];
+    individuel: { login: string; note: string; comment: string }[];
+    note_finale: string; // sum of all criterion notes as string
+    group_status: string; // "present" | "absent"
+}
+
 export interface IBaremeData {
     response: IBaremeResponse;
     groups: IBaremeGroup[];
     marks: IBaremeMark[];
+}
+
+export interface IBaremeFullLoad {
+    baremeData: IBaremeData;
+    initialMarks: Record<string, IBaremeMark>;
+    criteriaComments: Record<string, string>;
+    individuelNotes: Record<string, string>; // login → note "0"-"5"
 }
