@@ -23,13 +23,25 @@ org.gradle.daemon=true
 android.useAndroidX=true
 android.enableJetifier=true
 
-# Enable R8 code shrinking (minification)
-android.enableR8=true
-android.enableR8.fullMode=true
-
-# Enable D8 desugaring for Java 8+ language features
-android.enableD8.desugaring=true
-
-# Kotlin optimizations (if using Kotlin)
+# Kotlin optimizations
 kotlin.incremental=true
 kotlin.caching.enabled=true
+
+# APK Installation and Deployment Optimizations
+# Speed up ADB installation - don't include native libraries per ABI
+android.incrementalNativeLibsOnly=true
+
+# Enable Bundle compression for smaller APK
+android.enableBundleCompression=true
+
+# Optimize native dependency resolution
+android.enableNonTransitiveRDeps=true
+
+# For Release builds only (these are configured in build.gradle for release type):
+# Code minification: android.enableMinifyInReleaseBuilds=true
+# Shrink resources: android.enableShrinkResourcesInReleaseBuilds=true
+# PNG crushing: android.enablePngCrunchInReleaseBuilds=true
+
+# Faster compilation with legacy packaging
+# DISABLED by default, enable if you have native library issues
+# expo.useLegacyPackaging=true
