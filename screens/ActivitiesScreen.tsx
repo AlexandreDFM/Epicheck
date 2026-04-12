@@ -105,17 +105,25 @@ export default function ActivitiesScreen() {
     const loadActivities = useCallback(
         async (date: Date = selectedDate) => {
             try {
-                console.log("Loading activities...");
+                if (__DEV__) {
+                    console.log("Loading activities...");
+                }
                 setLoading(true);
                 const data = await epitechApi.getActivitiesForDate(date);
-                console.log("Activities loaded:", data.length, "events");
-                // Sort activities chronologically by start time
-                const sorted = [...data].sort(
-                    (a, b) =>
-                        new Date(a.start).getTime() -
-                        new Date(b.start).getTime(),
-                );
-                setActivities(sorted);
+                if (__DEV__) {
+                    console.log("Activities loaded:", data.length ? data.length : 0, "events");
+                }
+                if ((data.length ? data.length : 0) === 0) {
+                    setActivities([]);
+                } else {
+                    // Sort activities chronologically by start time
+                    const sorted = [...data].sort(
+                        (a, b) =>
+                            new Date(a.start).getTime() -
+                            new Date(b.start).getTime(),
+                    );
+                    setActivities(sorted);
+                }
             } catch (error: any) {
                 console.error("Load activities error:", error);
                 console.error(
