@@ -57,6 +57,7 @@ export default function RdvDetailsScreen() {
     const [statusMessage, setStatusMessage] = useState("Fetching data...");
     const [registrations, setRegistrations] = useState<IRegistration[]>([]);
     const [hasJenkinsCredentials, setHasJenkinsCredentials] = useState(false);
+    const [jenkinsBaseUrl, setJenkinsBaseUrl] = useState("");
     const [jenkinsProjectExists, setJenkinsProjectExists] = useState<
         boolean | null
     >(null); // null = not checked yet
@@ -310,6 +311,11 @@ export default function RdvDetailsScreen() {
             const has = await jenkinsService.hasCredentials();
             setHasJenkinsCredentials(has);
             console.log("[RdvDetails] Jenkins credentials available:", has);
+
+            // Always load the base URL — getBaseUrl() returns the configured
+            // value or the default from jenkinsService if nothing is stored yet
+            const baseUrl = await jenkinsService.getBaseUrl();
+            setJenkinsBaseUrl(baseUrl);
         } catch (error) {
             console.error(
                 "[RdvDetails] Error checking Jenkins credentials:",
@@ -365,18 +371,16 @@ export default function RdvDetailsScreen() {
      * Pattern: https://jenkins.epitest.eu/view/{MODULE}/job/{MODULE}/job/{PROJECT_NAME}/job/{YEAR}/job/{INSTANCE}/job/{LOGIN}/
      */
     const getJenkinsUrl = (login: string): string => {
-        const baseUrl = "https://jenkins.epitest.eu";
         const jobPath = getJenkinsJobPath(login);
-        return `${baseUrl}${jobPath}`;
+        return `${jenkinsBaseUrl}${jobPath}`;
     };
 
     /**
      * Constructs Jenkins URL for a team with assembled member logins
      */
     const getJenkinsTeamUrl = (item: IRegistration): string => {
-        const baseUrl = "https://jenkins.epitest.eu";
         const jobPath = getJenkinsTeamJobPath(item);
-        return `${baseUrl}${jobPath}`;
+        return `${jenkinsBaseUrl}${jobPath}`;
     };
 
     /**
@@ -1118,7 +1122,7 @@ export default function RdvDetailsScreen() {
                                                 .join(", ");
                                         if (!correctorDisplay) return null;
                                         return (
-                                            <Text className="text-tertiary mt-2 text-xs">
+                                            <Text className="mt-2 text-xs text-tertiary">
                                                 Correcteur : {correctorDisplay}
                                             </Text>
                                         );
@@ -1138,7 +1142,7 @@ export default function RdvDetailsScreen() {
                                     <Text className="text-lg font-bold uppercase text-primary">
                                         Note finale
                                     </Text>
-                                    <Text className="text-tertiary text-3xl font-bold">
+                                    <Text className="text-3xl font-bold text-tertiary">
                                         {formatNote(note)}
                                     </Text>
                                 </View>
@@ -1157,7 +1161,7 @@ export default function RdvDetailsScreen() {
                                             <Text className="text-md font-bold uppercase text-primary">
                                                 Correcteur
                                             </Text>
-                                            <Text className="text-md text-tertiary font-bold">
+                                            <Text className="text-md font-bold text-tertiary">
                                                 {correctorDisplay}
                                             </Text>
                                         </View>
@@ -1170,7 +1174,7 @@ export default function RdvDetailsScreen() {
                                         <Text className="text-md font-bold uppercase text-primary">
                                             Date de correction
                                         </Text>
-                                        <Text className="text-md text-tertiary font-bold">
+                                        <Text className="text-md font-bold text-tertiary">
                                             {note.correction_date ?? note.date}
                                         </Text>
                                     </View>
@@ -1179,7 +1183,7 @@ export default function RdvDetailsScreen() {
                                 {/* Commentaire général */}
                                 {note.comment && (
                                     <View className="border border-primary p-4">
-                                        <Text className="mb-2 text-md font-semibold uppercase text-primary">
+                                        <Text className="text-md mb-2 font-semibold uppercase text-primary">
                                             Commentaire
                                         </Text>
                                         <Text className="text-sm text-text-tertiary">
@@ -1266,7 +1270,9 @@ export default function RdvDetailsScreen() {
 
     const renderRegistration = ({ item }: { item: IRegistration }) => {
         const firstMember = item.members?.[0];
-        const memberCount = Array.isArray(item.members) ? item.members.length : 0;
+        const memberCount = Array.isArray(item.members)
+            ? item.members.length
+            : 0;
         const title =
             item.title?.trim() ||
             (item.type === "group"
