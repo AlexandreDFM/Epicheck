@@ -1,0 +1,31 @@
+# CODEOWNERS
+
+# Global owners
+* @AlexandreDFM
+
+# Specific component owners
+/components/ @AlexandreDFM
+/screens/ @AlexandreDFM
+/services/ @AlexandreDFM
+
+# Documentation
+/docs/ @AlexandreDFM
+*.md @AlexandreDFM
+
+# Configuration and build
+package.json @AlexandreDFM
+pnpm-lock.yaml @AlexandreDFM
+tsconfig.json @AlexandreDFM
+eslint.config.js @AlexandreDFM
+
+# Android
+/android/ @AlexandreDFM
+
+# iOS
+/ios/ @AlexandreDFM
+
+# Docker and deployment
+Dockerfile* @AlexandreDFM
+docker-compose*.yml @AlexandreDFM
+/kubernetes/ @AlexandreDFM
+/proxy-server/ @AlexandreDFM

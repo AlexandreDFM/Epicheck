@@ -1,10 +1,12 @@
 {
   "name": "epicheck",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "android:clean": "bash scripts/install-android.sh",
+    "android:wipe": "rm -rf android/build android/app/build && npx expo prebuild --platform android --clean",
     "ios": "expo run:ios",
     "ios:device": "expo run:ios --device",
     "ios:simulator": "expo run:ios",
