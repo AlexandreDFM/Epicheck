@@ -30,7 +30,9 @@
 #   docker compose up --build    then open http://localhost:8080
 services:
   proxy:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     image: epicheck:local
     restart: unless-stopped
     ports:

@@ -1,3 +1,6 @@
+packages:
+    - apps/*
+
 # Install scripts allowed to run (pnpm 11 blocks them by default).
 # unrs-resolver (ESLint import resolver) ships prebuilt binaries; its
 # postinstall only checks them, so it does not need to run.
@@ -32,6 +35,7 @@ overrides:
     picomatch@^4: ^4.0.7
     postcss@^8: ^8.5.33
     postcss-selector-parser@^6: ^6.1.6
+    proxy-addr@^2: ^2.0.8
     shell-quote@^1: ^1.12.0
     source-map-js@^1: ^1.2.4
     tar@^7: ^7.5.23

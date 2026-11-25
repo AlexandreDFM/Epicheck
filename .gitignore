@@ -29,10 +29,10 @@
 
 # dependencies
 node_modules/
+# pnpm store created inside the repository by containers mounting it
+.pnpm-store/
 
 # Proxy server
-proxy-server/node_modules/
-proxy-server/.env
 
 # Expo
 .expo/
@@ -71,9 +71,12 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-# generated native folders
+# generated native folders (expo prebuild); /ios and /android are those of
+# the layout before apps/
 /ios
 /android
+apps/mobile/ios/
+apps/mobile/android/
 
 # IDE
 .vscode/

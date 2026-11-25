@@ -9,44 +9,38 @@ permissions:
   contents: read
 
 jobs:
-  app:
-    name: App (types, lint, Expo dependencies)
+  mobile:
+    name: Mobile (types, lint, Expo dependencies)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Version from the packageManager field of package.json
+      # Version from the packageManager field of the root package.json
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec tsc --noEmit
-      - run: pnpm exec eslint .
+      - run: pnpm install --frozen-lockfile --filter mobile...
+      - run: pnpm --filter mobile run typecheck
+      - run: pnpm --filter mobile run lint
       # Native module versions must match the Expo SDK
-      - run: pnpm exec expo install --check
+      - run: pnpm --filter mobile exec expo install --check
       # Build tools still carry advisories that need a major update of their
-      # parent (UPDATE.md); fail on critical ones only
-      - run: pnpm audit --prod --audit-level critical
+      # parent (CHANGELOG 1.2.1); fail on critical ones only
+      - run: (pnpm audit --prod --json || true) | node scripts/ci/audit.mjs mobile critical
 
   proxy:
     name: Proxy (types, lint, tests, audit)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: proxy-server
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: proxy-server/package.json
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
-          cache-dependency-path: proxy-server/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run typecheck
-      - run: pnpm run lint
-      - run: pnpm test
-      - run: pnpm audit --prod
+      - run: pnpm install --frozen-lockfile --filter proxy...
+      - run: pnpm --filter proxy run typecheck
+      - run: pnpm --filter proxy run lint
+      - run: pnpm --filter proxy test
+      - run: (pnpm audit --prod --json || true) | node scripts/ci/audit.mjs proxy moderate

@@ -1,6 +1,11 @@
 # Ignore artifacts:
 build
 coverage
+dist
+.expo
+old
+apps/mobile/android
+apps/mobile/ios
 pnpm-lock.yaml
 yarn.lock
 package-lock.json
