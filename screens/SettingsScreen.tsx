@@ -43,6 +43,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import * as DocumentPicker from "expo-document-picker";
 import jenkinsService, {
     JENKINS_DEFAULT_BASE_URL,
+    normalizeJenkinsBaseUrl,
 } from "../services/jenkinsService";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -281,19 +282,42 @@ export default function SettingsScreen() {
         try {
             setIsValidatingJenkins(true);
 
-            const finalBaseUrl =
-                jenkinsBaseUrl.trim() || JENKINS_DEFAULT_BASE_URL;
+            const username = jenkinsUsername.trim();
+            const token = jenkinsToken.trim();
+            const finalBaseUrl = normalizeJenkinsBaseUrl(
+                jenkinsBaseUrl.trim() || JENKINS_DEFAULT_BASE_URL,
+            );
 
-            // Save credentials
-            await jenkinsService.setCredentials(
-                jenkinsUsername.trim(),
-                jenkinsToken.trim(),
+            // Validate before saving, so that valid stored credentials are
+            // not replaced by rejected ones
+            const status = await jenkinsService.checkCredentials(
+                username,
+                token,
                 finalBaseUrl,
             );
 
-            // Validate credentials using the dedicated service method
-            await jenkinsService.validateCredentials();
+            if (status === "invalid") {
+                Toast.show({
+                    type: "error",
+                    text1: "Invalid credentials",
+                    text2: "Jenkins rejected this username or API token. Nothing was saved.",
+                    position: "top",
+                });
+                return;
+            }
+
+            await jenkinsService.setCredentials(username, token, finalBaseUrl);
             setHasJenkinsCredentials(true);
+
+            if (status === "unreachable") {
+                Toast.show({
+                    type: "info",
+                    text1: "Saved without validation",
+                    text2: `Could not reach ${finalBaseUrl} to check the credentials.`,
+                    position: "top",
+                });
+                return;
+            }
 
             Toast.show({
                 type: "success",
