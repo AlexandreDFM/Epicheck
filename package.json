@@ -13,7 +13,7 @@
     "build:ios": "eas build --platform ios",
     "build:ios:local": "eas build --platform ios --local",
     "web": "expo start --web",
-    "proxy": "cd proxy-server && node server.js",
+    "proxy": "pnpm --dir proxy-server start",
     "build:android:debug": "expo run:android --variant debug",
     "build:android:release": "cd android && ./gradlew assembleRelease --warning-mode all && cd ..",
     "build:apk": "cd android && ./gradlew assembleRelease --warning-mode all && cd ..",
