@@ -32,7 +32,6 @@ import {
     ScrollView,
     TouchableOpacity,
     ActivityIndicator,
-    Platform,
 } from "react-native";
 
 import intraApi from "../services/intraApi";

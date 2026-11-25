@@ -419,7 +419,6 @@ function WebAuthComponent({ onCancel, onSuccess, isDark }: any) {
     );
     const { openIntranet } = useOpenIntranet();
     const [manualCookie, setManualCookie] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
 
     const validateAndSaveCookie = async () => {
         if (!manualCookie.trim()) {
@@ -635,8 +634,7 @@ function WebAuthComponent({ onCancel, onSuccess, isDark }: any) {
                             Validation Failed
                         </Text>
                         <Text className="mb-6 text-center text-sm text-text-secondary">
-                            {errorMessage ||
-                                "The cookie is invalid or expired."}
+                            The cookie is invalid or expired.
                         </Text>
                         <View className="w-full flex-row gap-3">
                             <TouchableOpacity

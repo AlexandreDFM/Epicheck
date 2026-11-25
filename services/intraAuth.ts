@@ -238,7 +238,7 @@ class IntraAuthService {
         try {
             await this.getIntranetUser();
             return true;
-        } catch (error) {
+        } catch {
             // Cookie is invalid, clear it
             await this.clearIntraCookie();
             return false;

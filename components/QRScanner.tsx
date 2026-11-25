@@ -137,7 +137,7 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
         try {
             const parsed = JSON.parse(data);
             email = parsed.email || parsed.Email || data;
-        } catch (e) {
+        } catch {
             // If not JSON, assume it's plain email
             email = data;
         }

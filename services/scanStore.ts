@@ -32,9 +32,8 @@ const LAST_QR_KEY = "last_qr_email";
 async function setLastQrEmail(email: string): Promise<void> {
     try {
         await SecureStore.setItemAsync(LAST_QR_KEY, email);
-    } catch (e) {
+    } catch {
         // fallback: ignore
-        // console.warn('Failed to persist last QR email', e);
     }
 }
 
@@ -42,7 +41,7 @@ async function getLastQrEmail(): Promise<string | null> {
     try {
         const v = await SecureStore.getItemAsync(LAST_QR_KEY);
         return v;
-    } catch (e) {
+    } catch {
         return null;
     }
 }
@@ -50,7 +49,7 @@ async function getLastQrEmail(): Promise<string | null> {
 async function clearLastQrEmail(): Promise<void> {
     try {
         await SecureStore.deleteItemAsync(LAST_QR_KEY);
-    } catch (e) {
+    } catch {
         // ignore
     }
 }

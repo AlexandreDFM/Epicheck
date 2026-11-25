@@ -367,15 +367,6 @@ export default function RdvDetailsScreen() {
     };
 
     /**
-     * Constructs Jenkins URL for a given student login
-     * Pattern: https://jenkins.epitest.eu/view/{MODULE}/job/{MODULE}/job/{PROJECT_NAME}/job/{YEAR}/job/{INSTANCE}/job/{LOGIN}/
-     */
-    const getJenkinsUrl = (login: string): string => {
-        const jobPath = getJenkinsJobPath(login);
-        return `${jenkinsBaseUrl}${jobPath}`;
-    };
-
-    /**
      * Constructs Jenkins URL for a team with assembled member logins
      */
     const getJenkinsTeamUrl = (item: IRegistration): string => {
@@ -967,23 +958,6 @@ export default function RdvDetailsScreen() {
                 </SafeAreaView>
             </Modal>
         );
-    };
-
-    /**
-     * Open Jenkins in browser
-     */
-    const openJenkins = (login: string) => {
-        if (!projectName) {
-            console.warn(
-                "[RdvDetails] Cannot open Jenkins: project name not loaded",
-            );
-            return;
-        }
-        const jenkinsUrl = getJenkinsUrl(login);
-        console.log("[RdvDetails] Opening Jenkins:", jenkinsUrl);
-        Linking.openURL(jenkinsUrl).catch((err) => {
-            console.error("[RdvDetails] Failed to open Jenkins URL:", err);
-        });
     };
 
     /**
