@@ -25,31 +25,31 @@
 # THE SOFTWARE.
 #
 
-# Dockerfile for CORS Proxy
-FROM node:22-alpine
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
+# Production image of the CORS proxy: compiled JavaScript, production
+# dependencies only, non-root user.
+FROM node:22.21-alpine AS build
+RUN corepack enable
 WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
+COPY tsconfig.json app.ts ./
+RUN pnpm run build
 
-# Copy application code
-COPY app.ts ./
+FROM node:22.21-alpine AS deps
+RUN corepack enable
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
-# Compile TypeScript
-RUN npx tsc app.ts
-
-# Expose port
+FROM node:22.21-alpine
+ENV NODE_ENV=production \
+    PORT=3001
+WORKDIR /app
+COPY package.json ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist/app.js ./dist/app.js
+USER node
 EXPOSE 3001
-
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Run the proxy server
-CMD ["node", "app.js"]
+    CMD wget -qO- http://127.0.0.1:3001/health > /dev/null || exit 1
+CMD ["node", "dist/app.js"]

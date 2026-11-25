@@ -1,203 +1,73 @@
 # EpiCheck CORS Proxy Server
 
-This proxy server forwards requests to the Epitech Intranet API, bypassing CORS restrictions for web browsers.
+The Epitech Intranet sends no CORS headers, so the **web** version of EpiCheck cannot call it from a browser. This proxy receives the request from the web app and forwards it to `https://intra.epitech.eu` with the user's cookie. The mobile apps call the Intranet directly and do not use it.
 
-## 🚀 Quick Start
+> **Known limitation:** outside the Epitech network, the Intranet answers requests coming from a server with an anti-DDoS page. The proxy then answers `401`. The web version is therefore only reliable when the proxy runs from the school network; the mobile app works everywhere.
 
-### 1. Install Dependencies
+## Quick start
+
+Requires Node 22 and pnpm (`corepack enable` picks the version from `package.json`).
 
 ```bash
 cd proxy-server
-npm install
-```
-
-### 2. Configure Environment
-
-Copy the example environment file:
-
-```bash
+pnpm install
 cp .env.example .env
+pnpm dev          # restarts when app.ts changes
 ```
 
-Edit `.env` if needed (default settings work for local development).
+From the repository root, `pnpm proxy` does the same. The server listens on `http://localhost:3001`.
 
-### 3. Start the Server
+| Script | Purpose |
+| --- | --- |
+| `pnpm dev` | Run `app.ts` with ts-node, reload on change |
+| `pnpm build` | Compile to `dist/` |
+| `pnpm start` | Run the compiled `dist/app.js` |
+| `pnpm typecheck` | Type check only |
+| `pnpm test` | Compile and run `app.test.ts` (no request reaches the Intranet) |
 
-**Development mode (with auto-reload):**
+## API
 
-```bash
-npm run dev
-```
-
-**Production mode:**
-
-```bash
-npm start
-```
-
-The server will start on `http://localhost:3001`
-
-## 📡 API Endpoints
-
-### Health Check
-
-```
-GET /health
-```
-
-**Response:**
+### `GET /health` and `GET /api/health`
 
 ```json
-{
-    "status": "ok",
-    "timestamp": "2025-11-12T10:30:00.000Z",
-    "service": "EpiCheck CORS Proxy"
-}
+{ "status": "ok", "timestamp": "2026-11-25T12:00:00.000Z", "service": "EpiCheck CORS Proxy" }
 ```
 
-### Proxy Endpoint
-
-```
-POST /api/intra-proxy
-```
-
-**Request Body:**
+### `POST /api/intra-proxy`
 
 ```json
 {
     "endpoint": "/user/?format=json",
-    "cookie": "your-intranet-cookie-value",
-    "method": "GET"
+    "cookie": "<value of the Intranet 'user' cookie, or a full cookie string>",
+    "method": "GET",
+    "data": {}
 }
 ```
 
-**Response:**
-Returns the data from Epitech Intranet API
+| Rule | Answer when broken |
+| --- | --- |
+| `endpoint` is a path that stays on `https://intra.epitech.eu` | `400` |
+| `method` is `GET` or `POST` | `400` |
+| `cookie` is a non-empty string (max 4 KB, single line) | `400` |
+| At most `RATE_LIMIT_PER_MINUTE` requests per minute and per client on `/api/` | `429` |
+| The Intranet answers | Its status and JSON body; `504` on timeout (15 s); `401` on the anti-DDoS page |
 
-**Example using curl:**
+Redirects are not followed, and the cookie is never logged: only the method, path and status.
 
-```bash
-curl -X POST http://localhost:3001/api/intra-proxy \
-  -H "Content-Type: application/json" \
-  -d '{
-    "endpoint": "/user/?format=json",
-    "cookie": "YOUR_COOKIE_HERE",
-    "method": "GET"
-  }'
-```
+## Configuration
 
-## 🔒 Security Features
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3001` | Listening port |
+| `ALLOWED_ORIGINS` | *(empty)* | Comma-separated browser origins allowed to call the proxy directly (Expo dev server). Leave empty when nginx serves the app and `/api` on the same origin, as in production |
+| `TRUST_PROXY` | `1` | Number of reverse proxies in front (nginx, ingress), so that the rate limit sees the client address |
+| `RATE_LIMIT_PER_MINUTE` | `120` | Requests per minute and per client on `/api/` |
 
-- **Rate Limiting:** 100 requests per 15 minutes per IP
-- **Helmet.js:** Security headers
-- **CORS:** Configurable allowed origins
-- **Input Validation:** Validates endpoint and cookie parameters
-- **Error Handling:** Graceful error responses
-
-## 🌍 Deployment
-
-### Option 1: Heroku
-
-1. Install Heroku CLI: `brew install heroku` (macOS)
-2. Login: `heroku login`
-3. Create app: `heroku create epicheck-proxy`
-4. Deploy: `git push heroku main`
-5. Set environment variables:
-    ```bash
-    heroku config:set ALLOWED_ORIGINS=https://your-web-app.com
-    heroku config:set NODE_ENV=production
-    ```
-
-### Option 2: Vercel (Serverless)
-
-1. Install Vercel CLI: `npm i -g vercel`
-2. Deploy: `vercel`
-3. Set environment variables in Vercel dashboard
-
-### Option 3: Railway
-
-1. Go to [railway.app](https://railway.app)
-2. Create new project from GitHub repo
-3. Select `proxy-server` directory
-4. Set environment variables
-5. Deploy
-
-### Option 4: DigitalOcean App Platform
-
-1. Connect GitHub repository
-2. Select `proxy-server` directory
-3. Configure build command: `npm install`
-4. Configure run command: `npm start`
-5. Deploy
-
-## 🔧 Configuration
-
-### Environment Variables
-
-| Variable          | Description                             | Default       | Required |
-| ----------------- | --------------------------------------- | ------------- | -------- |
-| `PORT`            | Server port                             | `3001`        | No       |
-| `ALLOWED_ORIGINS` | Comma-separated list of allowed origins | `*`           | No       |
-| `NODE_ENV`        | Environment (development/production)    | `development` | No       |
-
-### CORS Configuration
-
-To restrict access to specific domains, set `ALLOWED_ORIGINS`:
+## Docker
 
 ```bash
-# .env
-ALLOWED_ORIGINS=https://your-app.com,https://www.your-app.com
+docker build -t epicheck-proxy .          # production image, runs as user "node"
+docker compose -f ../docker-compose.dev.yml up proxy   # development, reloads app.ts
 ```
 
-For local development:
-
-```bash
-ALLOWED_ORIGINS=http://localhost:8081,http://localhost:19006
-```
-
-## 📊 Monitoring
-
-### Logs
-
-The server logs all requests:
-
-```
-[2025-11-12T10:30:00.000Z] GET /user/?format=json | Cookie: abc123...
-```
-
-### Health Check
-
-Monitor server health:
-
-```bash
-curl http://localhost:3001/health
-```
-
-## 🐛 Troubleshooting
-
-### Error: EADDRINUSE
-
-Port 3001 is already in use. Either:
-
-- Change the port in `.env`: `PORT=3002`
-- Kill the process using port 3001: `lsof -ti:3001 | xargs kill`
-
-### Error: Cannot connect to Intranet
-
-Check if:
-
-- Intranet is accessible: `curl https://intra.epitech.eu`
-- Cookie is valid
-- Network allows outgoing HTTPS requests
-
-### CORS errors persist
-
-Make sure:
-
-- Proxy server is running
-- React Native app is configured to use proxy URL
-- `ALLOWED_ORIGINS` includes your web app domain
-
-## 📝 License
-
-MIT
+In production the proxy runs in Kubernetes behind the web container's nginx (`location /api/`); see the deployment documentation at the repository root.
