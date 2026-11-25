@@ -30,7 +30,7 @@ jobs:
       - run: pnpm audit --prod --audit-level critical
 
   proxy:
-    name: Proxy (types, tests, audit)
+    name: Proxy (types, lint, tests, audit)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -47,5 +47,6 @@ jobs:
           cache-dependency-path: proxy-server/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
+      - run: pnpm run lint
       - run: pnpm test
       - run: pnpm audit --prod
