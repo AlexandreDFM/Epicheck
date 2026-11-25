@@ -89,7 +89,7 @@ jobs:
               --docker-password="$GHCR_PULL_TOKEN" \
               --dry-run=client -o yaml | kubectl apply -f -
           else
-            echo "::notice::GHCR_PULL_TOKEN is not set: the image must be public."
+            echo "::warning::GHCR_PULL_TOKEN is not set: the image must be public (it is private by default)."
             # Stale credentials would make GHCR answer 403 even for a public image
             kubectl -n "$NAMESPACE" create secret generic github-container-registry \
               --type=kubernetes.io/dockerconfigjson \
