@@ -10,9 +10,9 @@ module.exports = defineConfig([
             "old/**",
             "android/**",
             "ios/**",
-            "proxy-server/node_modules/**",
-            "proxy-server/dist/**",
-            "proxy-server/.backup/**",
+            // Standalone project with its own dependencies: checked by its
+            // own CI job (pnpm typecheck / pnpm test in proxy-server/)
+            "proxy-server/**",
         ],
     },
     {
