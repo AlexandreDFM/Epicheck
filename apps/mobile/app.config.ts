@@ -111,8 +111,9 @@ const WORKLETS_MARKER = "EpiCheck: libworklets.so for react-native-reanimated";
  * a folder that the Android Gradle plugin fills on Linux but, on macOS,
  * without libworklets.so itself: the release build then fails with
  * "ninja: error: .../libworklets.so, needed by libreanimated.so, missing".
- * Copy the library there after the worklets native build, and build the
- * worklets library before the reanimated one.
+ * After the worklets native build, copy the library there when it is
+ * missing (never over the one Gradle put), and build the worklets library
+ * before the reanimated one.
  */
 const withWorkletsLibraryForReanimated: ConfigPlugin = (config) =>
     withProjectBuildGradle(config, (mod) => {
@@ -133,10 +134,22 @@ gradle.projectsEvaluated {
             return
         }
         nativeBuild.doLast {
-            def target = new File(worklets.layout.buildDirectory.get().asFile, "intermediates/cmake/\${variant.toLowerCase()}/obj")
-            worklets.fileTree(new File(worklets.layout.buildDirectory.get().asFile, "intermediates/cxx/\${cmakeType}"))
+            def buildDir = worklets.layout.buildDirectory.get().asFile
+            def target = new File(buildDir, "intermediates/cmake/\${variant.toLowerCase()}/obj")
+            // Newest build of each ABI (the folder may also hold builds restored
+            // from the Gradle cache), copied only where the library is missing:
+            // on Linux the Android Gradle plugin already puts it there
+            worklets.fileTree(new File(buildDir, "intermediates/cxx/\${cmakeType}"))
                 .matching { include "**/obj/*/libworklets.so" }
-                .each { so -> worklets.copy { from so; into new File(target, so.parentFile.name) } }
+                .files
+                .groupBy { it.parentFile.name }
+                .each { abi, libs ->
+                    def destination = new File(target, abi)
+                    if (!new File(destination, "libworklets.so").exists()) {
+                        def newest = libs.max { it.lastModified() }
+                        worklets.copy { from newest; into destination }
+                    }
+                }
         }
         reanimated.tasks.matching { it.name.startsWith("buildCMake\${cmakeType}") }.configureEach {
             dependsOn(nativeBuild)
