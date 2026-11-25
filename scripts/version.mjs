@@ -2,16 +2,18 @@
 /**
  * Bump or show the EpiCheck version.
  *
- *   pnpm run version:bump patch|minor|major   # app + proxy package.json
+ *   pnpm run version:bump patch|minor|major   # apps/mobile + apps/proxy package.json
  *   pnpm run version:show                     # version and build number
  *
- * package.json "version" is the single source: app.config.ts derives the
+ * apps/mobile/package.json "version" is the single source: app.config.ts derives the
  * Android versionCode and iOS buildNumber from it (1.2.1 -> 10201). Commit
  * as "chore(release): vX.Y.Z", then tag vX.Y.Z on main after the merge.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-const FILES = ["package.json", "proxy-server/package.json"];
+// The app version is the source; the proxy follows it
+const APP = "apps/mobile/package.json";
+const FILES = [APP, "apps/proxy/package.json"];
 
 const read = (file) => JSON.parse(readFileSync(file, "utf8"));
 const buildNumber = (v) => {
@@ -20,7 +22,7 @@ const buildNumber = (v) => {
 };
 
 const [, , command, part] = process.argv;
-const current = read("package.json").version;
+const current = read(APP).version;
 
 if (command === "show") {
     console.log(`${current} (build ${buildNumber(current)})`);
@@ -48,4 +50,7 @@ for (const file of FILES) {
     writeFileSync(file, `${JSON.stringify(pkg, null, 4)}\n`);
 }
 console.log(`${current} -> ${next} (build ${buildNumber(next)})`);
-console.log(`next: git commit -am "chore(release): v${next}"`);
+console.log(
+    `next: move the [Unreleased] notes of CHANGELOG.md under ## [${next}],`,
+);
+console.log(`      then git commit -am "chore(release): v${next}"`);

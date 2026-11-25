@@ -3,5 +3,6 @@
     "trailingComma": "all",
     "tabWidth": 4,
     "useTabs": false,
-    "plugins": ["prettier-plugin-tailwindcss"]
+    "plugins": ["prettier-plugin-tailwindcss"],
+    "tailwindConfig": "./apps/mobile/tailwind.config.js"
 }

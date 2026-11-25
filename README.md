@@ -2,7 +2,7 @@
 
 Mobile app (Android, iOS) for Epitech staff to take attendance and follow projects on the Epitech Intranet: scan the students' QR codes, mark presences in batch, register students on the fly, and grade follow-ups with their Jenkins build results at hand. A web version exists, with a limitation (see below).
 
-> **Status:** maintained until the Epitech Intranet it relies on is retired. The end-of-life plan lives in `END.md`; this repository then becomes an archive. To bring it back to life later, start with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and the [version rules](docs/IOS_XCODE_TROUBLESHOOTING.md#5-workflow-de-version-bump).
+> **Status:** maintained until the Epitech Intranet it relies on is retired. The end-of-life plan lives in `END.md`; this repository then becomes an archive. To bring it back to life later, start with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and the [version rules](docs/development/VERSIONING.md).
 
 ## Features
 
@@ -20,10 +20,10 @@ NFC: the scanner reads the card, but it returns the card's own identifier, not t
 
 ## Platforms
 
-| Platform     | How it talks to the Intranet                                                                                                                                                                                                                              |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Android, iOS | Directly                                                                                                                                                                                                                                                  |
-| Web          | Through the CORS proxy (`proxy-server/`), because the Intranet sends no CORS headers. Outside the Epitech network the Intranet refuses requests coming from a server (anti-DDoS page), so the deployed web version is only reliable on the school network |
+| Platform     | How it talks to the Intranet                                                                                                                                                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android, iOS | Directly                                                                                                                                                                                                                                                |
+| Web          | Through the CORS proxy (`apps/proxy/`), because the Intranet sends no CORS headers. Outside the Epitech network the Intranet refuses requests coming from a server (anti-DDoS page), so the deployed web version is only reliable on the school network |
 
 ## Getting started
 
@@ -36,25 +36,27 @@ pnpm install
 pnpm android        # build and run on an Android device or emulator
 pnpm ios            # build and run on the iOS simulator (pnpm ios:device for a device)
 pnpm start          # Metro only, for an installed development build
+# native projects are generated in apps/mobile/android and apps/mobile/ios
 
 # Web: the proxy and the Expo web server, in two terminals
 pnpm proxy
 pnpm web
 ```
 
-Checks run by the CI: `pnpm exec tsc --noEmit`, `pnpm exec eslint .`, `pnpm exec expo install --check`, and `pnpm test` in `proxy-server/`.
+Checks run by the CI: `pnpm typecheck`, `pnpm lint`, `pnpm test` (all workspace projects) and `pnpm --filter mobile exec expo install --check`.
 
 ## Versions and releases
 
-`package.json` holds the only version; the Android `versionCode` and iOS build number are derived from it (1.3.0 → 10300).
+`apps/mobile/package.json` holds the only version; the Android `versionCode` and iOS build number are derived from it (1.3.0 → 10300).
 
 ```bash
 pnpm run version:bump patch    # or minor / major
+# move the [Unreleased] notes of CHANGELOG.md under the new version
 git commit -am "chore(release): vX.Y.Z"
 # after the merge on main: tag vX.Y.Z -> signed APK and AAB attached to a GitHub release
 ```
 
-Details: [docs/IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md#4-synchronisation-des-versions), signing: [docs/BUILD_APK.md](docs/BUILD_APK.md).
+Details: [docs/development/VERSIONING.md](docs/development/VERSIONING.md), signing: [docs/android/BUILD.md](docs/android/BUILD.md).
 
 ## Deployment (web)
 
@@ -62,35 +64,27 @@ Details: [docs/IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md#4
 
 ## Repository layout
 
+A pnpm workspace with two applications:
+
 ```
-App.tsx, index.ts      navigation and entry point
-screens/               one file per screen
-components/            QR, multi-QR and NFC scanners, text components
-services/              Intranet, Office 365, Jenkins clients; secure storage; sounds
-types/, hooks/, contexts/, utils/
-proxy-server/          CORS proxy for the web version (Express, tests with node:test)
-docker/, Dockerfile    web image: Expo web export + nginx + proxy
+apps/
+  mobile/              Expo app (Android, iOS, web): app.json, app.config.ts, configs
+    src/               App.tsx, screens/, components/, services/, hooks/,
+                       contexts/, types/, utils/   (imported as @/…)
+    assets/            fonts, images, sounds
+  proxy/               CORS proxy for the web version (Express, tests with node:test)
+docker/                image (Expo web export + nginx + proxy), nginx config
 k8s/                   Kubernetes manifests and deploy accounts
+scripts/               version.mjs, ci/ helpers
+docs/                  guides, by topic (docs/README.md)
 .github/workflows/     ci, build, deploy, android
-docs/                  guides (below)
 ```
+
+Run a command in one project with `pnpm --filter mobile …` or `pnpm --filter proxy …`; the root scripts cover the usual ones.
 
 ## Documentation
 
-| Guide                                                                                                                                                                                                                   | Topic                                   |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md)                                                                                                                                                                                     | Kubernetes, GitHub settings, operations |
-| [BUILD_APK.md](docs/BUILD_APK.md), [BUILD_IOS.md](docs/BUILD_IOS.md)                                                                                                                                                    | Local builds, release signing           |
-| [ANDROID_QUICK_COMMANDS.md](docs/ANDROID_QUICK_COMMANDS.md), [ANDROID_APK_INSTALL_TROUBLESHOOTING.md](docs/ANDROID_APK_INSTALL_TROUBLESHOOTING.md), [ANDROID_BUILD_OPTIMIZATION.md](docs/ANDROID_BUILD_OPTIMIZATION.md) | Android                                 |
-| [IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md)                                                                                                                                                       | Xcode, macOS 26, versions               |
-| [EXPO_BUILD_FIXES.md](docs/EXPO_BUILD_FIXES.md)                                                                                                                                                                         | Known Expo build issues                 |
-| [HYBRID_AUTH.md](docs/HYBRID_AUTH.md), [OFFICE365_SETUP.md](docs/OFFICE365_SETUP.md), [AZURE_AD_SPA_SETUP.md](docs/AZURE_AD_SPA_SETUP.md), [DEBUG_AUTH.md](docs/DEBUG_AUTH.md)                                          | Authentication                          |
-| [COOKIE_EXTRACTION_SOLUTIONS.md](docs/COOKIE_EXTRACTION_SOLUTIONS.md), [COOKIE_WORKAROUND.md](docs/COOKIE_WORKAROUND.md)                                                                                                | Intranet cookie                         |
-| [WEB_CORS_LIMITATION.md](docs/WEB_CORS_LIMITATION.md), [WEB_QUICKSTART.md](docs/WEB_QUICKSTART.md), [WEB_TESTING_CHECKLIST.md](docs/WEB_TESTING_CHECKLIST.md)                                                           | Web version                             |
-| [JENKINS_INTEGRATION.md](docs/JENKINS_INTEGRATION.md)                                                                                                                                                                   | Jenkins                                 |
-| [CUSTOM_SOUNDS.md](docs/CUSTOM_SOUNDS.md)                                                                                                                                                                               | Sounds                                  |
-| [DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md), [GIT_SETUP.md](docs/GIT_SETUP.md), [QUICKSTART.md](docs/QUICKSTART.md)                                                                                     | Development                             |
-| [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                                                                                            | Contributing                            |
+The guides are grouped by topic in [docs/](docs/README.md): deployment, development (conventions, versions), Android, iOS, authentication and the Intranet cookie, web version, features (Jenkins, sounds). See also [apps/proxy/README.md](apps/proxy/README.md), [docker/README.md](docker/README.md), [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 

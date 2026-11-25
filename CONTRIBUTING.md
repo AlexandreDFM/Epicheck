@@ -47,7 +47,7 @@ git fetch upstream
 
 ### 4. Set Up Development Environment
 
-Follow the [Git Setup Guide](./docs/GIT_SETUP.md) to configure Node.js, pnpm, and other dependencies.
+Follow the [Git Setup Guide](./docs/development/GIT_SETUP.md) to configure Node.js, pnpm, and other dependencies.
 
 ```bash
 # Install Node.js version from .nvmrc

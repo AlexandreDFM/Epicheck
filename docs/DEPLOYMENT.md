@@ -1,6 +1,6 @@
 # Deployment (Kubernetes + GitHub Actions)
 
-The web version of EpiCheck runs on the k3s cluster of the VPS, behind Traefik, with TLS from cert-manager (Let's Encrypt). GitHub Actions builds one image and deploys it with a deploy account limited to the app's namespace. The mobile apps are built separately (`.github/workflows/android.yaml`, [BUILD_APK.md](BUILD_APK.md)).
+The web version of EpiCheck runs on the k3s cluster of the VPS, behind Traefik, with TLS from cert-manager (Let's Encrypt). GitHub Actions builds one image and deploys it with a deploy account limited to the app's namespace. The mobile apps are built separately (`.github/workflows/android.yaml`, [android/BUILD.md](android/BUILD.md)).
 
 | Environment | URL                                                   | Branch    | Namespace          | GitHub environment |
 | ----------- | ----------------------------------------------------- | --------- | ------------------ | ------------------ |
@@ -35,7 +35,7 @@ No database, no volume, no application secret: the user's Intranet cookie only p
 | `.github/workflows/build.yaml`                    | Push on `main` or `develop`: checks, image `ghcr.io/epitech-nice/epicheck:<sha>` (`latest` for `main` only), then deploy                       |
 | `.github/workflows/deploy.yaml`                   | Reusable deploy (one call per environment)                                                                                                     |
 | `.github/workflows/android.yaml`                  | APK and AAB on `vX.Y.Z` tags, attached to the GitHub release                                                                                   |
-| `Dockerfile`, `docker/`                           | One image (Expo web export, nginx, proxy) run as two containers; uid 1000, read-only root filesystem ([docker/README.md](../docker/README.md)) |
+| `docker/Dockerfile`, `docker/nginx/`              | One image (Expo web export, nginx, proxy) run as two containers; uid 1000, read-only root filesystem ([docker/README.md](../docker/README.md)) |
 
 Kubernetes objects carry `app.kubernetes.io/name=epicheck`, `app.kubernetes.io/component=web`, `app.kubernetes.io/part-of=epicheck` and `app.kubernetes.io/managed-by=kustomize`.
 
@@ -89,11 +89,11 @@ gh variable set PUBLIC_SITE_URL --env preprod --body https://epicheck.ppd.nice-t
 
 ### Repository secrets
 
-| Secret                                                                                              | Required             | Use                                                                                                                                                                               |
-| --------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GHCR_PULL_TOKEN`                                                                                   | yes                  | Classic PAT with **only** `read:packages`, dedicated to EpiCheck: the cluster pulls the private image with it (pull secret `github-container-registry`, rewritten on each deploy) |
-| `GHCR_PULL_USER`                                                                                    | no                   | Owner of that PAT, if not `epitech-nice` (the repository owner)                                                                                                                   |
-| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | for Android releases | Release key of the mobile app ([BUILD_APK.md](BUILD_APK.md)); repository-level because the Android workflow runs on tags and pull requests, outside the deploy environments       |
+| Secret                                                                                              | Required             | Use                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GHCR_PULL_TOKEN`                                                                                   | yes                  | Classic PAT with **only** `read:packages`, dedicated to EpiCheck: the cluster pulls the private image with it (pull secret `github-container-registry`, rewritten on each deploy)   |
+| `GHCR_PULL_USER`                                                                                    | no                   | Owner of that PAT, if not `epitech-nice` (the repository owner)                                                                                                                     |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | for Android releases | Release key of the mobile app ([android/BUILD.md](android/BUILD.md)); repository-level because the Android workflow runs on tags and pull requests, outside the deploy environments |
 
 ### Variables
 
@@ -120,7 +120,7 @@ The token is repository-level: both environments use it. When it expires or is r
 
 ## Deploying
 
-A push on `main` deploys production; a push on `develop` deploys preprod. The flow is feature branch → pull request to `develop` (preprod) → pull request to `main` (production). A version is released by tagging `main` (see [the version rules](IOS_XCODE_TROUBLESHOOTING.md#5-workflow-de-version-bump)).
+A push on `main` deploys production; a push on `develop` deploys preprod. The flow is feature branch → pull request to `develop` (preprod) → pull request to `main` (production). A version is released by tagging `main` (see [the version rules](development/VERSIONING.md)).
 
 Deploy steps: connect with the environment's `KUBE_CONFIG`, check the account's rights, registry pull secret, settings, `kubectl apply -k` with the image tag set to the commit SHA, rollout, smoke tests on the environment's `PUBLIC_SITE_URL` (`/`, `/health`, `/api/health`, a target outside the Intranet refused with `400`, HSTS and CSP headers). On failure the job prints pods, logs, certificates and events.
 

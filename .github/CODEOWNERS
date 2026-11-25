@@ -30,4 +30,4 @@ docker-compose*.yml @AlexandreDFM
 /k8s/ @AlexandreDFM
 /docker/ @AlexandreDFM
 /.github/workflows/ @AlexandreDFM
-/proxy-server/ @AlexandreDFM
+/apps/proxy/ @AlexandreDFM

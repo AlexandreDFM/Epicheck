@@ -4,17 +4,18 @@ name: Android
 # - tag vX.Y.Z: build, then attach EpiCheck-X.Y.Z.apk/.aab to a GitHub release
 # - manual run (Actions tab), or a pull request touching the native config
 # Signing: secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
-# ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD (docs/BUILD_APK.md). Without them
+# ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD (docs/android/BUILD.md). Without them
 # the build uses the debug key and no release is published.
 on:
   push:
     tags: ["v*"]
   pull_request:
     paths:
-      - app.json
-      - app.config.ts
-      - package.json
+      - apps/mobile/app.json
+      - apps/mobile/app.config.ts
+      - apps/mobile/package.json
       - pnpm-lock.yaml
+      - scripts/ci/android.gradle.properties
       - .github/workflows/android.yaml
   workflow_dispatch:
 
@@ -34,9 +35,9 @@ jobs:
       - name: App version
         id: version
         run: |
-          version=$(node -p 'require("./package.json").version')
+          version=$(node -p 'require("./apps/mobile/package.json").version')
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # A release tag must match package.json (single source of the version)
+          # A release tag must match apps/mobile/package.json (single source of the version)
           if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "v$version" ]]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
             exit 1
@@ -47,7 +48,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --filter mobile...
 
       - uses: actions/setup-java@v6
         with:
@@ -57,11 +58,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Generate the native project
+        working-directory: apps/mobile
         env:
           CI: "1"
         run: |
           pnpm exec expo prebuild --platform android --no-install
-          cat android.gradle.properties.template >> android/gradle.properties
+          cat ../../scripts/ci/android.gradle.properties >> android/gradle.properties
 
       - name: Release key
         id: keystore
@@ -78,7 +80,7 @@ jobs:
           echo "signed=true" >> "$GITHUB_OUTPUT"
 
       - name: Build
-        working-directory: android
+        working-directory: apps/mobile/android
         env:
           NODE_ENV: production
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -91,8 +93,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/release/app-release.apk "out/EpiCheck-$VERSION.apk"
-          cp android/app/build/outputs/bundle/release/app-release.aab "out/EpiCheck-$VERSION.aab"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "out/EpiCheck-$VERSION.apk"
+          cp apps/mobile/android/app/build/outputs/bundle/release/app-release.aab "out/EpiCheck-$VERSION.aab"
           (cd out && sha256sum -- *.apk *.aab > SHA256SUMS)
           cat out/SHA256SUMS
           rm -f "$RUNNER_TEMP/release.jks"
@@ -111,6 +113,21 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          # Section "## [X.Y.Z] - date" up to the next "## [" heading
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if [ ! -s "$RUNNER_TEMP/notes.md" ]; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
       - uses: actions/download-artifact@v8
         with:
           name: EpiCheck-${{ needs.build.outputs.version }}
@@ -118,5 +135,5 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           name: EpiCheck ${{ needs.build.outputs.version }}
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/notes.md
           files: out/*

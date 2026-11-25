@@ -1,0 +1,36 @@
+# Build context: the repository root (docker build -f docker/Dockerfile .).
+# Only the workspace manifests, apps/ and docker/nginx are needed.
+**/node_modules
+**/.expo
+**/dist
+**/.DS_Store
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.idea
+.vscode
+apps/mobile/android
+apps/mobile/ios
+android
+ios
+old
+docs
+k8s
+kubernetes
+scripts
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.key
+apps/proxy/.backup
+*.md
+Dockerfile*
+docker-compose*.yml
