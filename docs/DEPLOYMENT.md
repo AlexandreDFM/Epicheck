@@ -83,17 +83,17 @@ gh variable set PUBLIC_SITE_URL --env preprod --body https://epicheck.ppd.nice-t
 
 ### Environment secrets (`production` and `preprod`)
 
-| Secret            | Required                   | Use                                                                                 |
-| ----------------- | -------------------------- | ----------------------------------------------------------------------------------- |
-| `KUBE_CONFIG`     | yes                        | Kubeconfig of the environment's `github-deployer`                                   |
-| `GHCR_PULL_TOKEN` | only for a private package | Classic PAT with only `read:packages`. Not needed: the `epicheck` package is public |
-| `GHCR_PULL_USER`  | no                         | Owner of that PAT, if not the repository owner                                      |
+| Secret        | Required | Use                                               |
+| ------------- | -------- | ------------------------------------------------- |
+| `KUBE_CONFIG` | yes      | Kubeconfig of the environment's `github-deployer` |
 
 ### Repository secrets
 
-| Secret                                                                                              | Required             | Use                                                                                                                                                                         |
-| --------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | for Android releases | Release key of the mobile app ([BUILD_APK.md](BUILD_APK.md)); repository-level because the Android workflow runs on tags and pull requests, outside the deploy environments |
+| Secret                                                                                              | Required             | Use                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GHCR_PULL_TOKEN`                                                                                   | yes                  | Classic PAT with **only** `read:packages`, dedicated to EpiCheck: the cluster pulls the private image with it (pull secret `github-container-registry`, rewritten on each deploy) |
+| `GHCR_PULL_USER`                                                                                    | no                   | Owner of that PAT, if not `epitech-nice` (the repository owner)                                                                                                                   |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | for Android releases | Release key of the mobile app ([BUILD_APK.md](BUILD_APK.md)); repository-level because the Android workflow runs on tags and pull requests, outside the deploy environments       |
 
 ### Variables
 
@@ -107,7 +107,16 @@ They become the ConfigMap `epicheck-app-config`. Constants (`NODE_ENV`, `PORT`, 
 
 ### Package visibility
 
-After the first build, set the package `ghcr.io/epitech-nice/epicheck` to **public** (organization → Packages → epicheck → Package settings). The workflow then empties the `github-container-registry` pull secret, so no token can expire.
+The image `ghcr.io/epitech-nice/epicheck` stays **private** (organization package, visible to its members only); the cluster pulls it with `GHCR_PULL_TOKEN`:
+
+```bash
+# github.com → Settings → Developer settings → Personal access tokens (classic):
+# scope read:packages only, expiry = planned end of the project
+gh secret set GHCR_PULL_TOKEN --repo epitech-nice/EpiCheck     # prompts for the value
+gh secret set GHCR_PULL_USER --repo epitech-nice/EpiCheck      # login that owns the PAT
+```
+
+The token is repository-level: both environments use it. When it expires or is revoked, pods can no longer be recreated (`ImagePullBackOff`): set a new one and rerun the deploy. Without the secret, the workflow empties the pull secret, which only works for a public package.
 
 ## Deploying
 
@@ -150,12 +159,12 @@ The manifests and the workflow's own `run:` blocks were run on a local k3s (Dock
 
 ## Troubleshooting
 
-| Symptom                                                                  | Cause                                                     | Fix                                                                          |
-| ------------------------------------------------------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `Secret KUBE_CONFIG of the … environment is missing`                     | Environment not set up                                    | Run `make-kubeconfig.sh` for that environment                                |
-| `The deploy account cannot manage <kind>`                                | A manifest uses a kind missing from the Role              | Add it to `k8s/rbac/deployer*.yaml` and apply as admin                       |
-| Pods in `ImagePullBackOff`, `403 Forbidden`                              | Package still private                                     | Make the package public, or set `GHCR_PULL_TOKEN`                            |
-| Certificate not ready on a new host                                      | DNS not pointing to the VPS, or HTTP-01 challenge blocked | `kubectl -n $N get certificate,challenges`; check the DNS record             |
-| Two Ingresses for `epicheck.nice-tek.eu`                                 | The former `epicheck` namespace still exists              | `kubectl delete namespace epicheck epicheck-staging` (admin)                 |
-| Web login works, then every call answers `401` with an anti-DDoS message | The Intranet refuses the VPS address                      | Use the mobile app, or run the proxy from the Epitech network (`pnpm proxy`) |
-| `field is immutable` on apply                                            | A selector changed                                        | Recreate the Deployment (admin), there is no data to keep                    |
+| Symptom                                                                  | Cause                                                         | Fix                                                                                     |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Secret KUBE_CONFIG of the … environment is missing`                     | Environment not set up                                        | Run `make-kubeconfig.sh` for that environment                                           |
+| `The deploy account cannot manage <kind>`                                | A manifest uses a kind missing from the Role                  | Add it to `k8s/rbac/deployer*.yaml` and apply as admin                                  |
+| Pods in `ImagePullBackOff`, `403 Forbidden`                              | `GHCR_PULL_TOKEN` missing, expired or without `read:packages` | Create a new classic PAT (`read:packages`) and update the secret, then rerun the deploy |
+| Certificate not ready on a new host                                      | DNS not pointing to the VPS, or HTTP-01 challenge blocked     | `kubectl -n $N get certificate,challenges`; check the DNS record                        |
+| Two Ingresses for `epicheck.nice-tek.eu`                                 | The former `epicheck` namespace still exists                  | `kubectl delete namespace epicheck epicheck-staging` (admin)                            |
+| Web login works, then every call answers `401` with an anti-DDoS message | The Intranet refuses the VPS address                          | Use the mobile app, or run the proxy from the Epitech network (`pnpm proxy`)            |
+| `field is immutable` on apply                                            | A selector changed                                            | Recreate the Deployment (admin), there is no data to keep                               |
