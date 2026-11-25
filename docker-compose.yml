@@ -32,11 +32,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        EXPO_PUBLIC_PROXY_URL: http://localhost:3001/api/intra-proxy
+        # nginx forwards /api/ to the proxy container: same origin, no CORS
+        EXPO_PUBLIC_PROXY_URL: /api/intra-proxy
     container_name: epicheck-app
+    # nginx resolves the proxy host name when it starts
+    depends_on:
+      - proxy
     ports:
       - "80:80"
-      - "443:443"
     environment:
       - NODE_ENV=production
     networks:
@@ -55,13 +58,9 @@ services:
       context: ./proxy-server
       dockerfile: Dockerfile
     container_name: epicheck-proxy
-    ports:
-      - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - BACKEND_URL=http://localhost
-      - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://127.0.0.1
     networks:
       - epicheck-network
     restart: unless-stopped
@@ -71,8 +70,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    depends_on:
-      - app
 
 networks:
   epicheck-network:
