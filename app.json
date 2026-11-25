@@ -37,15 +37,17 @@
             "versionCode": 4,
             "permissions": [
                 "android.permission.CAMERA",
-                "android.permission.NFC",
-                "android.permission.READ_EXTERNAL_STORAGE",
-                "android.permission.WRITE_EXTERNAL_STORAGE"
+                "android.permission.NFC"
             ],
             "intentFilters": [
                 {
                     "action": "android.nfc.action.NDEF_DISCOVERED",
                     "category": ["android.intent.category.DEFAULT"]
                 }
+            ],
+            "blockedPermissions": [
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE"
             ]
         },
         "web": {
