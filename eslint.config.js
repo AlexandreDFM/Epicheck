@@ -15,4 +15,11 @@ module.exports = defineConfig([
             "proxy-server/.backup/**",
         ],
     },
+    {
+        rules: {
+            // axios.create() is the documented API; axios >= 1.21 also
+            // exports `create`, which this rule reports as ambiguous
+            "import/no-named-as-default-member": "off",
+        },
+    },
 ]);
