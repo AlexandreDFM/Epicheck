@@ -9,7 +9,7 @@ The Epitech Intranet sends no CORS headers, so the **web** version of EpiCheck c
 Requires Node 22 and pnpm (`corepack enable` picks the version from `package.json`).
 
 ```bash
-cd proxy-server
+cd apps/proxy
 pnpm install
 cp .env.example .env
 pnpm dev          # restarts when app.ts changes
@@ -17,13 +17,13 @@ pnpm dev          # restarts when app.ts changes
 
 From the repository root, `pnpm proxy` does the same. The server listens on `http://localhost:3001`.
 
-| Script           | Purpose                                                         |
-| ---------------- | --------------------------------------------------------------- |
-| `pnpm dev`       | Run `app.ts` with ts-node, reload on change                     |
-| `pnpm build`     | Compile to `dist/`                                              |
-| `pnpm start`     | Run the compiled `dist/app.js`                                  |
-| `pnpm typecheck` | Type check only                                                 |
-| `pnpm test`      | Compile and run `app.test.ts` (no request reaches the Intranet) |
+| Script           | Purpose                                                             |
+| ---------------- | ------------------------------------------------------------------- |
+| `pnpm dev`       | Run `src/app.ts` with ts-node, reload on change                     |
+| `pnpm build`     | Compile to `dist/`                                                  |
+| `pnpm start`     | Run the compiled `dist/app.js`                                      |
+| `pnpm typecheck` | Type check only                                                     |
+| `pnpm test`      | Compile and run `src/app.test.ts` (no request reaches the Intranet) |
 
 ## API
 
@@ -69,10 +69,10 @@ Redirects are not followed, and the cookie is never logged: only the method, pat
 
 ## Docker
 
-The proxy has no image of its own: the root `Dockerfile` builds one image with the web export, nginx and the proxy, run as two containers ([docker/README.md](../docker/README.md)).
+The proxy has no image of its own: `docker/Dockerfile` builds one image with the web export, nginx and the proxy, run as two containers ([docker/README.md](../../docker/README.md)).
 
 ```bash
-docker compose -f ../docker-compose.dev.yml up proxy   # development, reloads app.ts
+docker compose -f docker-compose.dev.yml up proxy   # from the repository root   # development, reloads app.ts
 ```
 
-In production the proxy runs in Kubernetes next to nginx, in the same pod (`location /api/` → `127.0.0.1:3001`); see [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
+In production the proxy runs in Kubernetes next to nginx, in the same pod (`location /api/` → `127.0.0.1:3001`); see [docs/DEPLOYMENT.md](../../docs/DEPLOYMENT.md).

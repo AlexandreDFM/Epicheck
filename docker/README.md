@@ -1,6 +1,6 @@
 # Docker
 
-One image, built by the root `Dockerfile`, is used everywhere: Kubernetes (production and preprod) and the local production-like stack (`docker-compose.yml`).
+One image, built by `docker/Dockerfile` (context: the repository root), is used everywhere: Kubernetes (production and preprod) and the local production-like stack (`docker-compose.yml`).
 
 The image holds the Expo web export, nginx and the CORS proxy, and runs as two processes:
 

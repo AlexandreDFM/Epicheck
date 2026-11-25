@@ -22,17 +22,18 @@ Complete setup guide to get the project running on a local machine after cloning
 
 ## Prerequisites
 
-| Tool          | Minimum Version | Install                                                    |
-| ------------- | --------------- | ---------------------------------------------------------- |
-| **Git**       | 2.30+           | `brew install git` or [git-scm.com](https://git-scm.com/) |
-| **Node.js**   | 22+ (LTS)       | Via **nvm** (recommended) — see below                      |
-| **pnpm**      | 9+              | `corepack enable && corepack prepare pnpm@latest`          |
-| **Xcode**     | 15+ (macOS)     | Mac App Store (for iOS builds)                             |
-| **CocoaPods** | 1.14+ (macOS)   | `sudo gem install cocoapods`                               |
-| **JDK**       | 17 (Android)    | `brew install openjdk@17`                                  |
-| **Android Studio** | Latest     | [developer.android.com](https://developer.android.com/studio) |
+| Tool               | Minimum Version | Install                                                       |
+| ------------------ | --------------- | ------------------------------------------------------------- |
+| **Git**            | 2.30+           | `brew install git` or [git-scm.com](https://git-scm.com/)     |
+| **Node.js**        | 22+ (LTS)       | Via **nvm** (recommended) — see below                         |
+| **pnpm**           | 9+              | `corepack enable && corepack prepare pnpm@latest`             |
+| **Xcode**          | 15+ (macOS)     | Mac App Store (for iOS builds)                                |
+| **CocoaPods**      | 1.14+ (macOS)   | `sudo gem install cocoapods`                                  |
+| **JDK**            | 17 (Android)    | `brew install openjdk@17`                                     |
+| **Android Studio** | Latest          | [developer.android.com](https://developer.android.com/studio) |
 
 After cloning the repository, run `nvm install && nvm use` in the project root to use the Node.js version defined in the `.nvmrc` file.
+
 > **Note:** For **web-only** development, only Git, Node.js, and pnpm are required.
 
 ---
@@ -53,12 +54,12 @@ cd Epicheck
 
 ## 2. Branch Strategy
 
-| Branch        | Purpose                       | Deploys to          |
-| ------------- | ----------------------------- | ------------------- |
-| `main`        | Production-ready code         | Production (CI/CD)  |
-| `develop`     | Integration / staging branch  | Staging (CI/CD)     |
-| `feature/*`   | New features                  | —                   |
-| `fix/*`       | Bug fixes                     | —                   |
+| Branch      | Purpose                      | Deploys to         |
+| ----------- | ---------------------------- | ------------------ |
+| `main`      | Production-ready code        | Production (CI/CD) |
+| `develop`   | Integration / staging branch | Staging (CI/CD)    |
+| `feature/*` | New features                 | —                  |
+| `fix/*`     | Bug fixes                    | —                  |
 
 ### Day-to-day workflow
 
@@ -154,7 +155,7 @@ pnpm install
 ### Proxy server (for web development with CORS bypass)
 
 ```bash
-cd proxy-server
+cd apps/proxy
 pnpm install
 cd ..
 ```
@@ -174,7 +175,7 @@ cd ios && pod install && cd ..
 If the `android/gradle.properties` file is missing or needs reset:
 
 ```bash
-cp android.gradle.properties.template android/gradle.properties
+cp scripts/ci/android.gradle.properties apps/mobile/android/gradle.properties
 ```
 
 ---
@@ -204,10 +205,10 @@ EXPO_PUBLIC_AZURE_TENANT_ID=organizations
 ### Proxy server `.env`
 
 ```bash
-cp proxy-server/.env.example proxy-server/.env
+cp apps/proxy/.env.example apps/proxy/.env
 ```
 
-Edit `proxy-server/.env`:
+Edit `apps/proxy/.env`:
 
 ```env
 PORT=3001
@@ -301,19 +302,19 @@ pnpm start --clear
 
 ## 9. Useful Commands
 
-| Command                        | Description                        |
-| ------------------------------ | ---------------------------------- |
-| `pnpm start`                   | Start Expo dev server              |
-| `pnpm web`                     | Start in web browser               |
-| `pnpm ios`                     | Run on iOS Simulator               |
-| `pnpm android`                 | Run on Android Emulator            |
-| `pnpm lint`                    | Run ESLint                         |
-| `pnpm format`                  | Format all files with Prettier     |
-| `pnpm proxy`                   | Start proxy server (web platform)  |
-| `pnpm build:android:release`   | Build Android release APK          |
-| `pnpm build:ios`               | Build iOS via EAS                  |
-| `npx expo prebuild`            | Generate native project files      |
-| `npx expo-doctor`              | Check project health               |
+| Command                      | Description                       |
+| ---------------------------- | --------------------------------- |
+| `pnpm start`                 | Start Expo dev server             |
+| `pnpm web`                   | Start in web browser              |
+| `pnpm ios`                   | Run on iOS Simulator              |
+| `pnpm android`               | Run on Android Emulator           |
+| `pnpm lint`                  | Run ESLint                        |
+| `pnpm format`                | Format all files with Prettier    |
+| `pnpm proxy`                 | Start proxy server (web platform) |
+| `pnpm build:android:release` | Build Android release APK         |
+| `pnpm build:ios`             | Build iOS via EAS                 |
+| `npx expo prebuild`          | Generate native project files     |
+| `npx expo-doctor`            | Check project health              |
 
 ---
 

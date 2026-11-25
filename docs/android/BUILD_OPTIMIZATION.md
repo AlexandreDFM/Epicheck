@@ -15,7 +15,7 @@ The GitHub Actions workflow automatically applies optimizations:
 ```yaml
 - name: Apply Gradle optimizations
   run: |
-      cat android.gradle.properties.template >> android/gradle.properties
+      cat ../../scripts/ci/android.gradle.properties >> android/gradle.properties   # from apps/mobile
 ```
 
 No manual intervention required for CI/CD builds.
@@ -31,7 +31,7 @@ npx expo prebuild --platform android
 #### Step 2: Apply Optimizations
 
 ```bash
-cat android.gradle.properties.template >> android/gradle.properties
+cat ../../scripts/ci/android.gradle.properties >> android/gradle.properties   # from apps/mobile
 ```
 
 Or manually edit `android/gradle.properties` and add:

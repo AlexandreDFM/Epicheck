@@ -3,6 +3,7 @@
 ## 🔴 Problème: ADB failed to install APK
 
 ### Message d'erreur typique:
+
 ```
 Error: adb: failed to install /path/to/app-debug.apk
 Error: ... exited with non-zero code: 1
@@ -31,7 +32,7 @@ npx expo prebuild --platform android --clean
 
 ```bash
 # Après expo prebuild, appliquer les optimisations
-cat android.gradle.properties.template >> android/gradle.properties
+cat ../../scripts/ci/android.gradle.properties >> android/gradle.properties   # from apps/mobile
 ```
 
 **Ou ajouter manuellement à `android/gradle.properties`:**
@@ -79,17 +80,19 @@ emulator -avd <NOM_AVD> -partition-size 2048
 ### 4. **Réduire la taille de l'APK**
 
 #### Option A: Build debug minifié (recommandé pour les tests)
+
 ```bash
 npm run build:android:debug
 ```
 
 #### Option B: Utiliser les ABI splits pour réduire la taille
+
 Modifier `android/app/build.gradle`:
 
 ```gradle
 android {
     // ... existing config
-    
+
     bundle {
         density {
             enableSplit = true
@@ -105,6 +108,7 @@ android {
 ```
 
 #### Option C: Vérifier la taille de l'APK
+
 ```bash
 # Analyser la composition de l'APK
 cd android/app/build/outputs/apk/debug
@@ -142,7 +146,7 @@ emulator -avd <NOM_AVD> -wipe-data
 
 ## 🚀 Script automatisé d'installation
 
-Créez `scripts/install-android.sh`:
+Créez `apps/mobile/scripts/install-android.sh`:
 
 ```bash
 #!/bin/bash
@@ -157,7 +161,7 @@ echo "🏗️ Reconstruction du projet Android..."
 npx expo prebuild --platform android --clean
 
 echo "⚙️ Application des optimisations..."
-cat android.gradle.properties.template >> android/gradle.properties
+cat ../../scripts/ci/android.gradle.properties >> android/gradle.properties   # from apps/mobile
 
 echo "📊 Vérification des appareils..."
 adb devices
@@ -174,9 +178,10 @@ fi
 ```
 
 Utilisation:
+
 ```bash
-chmod +x scripts/install-android.sh
-./scripts/install-android.sh
+chmod +x apps/mobile/scripts/install-android.sh
+./apps/mobile/scripts/install-android.sh
 ```
 
 ---
@@ -213,6 +218,7 @@ adb logcat | grep -i error
 ## ⚡ Configuration recommandée pour le développement
 
 **`android/gradle.properties`:**
+
 ```properties
 # Performance optimizations
 org.gradle.caching=true
@@ -234,8 +240,8 @@ android.enableNonTransitiveRDeps=true
 
 ## 📈 Performance avant/après
 
-| Étape | Avant | Après | Gain |
-|-------|-------|-------|------|
-| Clean Build | ~15 min | ~8 min | **47% plus rapide** |
-| Incremental Build | ~5 min | ~1.5 min | **70% plus rapide** |
-| APK Size | ~45 MB | ~28 MB | **38% plus petit** |
+| Étape             | Avant   | Après    | Gain                |
+| ----------------- | ------- | -------- | ------------------- |
+| Clean Build       | ~15 min | ~8 min   | **47% plus rapide** |
+| Incremental Build | ~5 min  | ~1.5 min | **70% plus rapide** |
+| APK Size          | ~45 MB  | ~28 MB   | **38% plus petit**  |

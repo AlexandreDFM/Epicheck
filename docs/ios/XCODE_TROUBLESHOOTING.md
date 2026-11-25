@@ -54,8 +54,8 @@ Les dossiers suivants ne sont **pas** protégés par TCC :
 
 1. Ouvrir **Réglages Système** → **Confidentialité et sécurité** → **Accès complet au disque**
 2. Cliquer sur **+** et ajouter :
-   - `/Applications/Xcode.app`
-   - `/Applications/Utilities/Terminal.app` (ou iTerm2)
+    - `/Applications/Xcode.app`
+    - `/Applications/Utilities/Terminal.app` (ou iTerm2)
 3. Redémarrer Xcode
 
 > **⚠️ Note :** Cette solution fonctionne mais est moins pérenne. Un futur update de macOS pourrait révoquer ces permissions. Déplacer le projet hors de `~/Documents/` reste la meilleure pratique.
@@ -142,53 +142,13 @@ Ensuite, vérifiez dans **Réglages Système → Confidentialité et sécurité 
 
 ## 4. Synchronisation des versions
 
-### Source unique
-
-La version ne se règle plus à la main dans `app.json` ni dans les projets natifs : **seul le champ `version` de `package.json` compte**. `app.config.ts` en dérive le reste à chaque `expo prebuild` / `expo run` :
-
-| Valeur | Calcul | Exemple pour `1.2.1` |
-|---|---|---|
-| `expo.version` → `CFBundleShortVersionString`, `MARKETING_VERSION`, `versionName` | la version | `1.2.1` |
-| `ios.buildNumber` → `CFBundleVersion`, `CURRENT_PROJECT_VERSION` | `MAJ × 10000 + MIN × 100 + PATCH` | `10201` |
-| `android.versionCode` | idem | `10201` |
-
-Le plugin `withXcodeVersion` (dans `app.config.ts`) écrit aussi `MARKETING_VERSION` et `CURRENT_PROJECT_VERSION` dans `project.pbxproj` : la correction au `sed` n'est plus nécessaire.
-
-### Vérifier
-
-```bash
-pnpm run version:show                      # 1.2.1 (build 10201)
-pnpm exec expo config --type public | grep -E "version|buildNumber|versionCode"
-
-# Projets natifs, après prebuild
-plutil -p ios/EpiCheck/Info.plist | grep -E "CFBundleShortVersionString|CFBundleVersion"
-grep -E "MARKETING_VERSION|CURRENT_PROJECT_VERSION" ios/EpiCheck.xcodeproj/project.pbxproj | sort -u
-grep -E "versionName|versionCode" android/app/build.gradle
-```
+La version vient de `apps/mobile/package.json` et se propage à Xcode lors d'`expo prebuild` : voir [development/VERSIONING.md](../development/VERSIONING.md). Après un bump : `pnpm exec expo prebuild` dans `apps/mobile` (sans `--clean`, pour garder la Team de signature), puis `cd ios && pod install` si des dépendances natives ont changé.
 
 ---
 
 ## 5. Workflow de version bump
 
-```bash
-pnpm run version:bump patch     # ou minor / major : met à jour package.json et proxy-server/package.json
-pnpm exec expo prebuild         # propage la version dans ios/ et android/ (sans --clean : garde le Signing)
-cd ios && pod install && cd ..  # seulement si des dépendances natives ont changé
-git commit -am "chore(release): vX.Y.Z"
-# après fusion sur main : git tag vX.Y.Z && git push origin vX.Y.Z  (déclenche la release APK)
-```
-
-> `expo prebuild --clean` reste utile quand `ios/` ou `android/` sont incohérents, mais il supprime la Team de signature choisie dans Xcode : la resélectionner ensuite (Signing & Capabilities).
-
-### Convention de versioning
-
-| Type de changement | Version | Exemple |
-|---|---|---|
-| Corrections de bugs | Patch (x.y.**Z**) | 1.2.0 → 1.2.1 |
-| Nouvelles fonctionnalités, changement d'infrastructure visible | Minor (x.**Y**.0) | 1.2.1 → 1.3.0 |
-| Rupture (abandon d'une plateforme, changement d'API) | Major (**X**.0.0) | 1.3.0 → 2.0.0 |
-
-Le numéro de build suit la version : toute nouvelle soumission sur un store (ou nouvel APK) demande donc au moins un bump **patch**. Les tags Git s'écrivent `vX.Y.Z` (sans point après le `v`). Mineur et patch restent sous 100.
+Voir [development/VERSIONING.md](../development/VERSIONING.md#bump).
 
 ---
 
@@ -202,14 +162,14 @@ Le numéro de build suit la version : toute nouvelle soumission sur un store (ou
 2. **com.apple.provenance** — Voir [section 2](#2-comappleprovenance--pnpm)
 3. **Developer Mode désactivé** — Voir [section 3](#3-developer-mode)
 4. **Node introuvable** — Vérifier `.xcode.env.local` :
-   ```bash
-   cat ios/.xcode.env.local
-   # Doit contenir : export NODE_BINARY=/chemin/vers/node
-   ```
+    ```bash
+    cat ios/.xcode.env.local
+    # Doit contenir : export NODE_BINARY=/chemin/vers/node
+    ```
 5. **Pods désynchronisés** :
-   ```bash
-   cd ios && rm -rf Pods Podfile.lock && pod install && cd ..
-   ```
+    ```bash
+    cd ios && rm -rf Pods Podfile.lock && pod install && cd ..
+    ```
 
 ### "Signing requires a development team"
 

@@ -10,6 +10,7 @@ npm run android:clean
 ## 🆘 Situations problématiques
 
 ### ❌ "INSTALL_FAILED_INSUFFICIENT_STORAGE"
+
 **Cause:** Espace disque insuffisant sur l'émulateur
 
 ```bash
@@ -21,6 +22,7 @@ emulator -avd <NOM_AVD> -partition-size 2048
 ```
 
 ### ❌ "INSTALL_FAILED_VERSION_DOWNGRADE"
+
 **Cause:** Version d'app plus ancienne que celle installée
 
 ```bash
@@ -32,6 +34,7 @@ npm run android
 ```
 
 ### ❌ "Protocol failure"
+
 **Cause:** Connexion ADB instable
 
 ```bash
@@ -42,6 +45,7 @@ adb devices
 ```
 
 ### ❌ "Build fails with OOM"
+
 **Cause:** Mémoire insuffisante pour Gradle
 
 ```bash
@@ -50,6 +54,7 @@ org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
 ```
 
 ### ❌ "APK too large"
+
 **Cause:** APK dépasse les 100 MB
 
 ```bash
@@ -69,6 +74,7 @@ npm run android:wipe
 ## 📝 Commandes utiles
 
 ### Vérifier l'état
+
 ```bash
 # Lister les appareils
 adb devices
@@ -84,6 +90,7 @@ adb logcat | grep -i epicheck
 ```
 
 ### Installer/Désinstaller manuellement
+
 ```bash
 # Installer
 adb install -r -d android/app/build/outputs/apk/debug/app-debug.apk
@@ -96,6 +103,7 @@ adb shell am start -n com.hownee.epicheck.app/.MainActivity
 ```
 
 ### Debugging
+
 ```bash
 # Logs détaillés
 adb logcat
