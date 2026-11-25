@@ -1,0 +1,5 @@
+# Install scripts allowed to run (pnpm 11 blocks them by default).
+# unrs-resolver (ESLint import resolver) ships prebuilt binaries; its
+# postinstall only checks them, so it does not need to run.
+allowBuilds:
+    unrs-resolver: false
