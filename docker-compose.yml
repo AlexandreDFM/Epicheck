@@ -25,56 +25,37 @@
 # THE SOFTWARE.
 #
 
+# Production-like local stack: the image used by Kubernetes, run as its two
+# processes (proxy, and web sharing the proxy's network like a pod).
+#   docker compose up --build    then open http://localhost:8080
 services:
-  # Main application (web build)
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        # nginx forwards /api/ to the proxy container: same origin, no CORS
-        EXPO_PUBLIC_PROXY_URL: /api/intra-proxy
-    container_name: epicheck-app
-    # nginx resolves the proxy host name when it starts
+  proxy:
+    build: .
+    image: epicheck:local
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    environment:
+      - NODE_ENV=production
+      # nginx is the only reverse proxy in front of it here
+      - TRUST_PROXY=1
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    image: epicheck:local
+    pull_policy: never
+    restart: unless-stopped
+    command: ["nginx", "-e", "stderr", "-g", "daemon off;"]
+    network_mode: "service:proxy"
+    read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
       - proxy
-    ports:
-      - "80:80"
-    environment:
-      - NODE_ENV=production
-    networks:
-      - epicheck-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Proxy server (for API proxying)
-  proxy:
-    build:
-      context: ./proxy-server
-      dockerfile: Dockerfile
-    container_name: epicheck-proxy
-    environment:
-      - NODE_ENV=production
-      - PORT=3001
-    networks:
-      - epicheck-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-networks:
-  epicheck-network:
-    driver: bridge
-
-volumes:
-  app_data:
-    driver: local

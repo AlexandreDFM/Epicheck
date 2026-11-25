@@ -24,65 +24,61 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-#
 
-# Stage 1: Build
-FROM --platform=linux/amd64 node:22-alpine AS builder
+# One image for EpiCheck web, used by Kubernetes (production, preprod) and
+# docker-compose.yml. It holds the Expo web export served by nginx and the
+# CORS proxy (Node), run as two containers of the same pod:
+#   proxy: node dist/app.js (the default command), port 3001
+#   web:   nginx -e stderr -g 'daemon off;', port 8080, /api -> 127.0.0.1:3001
+# Both run as the unprivileged "node" user (uid 1000) and write only under
+# /tmp, so the root filesystem can be read-only.
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Install build dependencies
-RUN apk add --no-cache \
-    git \
-    python3 \
-    make \
-    g++
-
+# Stage 1: Expo web export (platform independent: built on the runner's
+# architecture even for an arm64 image)
+FROM --platform=$BUILDPLATFORM node:22.21-alpine AS web-build
+RUN corepack enable
 WORKDIR /app
-
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install all dependencies (including dev dependencies for build)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
-
-# Build arguments for environment variables (must be before COPY)
-ARG EXPO_PUBLIC_PROXY_URL=/api/intra-proxy
-ARG BUILD_DATE
-ARG GIT_COMMIT
-
-ENV EXPO_PUBLIC_PROXY_URL=${EXPO_PUBLIC_PROXY_URL}
-
-# Verify environment variable is set
-RUN echo "Building with EXPO_PUBLIC_PROXY_URL=${EXPO_PUBLIC_PROXY_URL}" && \
-    echo "Build date: ${BUILD_DATE}" && \
-    echo "Git commit: ${GIT_COMMIT}"
-
-# Copy source code
 COPY . .
+# Same origin as the app: nginx forwards /api/ to the proxy
+ARG EXPO_PUBLIC_PROXY_URL=/api/intra-proxy
+ENV EXPO_PUBLIC_PROXY_URL=${EXPO_PUBLIC_PROXY_URL}
+RUN pnpm exec expo export --platform web --output-dir dist
 
-# Build the web version of the app for production using Metro
-RUN npx expo export --platform web
+# Stage 2: compile the proxy
+FROM node:22.21-alpine AS proxy-build
+RUN corepack enable
+WORKDIR /proxy
+COPY proxy-server/package.json proxy-server/pnpm-lock.yaml proxy-server/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY proxy-server/tsconfig.json proxy-server/app.ts ./
+RUN pnpm run build && pnpm prune --prod
 
-# Stage 2: Production
-FROM nginx:alpine
+# Stage 3: final image
+FROM node:22.21-alpine
+RUN apk add --no-cache nginx && \
+    rm -f /etc/nginx/http.d/default.conf && \
+    mkdir -p /var/log/nginx /var/lib/nginx && \
+    chown -R node:node /var/log/nginx /var/lib/nginx
+COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/security-headers.inc /etc/nginx/security-headers.inc
+COPY --from=web-build /app/dist /usr/share/nginx/html
+WORKDIR /app
+COPY --from=proxy-build /proxy/package.json ./
+COPY --from=proxy-build /proxy/node_modules ./node_modules
+COPY --from=proxy-build /proxy/dist/app.js ./dist/app.js
 
-# Install wget for healthcheck
-RUN apk add --no-cache wget
+ARG APP_VERSION=dev
+ARG GIT_COMMIT=unknown
+LABEL org.opencontainers.image.title="EpiCheck" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${GIT_COMMIT}"
 
-# Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy custom nginx configuration if needed
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port 80
-EXPOSE 80
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production \
+    PORT=3001
+USER node
+# HTTP only: TLS ends at the Kubernetes ingress (Traefik)
+EXPOSE 8080 3001
+CMD ["node", "dist/app.js"]
