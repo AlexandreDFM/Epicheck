@@ -128,7 +128,9 @@ class EpitechApiService {
 
             // Fetch registered students and resolve login
             if (__DEV__) {
-                console.log("📋 Checking if student is registered for event...");
+                console.log(
+                    "📋 Checking if student is registered for event...",
+                );
             }
             const registeredStudents =
                 await intraApi.getRegisteredStudents(event);
@@ -161,10 +163,7 @@ class EpitechApiService {
             }
 
             if (__DEV__) {
-                console.log(
-                    "✅ Using login for marking:",
-                    actualLogin,
-                );
+                console.log("✅ Using login for marking:", actualLogin);
             }
 
             await intraApi.markStudentPresent(event, actualLogin);
@@ -388,7 +387,10 @@ class EpitechApiService {
                 );
 
             if (__DEV__) {
-                console.log("Registered Students for module:", registeredStudents);
+                console.log(
+                    "Registered Students for module:",
+                    registeredStudents,
+                );
             }
 
             const registeredStudentsList = registeredStudents;
@@ -481,7 +483,9 @@ class EpitechApiService {
             await intraApi.forceRegisterStudentModule(email, event);
 
             if (__DEV__) {
-                console.log(`✓ Registered ${email} for event: ${event.acti_title}`);
+                console.log(
+                    `✓ Registered ${email} for event: ${event.acti_title}`,
+                );
             }
 
             return {
@@ -669,7 +673,10 @@ class EpitechApiService {
             // Group activities by unique activity key to avoid duplicate fetches
             const uniqueKeys = new Map<string, IIntraEvent>();
             if (!Array.isArray(activities)) {
-                console.warn("[EpitechApi] Activities is not an array:", activities);
+                console.warn(
+                    "[EpitechApi] Activities is not an array:",
+                    activities,
+                );
                 return activities;
             }
 
@@ -718,9 +725,7 @@ class EpitechApiService {
                 );
 
                 // Extract assistants from the matching event, excluding duplicates already in prof_inst
-                const rawAssistants = Array.isArray(
-                    matchingEvent?.assistants,
-                )
+                const rawAssistants = Array.isArray(matchingEvent?.assistants)
                     ? matchingEvent.assistants
                     : [];
                 const profLogins = new Set(
@@ -754,7 +759,7 @@ class EpitechApiService {
                     begin: details.begin || undefined,
                     end_register: details.end_register || undefined,
                     deadline: details.deadline || undefined,
-            };
+                };
             });
         } catch (error) {
             console.error(

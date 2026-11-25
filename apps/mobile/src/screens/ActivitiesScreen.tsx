@@ -111,7 +111,11 @@ export default function ActivitiesScreen() {
                 setLoading(true);
                 const data = await epitechApi.getActivitiesForDate(date);
                 if (__DEV__) {
-                    console.log("Activities loaded:", data.length ? data.length : 0, "events");
+                    console.log(
+                        "Activities loaded:",
+                        data.length ? data.length : 0,
+                        "events",
+                    );
                 }
                 if ((data.length ? data.length : 0) === 0) {
                     setActivities([]);
@@ -533,7 +537,9 @@ export default function ActivitiesScreen() {
                             if (__DEV__) {
                                 console.log(`Event: ${event.acti_title}`);
                                 console.log(`Type: ${event.type_code}`);
-                                console.log(`Event Type Title: ${event.type_title}`);
+                                console.log(
+                                    `Event Type Title: ${event.type_title}`,
+                                );
                                 console.log(`Rights:`, event.rights);
                                 console.log(
                                     `Has prof_inst:`,
@@ -582,7 +588,11 @@ export default function ActivitiesScreen() {
                                             return;
                                         }
                                         if (
-                                            (event.type_title === "Follow-up" || event.type_title === "Defense" || event.type_title === "Review") &&
+                                            (event.type_title === "Follow-up" ||
+                                                event.type_title ===
+                                                    "Defense" ||
+                                                event.type_title ===
+                                                    "Review") &&
                                             event.rights?.includes(
                                                 "force_register",
                                             ) !== false
@@ -681,7 +691,8 @@ export default function ActivitiesScreen() {
                                                                 name="clock-circle"
                                                                 size={12}
                                                             />{" "}
-                                                            {startTime}{" - "}
+                                                            {startTime}
+                                                            {" - "}
                                                             {endTime}
                                                         </Text>
                                                     </View>
@@ -851,14 +862,12 @@ export default function ActivitiesScreen() {
                                                                             "IBMPlexSans",
                                                                     }}
                                                                 >
-                                                                    {
-                                                                        p && p.title
-                                                                            ?
-                                                                        p.title.split(
-                                                                            " ",
-                                                                        )[0]
-                                                                            : "Teacher"
-                                                                    }
+                                                                    {p &&
+                                                                    p.title
+                                                                        ? p.title.split(
+                                                                              " ",
+                                                                          )[0]
+                                                                        : "Teacher"}
                                                                 </Text>
                                                             </View>
                                                         ),
@@ -973,14 +982,12 @@ export default function ActivitiesScreen() {
                                                                             "IBMPlexSans",
                                                                     }}
                                                                 >
-                                                                    {
-                                                                        a && a.title
-                                                                            ?
-                                                                        a.title.split(
-                                                                            " ",
-                                                                        )[0]
-                                                                            : "Assistant"
-                                                                    }
+                                                                    {a &&
+                                                                    a.title
+                                                                        ? a.title.split(
+                                                                              " ",
+                                                                          )[0]
+                                                                        : "Assistant"}
                                                                 </Text>
                                                             </View>
                                                         ),

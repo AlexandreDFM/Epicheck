@@ -42,59 +42,98 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
     const requestCameraPermission = useCallback(async () => {
         try {
             setPermissionError(null);
-            
+
             if (Platform.OS === "web") {
                 // On web, we need to use the native browser API
                 // First check if we're in a secure context (HTTPS)
                 if (typeof window !== "undefined" && !window.isSecureContext) {
-                    console.error("[QRScanner] Not in secure context (HTTPS required)");
-                    setPermissionError("Camera requires HTTPS. Please access the site via https://");
+                    console.error(
+                        "[QRScanner] Not in secure context (HTTPS required)",
+                    );
+                    setPermissionError(
+                        "Camera requires HTTPS. Please access the site via https://",
+                    );
                     setHasPermission(false);
                     return;
                 }
 
                 // Check if mediaDevices is available
-                if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-                    console.error("[QRScanner] navigator.mediaDevices not available");
-                    setPermissionError("Camera API not available in this browser");
+                if (
+                    typeof navigator === "undefined" ||
+                    !navigator.mediaDevices
+                ) {
+                    console.error(
+                        "[QRScanner] navigator.mediaDevices not available",
+                    );
+                    setPermissionError(
+                        "Camera API not available in this browser",
+                    );
                     setHasPermission(false);
                     return;
                 }
 
                 try {
                     // Request camera permission using browser API
-                    console.log("[QRScanner] Requesting camera permission via getUserMedia...");
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: "environment" } 
+                    console.log(
+                        "[QRScanner] Requesting camera permission via getUserMedia...",
+                    );
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "environment" },
                     });
-                    
+
                     // Stop the stream immediately - we just needed to trigger permission
-                    stream.getTracks().forEach(track => track.stop());
-                    
-                    console.log("[QRScanner] Camera permission granted via getUserMedia");
+                    stream.getTracks().forEach((track) => track.stop());
+
+                    console.log(
+                        "[QRScanner] Camera permission granted via getUserMedia",
+                    );
                     setHasPermission(true);
                 } catch (err: unknown) {
                     const error = err as Error & { name?: string };
-                    console.error("[QRScanner] getUserMedia error:", error.name, error.message);
-                    
-                    if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-                        setPermissionError("Camera permission was denied. Please allow camera access in your browser settings.");
-                    } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+                    console.error(
+                        "[QRScanner] getUserMedia error:",
+                        error.name,
+                        error.message,
+                    );
+
+                    if (
+                        error.name === "NotAllowedError" ||
+                        error.name === "PermissionDeniedError"
+                    ) {
+                        setPermissionError(
+                            "Camera permission was denied. Please allow camera access in your browser settings.",
+                        );
+                    } else if (
+                        error.name === "NotFoundError" ||
+                        error.name === "DevicesNotFoundError"
+                    ) {
                         setPermissionError("No camera found on this device.");
-                    } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
-                        setPermissionError("Camera is in use by another application.");
+                    } else if (
+                        error.name === "NotReadableError" ||
+                        error.name === "TrackStartError"
+                    ) {
+                        setPermissionError(
+                            "Camera is in use by another application.",
+                        );
                     } else if (error.name === "OverconstrainedError") {
                         // Try again without facingMode constraint
                         try {
-                            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                            stream.getTracks().forEach(track => track.stop());
+                            const stream =
+                                await navigator.mediaDevices.getUserMedia({
+                                    video: true,
+                                });
+                            stream.getTracks().forEach((track) => track.stop());
                             setHasPermission(true);
                             return;
                         } catch {
-                            setPermissionError("Could not access camera with requested settings.");
+                            setPermissionError(
+                                "Could not access camera with requested settings.",
+                            );
                         }
                     } else {
-                        setPermissionError(`Camera error: ${error.message || "Unknown error"}`);
+                        setPermissionError(
+                            `Camera error: ${error.message || "Unknown error"}`,
+                        );
                     }
                     setHasPermission(false);
                 }
@@ -179,7 +218,8 @@ export default function QRScanner({ onScan, isActive }: QRScannerProps) {
                     className="mb-4 text-center text-epitech-gray-dark"
                     style={{ fontFamily: "IBMPlexSans" }}
                 >
-                    {permissionError || "Please grant camera permissions in your device settings to scan QR codes."}
+                    {permissionError ||
+                        "Please grant camera permissions in your device settings to scan QR codes."}
                 </Text>
                 {Platform.OS === "web" && (
                     <Pressable

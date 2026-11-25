@@ -51,12 +51,14 @@ export interface IIntraEvent {
         title: string;
         type: string;
     }[];
-    assistants?: {
-        login: string;
-        picture: string;
-        title: string;
-        type: string;
-    }[] | null;
+    assistants?:
+        | {
+              login: string;
+              picture: string;
+              title: string;
+              type: string;
+          }[]
+        | null;
     total_students_registered?: number;
 
     // Fields from activity detail endpoint
