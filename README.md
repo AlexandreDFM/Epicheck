@@ -6,24 +6,24 @@ Mobile app (Android, iOS) for Epitech staff to take attendance and follow projec
 
 ## Features
 
-| Screen | What it does |
-|---|---|
-| Login | Office 365 login through the Intranet in a WebView; the Intranet cookie is kept in the device's secure storage |
-| Activities | Your activities on the Intranet, in chronological order |
-| Presence | QR code scanning (one code, or **several at once** with multi-scan), batch mode (queue, then send), register mode (registers the student on the module and the event first), camera on/off, success/error sounds |
-| Manual attendance | Mark students from the registered list |
-| Follow-ups (RDV) | Registered students or groups, their last Jenkins build, trigger a build, open Jenkins |
-| Grading | Fill the grading scale (bareme) of a follow-up and save it to the Intranet |
-| Settings | Theme, custom sounds, Jenkins credentials (validated before saving), manual cookie |
+| Screen            | What it does                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login             | Office 365 login through the Intranet in a WebView; the Intranet cookie is kept in the device's secure storage                                                                                                   |
+| Activities        | Your activities on the Intranet, in chronological order                                                                                                                                                          |
+| Presence          | QR code scanning (one code, or **several at once** with multi-scan), batch mode (queue, then send), register mode (registers the student on the module and the event first), camera on/off, success/error sounds |
+| Manual attendance | Mark students from the registered list                                                                                                                                                                           |
+| Follow-ups (RDV)  | Registered students or groups, their last Jenkins build, trigger a build, open Jenkins                                                                                                                           |
+| Grading           | Fill the grading scale (bareme) of a follow-up and save it to the Intranet                                                                                                                                       |
+| Settings          | Theme, custom sounds, Jenkins credentials (validated before saving), manual cookie                                                                                                                               |
 
 NFC: the scanner reads the card, but it returns the card's own identifier, not the student's email, and the card-to-student mapping is not available. QR codes are the supported method.
 
 ## Platforms
 
-| Platform | How it talks to the Intranet |
-|---|---|
-| Android, iOS | Directly |
-| Web | Through the CORS proxy (`proxy-server/`), because the Intranet sends no CORS headers. Outside the Epitech network the Intranet refuses requests coming from a server (anti-DDoS page), so the deployed web version is only reliable on the school network |
+| Platform     | How it talks to the Intranet                                                                                                                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android, iOS | Directly                                                                                                                                                                                                                                                  |
+| Web          | Through the CORS proxy (`proxy-server/`), because the Intranet sends no CORS headers. Outside the Epitech network the Intranet refuses requests coming from a server (anti-DDoS page), so the deployed web version is only reliable on the school network |
 
 ## Getting started
 
@@ -77,20 +77,20 @@ docs/                  guides (below)
 
 ## Documentation
 
-| Guide | Topic |
-|---|---|
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Kubernetes, GitHub settings, operations |
-| [BUILD_APK.md](docs/BUILD_APK.md), [BUILD_IOS.md](docs/BUILD_IOS.md) | Local builds, release signing |
-| [ANDROID_QUICK_COMMANDS.md](docs/ANDROID_QUICK_COMMANDS.md), [ANDROID_APK_INSTALL_TROUBLESHOOTING.md](docs/ANDROID_APK_INSTALL_TROUBLESHOOTING.md), [ANDROID_BUILD_OPTIMIZATION.md](docs/ANDROID_BUILD_OPTIMIZATION.md) | Android |
-| [IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md) | Xcode, macOS 26, versions |
-| [EXPO_BUILD_FIXES.md](docs/EXPO_BUILD_FIXES.md) | Known Expo build issues |
-| [HYBRID_AUTH.md](docs/HYBRID_AUTH.md), [OFFICE365_SETUP.md](docs/OFFICE365_SETUP.md), [AZURE_AD_SPA_SETUP.md](docs/AZURE_AD_SPA_SETUP.md), [DEBUG_AUTH.md](docs/DEBUG_AUTH.md) | Authentication |
-| [COOKIE_EXTRACTION_SOLUTIONS.md](docs/COOKIE_EXTRACTION_SOLUTIONS.md), [COOKIE_WORKAROUND.md](docs/COOKIE_WORKAROUND.md) | Intranet cookie |
-| [WEB_CORS_LIMITATION.md](docs/WEB_CORS_LIMITATION.md), [WEB_QUICKSTART.md](docs/WEB_QUICKSTART.md), [WEB_TESTING_CHECKLIST.md](docs/WEB_TESTING_CHECKLIST.md) | Web version |
-| [JENKINS_INTEGRATION.md](docs/JENKINS_INTEGRATION.md) | Jenkins |
-| [CUSTOM_SOUNDS.md](docs/CUSTOM_SOUNDS.md) | Sounds |
-| [DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md), [GIT_SETUP.md](docs/GIT_SETUP.md), [QUICKSTART.md](docs/QUICKSTART.md) | Development |
-| [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributing |
+| Guide                                                                                                                                                                                                                   | Topic                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md)                                                                                                                                                                                     | Kubernetes, GitHub settings, operations |
+| [BUILD_APK.md](docs/BUILD_APK.md), [BUILD_IOS.md](docs/BUILD_IOS.md)                                                                                                                                                    | Local builds, release signing           |
+| [ANDROID_QUICK_COMMANDS.md](docs/ANDROID_QUICK_COMMANDS.md), [ANDROID_APK_INSTALL_TROUBLESHOOTING.md](docs/ANDROID_APK_INSTALL_TROUBLESHOOTING.md), [ANDROID_BUILD_OPTIMIZATION.md](docs/ANDROID_BUILD_OPTIMIZATION.md) | Android                                 |
+| [IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md)                                                                                                                                                       | Xcode, macOS 26, versions               |
+| [EXPO_BUILD_FIXES.md](docs/EXPO_BUILD_FIXES.md)                                                                                                                                                                         | Known Expo build issues                 |
+| [HYBRID_AUTH.md](docs/HYBRID_AUTH.md), [OFFICE365_SETUP.md](docs/OFFICE365_SETUP.md), [AZURE_AD_SPA_SETUP.md](docs/AZURE_AD_SPA_SETUP.md), [DEBUG_AUTH.md](docs/DEBUG_AUTH.md)                                          | Authentication                          |
+| [COOKIE_EXTRACTION_SOLUTIONS.md](docs/COOKIE_EXTRACTION_SOLUTIONS.md), [COOKIE_WORKAROUND.md](docs/COOKIE_WORKAROUND.md)                                                                                                | Intranet cookie                         |
+| [WEB_CORS_LIMITATION.md](docs/WEB_CORS_LIMITATION.md), [WEB_QUICKSTART.md](docs/WEB_QUICKSTART.md), [WEB_TESTING_CHECKLIST.md](docs/WEB_TESTING_CHECKLIST.md)                                                           | Web version                             |
+| [JENKINS_INTEGRATION.md](docs/JENKINS_INTEGRATION.md)                                                                                                                                                                   | Jenkins                                 |
+| [CUSTOM_SOUNDS.md](docs/CUSTOM_SOUNDS.md)                                                                                                                                                                               | Sounds                                  |
+| [DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md), [GIT_SETUP.md](docs/GIT_SETUP.md), [QUICKSTART.md](docs/QUICKSTART.md)                                                                                     | Development                             |
+| [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                                                                                            | Contributing                            |
 
 ## License
 
