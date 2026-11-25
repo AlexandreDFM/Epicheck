@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 #
-# Prints the PRD_KUBE_CONFIG or PPD_KUBE_CONFIG GitHub secret: a kubeconfig for the github-deployer
-# account (k8s/rbac/deployer.yaml), base64-encoded on one line.
+# Prints the KUBE_CONFIG secret of a GitHub environment (production or preprod): a kubeconfig for
+# the github-deployer account (k8s/rbac/deployer*.yaml), base64-encoded on one line.
 #
 # Usage (with an admin kubeconfig, after applying deployer.yaml):
 #   ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443
-#   ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443 | gh secret set PRD_KUBE_CONFIG
+#   ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443 \
+#     | gh secret set KUBE_CONFIG --env production --repo epitech-nice/EpiCheck
 #   NAMESPACE=epicheck-preprod ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443 \
-#     | gh secret set PPD_KUBE_CONFIG
+#     | gh secret set KUBE_CONFIG --env preprod --repo epitech-nice/EpiCheck
 #
 set -euo pipefail
 

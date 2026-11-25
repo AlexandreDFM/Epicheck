@@ -2,7 +2,7 @@
 # resources EpiCheck uses, in the epicheck-preprod namespace (no delete, no
 # exec, nothing cluster-wide). Applied once by a cluster admin, then:
 #   NAMESPACE=epicheck-preprod ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443
-# prints the PPD_KUBE_CONFIG repository secret.
+# prints the KUBE_CONFIG secret of the preprod GitHub environment.
 # Same Role as deployer.yaml (production).
 apiVersion: v1
 kind: ServiceAccount

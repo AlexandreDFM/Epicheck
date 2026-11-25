@@ -62,7 +62,6 @@ jobs:
       environment: production
       namespace: epicheck-prod
       manifests: k8s/production
-      prefix: PRD
     secrets: inherit
 
   deploy-preprod:
@@ -76,5 +75,4 @@ jobs:
       environment: preprod
       namespace: epicheck-preprod
       manifests: k8s/preprod
-      prefix: PPD
     secrets: inherit

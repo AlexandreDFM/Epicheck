@@ -1,9 +1,9 @@
 name: Deploy to Kubernetes
 
 # Called by build.yaml once the image of the commit is pushed.
-# Secrets and Variables are repository-level and prefixed per environment:
-# PRD_ for production, PPD_ for preprod (e.g. PRD_KUBE_CONFIG). The GitHub
-# environment only records the deployments and their URL.
+# Secrets and Variables belong to the GitHub environment of the deployment
+# (production or preprod): KUBE_CONFIG, PUBLIC_SITE_URL... have the same
+# name in both, and only a job running in that environment can read them.
 # EpiCheck has no application secret: the only secret is the kubeconfig of
 # the namespace-scoped deploy account.
 # One-time setup (namespaces, deploy accounts, Secrets and Variables):
@@ -23,17 +23,12 @@ on:
         description: Kustomize folder
         required: true
         type: string
-      prefix:
-        description: Prefix of the environment's Secrets and Variables (PRD or PPD)
-        required: true
-        type: string
 
 permissions:
   contents: read
 
 env:
   APP: epicheck
-  PREFIX: ${{ inputs.prefix }}
   NAMESPACE: ${{ inputs.namespace }}
   MANIFESTS: ${{ inputs.manifests }}
 
@@ -43,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ inputs.environment }}
-      url: ${{ vars[format('{0}_PUBLIC_SITE_URL', inputs.prefix)] }}
+      url: ${{ vars.PUBLIC_SITE_URL }}
     # One deployment at a time per environment; a newer one waits
     concurrency:
       group: deploy-${{ inputs.environment }}
@@ -53,10 +48,10 @@ jobs:
 
       - name: Connect to the cluster
         env:
-          KUBE_CONFIG: ${{ secrets[format('{0}_KUBE_CONFIG', inputs.prefix)] }}
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
         run: |
           if [ -z "$KUBE_CONFIG" ]; then
-            echo "::error::Secret ${PREFIX}_KUBE_CONFIG is missing (k8s/rbac/make-kubeconfig.sh)"
+            echo "::error::Secret KUBE_CONFIG of the ${{ inputs.environment }} environment is missing (k8s/rbac/make-kubeconfig.sh)"
             exit 1
           fi
           kubeconfig="$RUNNER_TEMP/kubeconfig"
@@ -104,8 +99,8 @@ jobs:
 
       - name: Application settings (GitHub Variables)
         env:
-          PUBLIC_SITE_URL: ${{ vars[format('{0}_PUBLIC_SITE_URL', inputs.prefix)] }}
-          RATE_LIMIT_PER_MINUTE: ${{ vars[format('{0}_RATE_LIMIT_PER_MINUTE', inputs.prefix)] }}
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          RATE_LIMIT_PER_MINUTE: ${{ vars.RATE_LIMIT_PER_MINUTE }}
         run: |
           # Only the Variables that are set: the defaults of k8s/base apply otherwise
           args=()
@@ -142,10 +137,10 @@ jobs:
 
       - name: Smoke tests on the public site
         env:
-          SITE: ${{ vars[format('{0}_PUBLIC_SITE_URL', inputs.prefix)] }}
+          SITE: ${{ vars.PUBLIC_SITE_URL }}
         run: |
           if [ -z "$SITE" ]; then
-            echo "::warning::Variable ${PREFIX}_PUBLIC_SITE_URL is not set: no smoke tests"
+            echo "::warning::Variable PUBLIC_SITE_URL of the ${{ inputs.environment }} environment is not set: no smoke tests"
             exit 0
           fi
           # Through the ingress, like a visitor: DNS, TLS, nginx, proxy

@@ -2,7 +2,7 @@
 # resources EpiCheck uses, in the epicheck-prod namespace (no delete, no exec,
 # nothing cluster-wide). Applied once by a cluster admin, then:
 #   ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443
-# prints the PRD_KUBE_CONFIG repository secret.
+# prints the KUBE_CONFIG secret of the production GitHub environment.
 # Preprod: deployer-preprod.yaml, same Role in epicheck-preprod.
 apiVersion: v1
 kind: ServiceAccount
