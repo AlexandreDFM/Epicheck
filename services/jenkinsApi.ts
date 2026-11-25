@@ -35,6 +35,30 @@ interface IJenkinsJob {
     };
 }
 
+/** Error thrown by the Jenkins client, keeping the HTTP status if any */
+export class JenkinsApiError extends Error {
+    readonly status?: number;
+
+    constructor(message: string, status?: number) {
+        super(message);
+        this.name = "JenkinsApiError";
+        this.status = status;
+    }
+}
+
+function toJenkinsError(action: string, error: any): JenkinsApiError {
+    return new JenkinsApiError(
+        `${action}: ${error?.message || "Unknown error"}`,
+        error?.response?.status,
+    );
+}
+
+/** scheme://host[:port] of an absolute URL, or null for a relative one */
+function originOf(url: string): string | null {
+    const match = /^(https?:\/\/[^/?#]+)/i.exec(url);
+    return match ? match[1].toLowerCase() : null;
+}
+
 class JenkinsApiService {
     private readonly api: AxiosInstance;
 
@@ -50,9 +74,15 @@ class JenkinsApiService {
          */
         this.api.interceptors.request.use(async (config) => {
             const baseUrl = await jenkinsService.getBaseUrl();
-            const authHeader = await jenkinsService.getAuthHeader();
             config.baseURL = baseUrl;
-            config.headers.Authorization = authHeader;
+
+            // Only send the token to the configured Jenkins: an absolute URL
+            // (e.g. a build url returned by Jenkins) may point elsewhere
+            const target = originOf(config.url ?? "");
+            if (target === null || target === originOf(baseUrl)) {
+                config.headers.Authorization =
+                    await jenkinsService.getAuthHeader();
+            }
             return config;
         });
     }
@@ -71,9 +101,7 @@ class JenkinsApiService {
             return response.data;
         } catch (error: any) {
             console.error("[JenkinsApi] Error fetching job info:", error);
-            throw new Error(
-                `Failed to fetch job info: ${error.message || "Unknown error"}`,
-            );
+            throw toJenkinsError("Failed to fetch job info", error);
         }
     }
 
@@ -105,9 +133,7 @@ class JenkinsApiService {
             };
         } catch (error: any) {
             console.error("[JenkinsApi] Error fetching build info:", error);
-            throw new Error(
-                `Failed to fetch build info: ${error.message || "Unknown error"}`,
-            );
+            throw toJenkinsError("Failed to fetch build info", error);
         }
     }
 
@@ -137,9 +163,7 @@ class JenkinsApiService {
             };
         } catch (error: any) {
             console.error("[JenkinsApi] Error fetching last build:", error);
-            throw new Error(
-                `Failed to fetch last build: ${error.message || "Unknown error"}`,
-            );
+            throw toJenkinsError("Failed to fetch last build", error);
         }
     }
 
@@ -193,9 +217,7 @@ class JenkinsApiService {
             return response.data;
         } catch (error: any) {
             console.error("[JenkinsApi] Error fetching console output:", error);
-            throw new Error(
-                `Failed to fetch console output: ${error.message || "Unknown error"}`,
-            );
+            throw toJenkinsError("Failed to fetch console output", error);
         }
     }
 
@@ -219,9 +241,7 @@ class JenkinsApiService {
             console.log("[JenkinsApi] ✓ Build triggered");
         } catch (error: any) {
             console.error("[JenkinsApi] Error triggering build:", error);
-            throw new Error(
-                `Failed to trigger build: ${error.message || "Unknown error"}`,
-            );
+            throw toJenkinsError("Failed to trigger build", error);
         }
     }
 
@@ -238,9 +258,7 @@ class JenkinsApiService {
             return response.data;
         } catch (error: any) {
             console.error("[JenkinsApi] Error fetching queue info:", error);
-            throw new Error(
-                `Failed to fetch queue info: ${error.message || "Unknown error"}`,
-            );
+            throw toJenkinsError("Failed to fetch queue info", error);
         }
     }
 }
