@@ -15,13 +15,23 @@ The section of a version is used as the notes of its GitHub release (`.github/wo
 - One image for the web app and the CORS proxy, run as two containers (nginx and Node), non-root with a read-only file system.
 - Workflows: checks on pull requests, image build, deploy with smoke tests on the public site, Android APK and AAB attached to the release of a `vX.Y.Z` tag.
 - Android release builds signed with the key given by the `ANDROID_KEYSTORE_*` variables or secrets.
-- `docs/DEPLOYMENT.md`, `docker/README.md`, this changelog.
+- `docs/DEPLOYMENT.md`, `docker/README.md`, this changelog (also the notes of the GitHub release).
+- ESLint for the proxy, run by its CI job; per-project audit gate in CI.
 
 ### Changed
 
 - The deploy account is limited to the app's namespace (`github-deployer`), instead of a cluster-admin kubeconfig; secrets and settings live in the GitHub environments `production` and `preprod`.
 - The image is private and pulled with a dedicated read-only token.
+- Repository layout: a pnpm workspace with `apps/mobile` (Expo app, sources under `src/`, `@/` imports) and `apps/proxy`; Dockerfile in `docker/`; guides grouped by topic under `docs/`.
 - README rewritten; superseded implementation notes removed.
+
+### Fixed
+
+- Local Android release builds on macOS: `libworklets.so` is now provided where react-native-reanimated links it.
+
+### Security
+
+- `.env` files are ignored by Git (only the examples are versioned).
 
 ### Removed
 
