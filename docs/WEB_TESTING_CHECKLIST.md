@@ -351,7 +351,6 @@ If you've checked all boxes above:
 - **Quick Start Guide:** `/docs/WEB_QUICKSTART.md`
 - **Proxy Documentation:** `/proxy-server/README.md`
 - **CORS Explanation:** `/docs/WEB_CORS_LIMITATION.md`
-- **Implementation Details:** `/docs/IMPLEMENTATION_COMPLETE.md`
 
 ---
 
