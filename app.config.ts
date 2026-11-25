@@ -12,6 +12,7 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 import {
     withAppBuildGradle,
+    withProjectBuildGradle,
     withXcodeProject,
     type ConfigPlugin,
 } from "expo/config-plugins";
@@ -102,6 +103,50 @@ const withReleaseSigning: ConfigPlugin = (config) =>
         return mod;
     });
 
+const WORKLETS_MARKER = "EpiCheck: libworklets.so for react-native-reanimated";
+
+/**
+ * react-native-reanimated 4.1 links libworklets.so from
+ * react-native-worklets/android/build/intermediates/cmake/<debug|release>/obj,
+ * a folder that the Android Gradle plugin fills on Linux but, on macOS,
+ * without libworklets.so itself: the release build then fails with
+ * "ninja: error: .../libworklets.so, needed by libreanimated.so, missing".
+ * Copy the library there after the worklets native build, and build the
+ * worklets library before the reanimated one.
+ */
+const withWorkletsLibraryForReanimated: ConfigPlugin = (config) =>
+    withProjectBuildGradle(config, (mod) => {
+        if (mod.modResults.contents.includes(WORKLETS_MARKER)) {
+            return mod;
+        }
+        mod.modResults.contents += `
+// ${WORKLETS_MARKER} (app.config.ts)
+gradle.projectsEvaluated {
+    def worklets = rootProject.findProject(":react-native-worklets")
+    def reanimated = rootProject.findProject(":react-native-reanimated")
+    if (worklets == null || reanimated == null) {
+        return
+    }
+    ["Debug": "Debug", "Release": "RelWithDebInfo"].each { variant, cmakeType ->
+        def nativeBuild = worklets.tasks.findByName("externalNativeBuild\${variant}")
+        if (nativeBuild == null) {
+            return
+        }
+        nativeBuild.doLast {
+            def target = new File(worklets.layout.buildDirectory.get().asFile, "intermediates/cmake/\${variant.toLowerCase()}/obj")
+            worklets.fileTree(new File(worklets.layout.buildDirectory.get().asFile, "intermediates/cxx/\${cmakeType}"))
+                .matching { include "**/obj/*/libworklets.so" }
+                .each { so -> worklets.copy { from so; into new File(target, so.parentFile.name) } }
+        }
+        reanimated.tasks.matching { it.name.startsWith("buildCMake\${cmakeType}") }.configureEach {
+            dependsOn(nativeBuild)
+        }
+    }
+}
+`;
+        return mod;
+    });
+
 export default ({ config }: ConfigContext): ExpoConfig => {
     const build = buildNumberOf(version);
     const withVersions: ExpoConfig = {
@@ -112,7 +157,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ios: { ...config.ios, buildNumber: String(build) },
         android: { ...config.android, versionCode: build },
     };
-    return withReleaseSigning(
-        withXcodeVersion(withVersions, { version, build: String(build) }),
+    return withWorkletsLibraryForReanimated(
+        withReleaseSigning(
+            withXcodeVersion(withVersions, { version, build: String(build) }),
+        ),
     );
 };
