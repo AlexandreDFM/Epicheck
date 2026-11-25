@@ -25,7 +25,15 @@
  * THE SOFTWARE.
  */
 
-import { Text, TextInput } from "react-native";
+import { Text as RNText, TextInput as RNTextInput } from "react-native";
+
+// Text and TextInput are forwardRef components: their render function exists
+// at runtime but is not part of the public typings.
+type ForwardRefComponent = {
+    render?: (this: unknown, props: any, ref: any) => any;
+};
+const Text = RNText as unknown as ForwardRefComponent;
+const TextInput = RNTextInput as unknown as ForwardRefComponent;
 
 export const setDefaultFontFamily = () => {
     // Store the original render functions
