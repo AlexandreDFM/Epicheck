@@ -1,0 +1,7 @@
+# Standalone project (own lockfile, own Docker image): this file stops pnpm
+# from treating proxy-server/ as part of the app workspace one level up.
+allowBuilds: {}
+
+# Security fixes for transitive dependencies not yet released by their parent
+overrides:
+    proxy-addr: ">=2.0.8"
