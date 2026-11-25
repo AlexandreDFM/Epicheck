@@ -67,10 +67,12 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
         checkNfcSupport();
 
         return () => {
-            if (Platform.OS !== "web" && isNfcSupported) {
+            // isNfcSupported would be the value captured on mount here, so
+            // always try to cancel and ignore the error when NFC is absent
+            if (Platform.OS !== "web") {
                 try {
                     NfcManager.cancelTechnologyRequest().catch(() => {});
-                } catch (error) {
+                } catch {
                     // Ignore cleanup errors
                 }
             }
@@ -87,6 +89,9 @@ export default function NFCScanner({ onScan, isActive }: NFCScannerProps) {
         return () => {
             stopNfcScan();
         };
+        // Only react to activation and support changes: isScanning changes
+        // inside start/stop and would restart the scan in a loop
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isActive, isNfcSupported]);
 
     const startNfcScan = async () => {
