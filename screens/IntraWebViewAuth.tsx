@@ -218,7 +218,10 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
         try {
             const parsed = JSON.parse(data);
             if (parsed.cookie !== undefined) {
-                console.log("[Mobile] Cookie from JS:", parsed.cookie);
+                console.log(
+                    "[Mobile] Cookie string from JS, length:",
+                    String(parsed.cookie).length,
+                );
                 const userCookie = parseCookieString(parsed.cookie);
                 if (userCookie) {
                     hasCalledSuccessRef.current = true;

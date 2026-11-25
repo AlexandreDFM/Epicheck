@@ -25,6 +25,9 @@
  * THE SOFTWARE.
  */
 
+// First import: silences sensitive logs in release builds
+import "./utils/productionLogs";
+
 import { registerRootComponent } from "expo";
 
 import App from "./App";
