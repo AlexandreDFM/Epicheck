@@ -50,6 +50,7 @@ Checks run by the CI: `pnpm exec tsc --noEmit`, `pnpm exec eslint .`, `pnpm exec
 
 ```bash
 pnpm run version:bump patch    # or minor / major
+# move the [Unreleased] notes of CHANGELOG.md under the new version
 git commit -am "chore(release): vX.Y.Z"
 # after the merge on main: tag vX.Y.Z -> signed APK and AAB attached to a GitHub release
 ```

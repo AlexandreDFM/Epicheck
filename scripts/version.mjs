@@ -48,4 +48,7 @@ for (const file of FILES) {
     writeFileSync(file, `${JSON.stringify(pkg, null, 4)}\n`);
 }
 console.log(`${current} -> ${next} (build ${buildNumber(next)})`);
-console.log(`next: git commit -am "chore(release): v${next}"`);
+console.log(
+    `next: move the [Unreleased] notes of CHANGELOG.md under ## [${next}],`,
+);
+console.log(`      then git commit -am "chore(release): v${next}"`);

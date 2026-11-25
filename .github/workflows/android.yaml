@@ -111,6 +111,21 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+      - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          # Section "## [X.Y.Z] - date" up to the next "## [" heading
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if [ ! -s "$RUNNER_TEMP/notes.md" ]; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
       - uses: actions/download-artifact@v8
         with:
           name: EpiCheck-${{ needs.build.outputs.version }}
@@ -118,5 +133,5 @@ jobs:
       - uses: softprops/action-gh-release@v3
         with:
           name: EpiCheck ${{ needs.build.outputs.version }}
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/notes.md
           files: out/*
