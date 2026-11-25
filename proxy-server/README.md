@@ -69,9 +69,10 @@ Redirects are not followed, and the cookie is never logged: only the method, pat
 
 ## Docker
 
+The proxy has no image of its own: the root `Dockerfile` builds one image with the web export, nginx and the proxy, run as two containers ([docker/README.md](../docker/README.md)).
+
 ```bash
-docker build -t epicheck-proxy .          # production image, runs as user "node"
 docker compose -f ../docker-compose.dev.yml up proxy   # development, reloads app.ts
 ```
 
-In production the proxy runs in Kubernetes behind the web container's nginx (`location /api/`); see the deployment documentation at the repository root.
+In production the proxy runs in Kubernetes next to nginx, in the same pod (`location /api/` → `127.0.0.1:3001`); see [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
