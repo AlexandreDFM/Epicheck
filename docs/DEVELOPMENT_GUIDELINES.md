@@ -37,7 +37,9 @@ EpiCheck/
 ├── android/             # Android native code
 ├── ios/                 # iOS native code
 ├── docs/                # Documentation
-└── kubernetes/          # K8s deployment configs
+├── docker/              # nginx config of the web image
+├── k8s/                 # Kubernetes manifests and deploy accounts (docs/DEPLOYMENT.md)
+└── proxy-server/        # CORS proxy for the web version
 ```
 
 ---
@@ -47,7 +49,7 @@ EpiCheck/
 ### Prerequisites
 
 - Node.js 22+ (use `.nvmrc`)
-- pnpm 9+
+- pnpm 11 (`corepack enable` uses the version of `package.json`)
 - Git 2.30+
 - For iOS: Xcode 15+, CocoaPods 1.14+
 - For Android: JDK 17+, Android Studio
