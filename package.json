@@ -18,7 +18,9 @@
         "build:android:release": "cd android && ./gradlew assembleRelease --warning-mode all && cd ..",
         "build:apk": "cd android && ./gradlew assembleRelease --warning-mode all && cd ..",
         "lint": "expo lint",
-        "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yaml}\""
+        "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yaml}\"",
+        "version:bump": "node scripts/version.mjs bump",
+        "version:show": "node scripts/version.mjs show"
     },
     "dependencies": {
         "@expo/vector-icons": "^15.0.3",
@@ -69,5 +71,9 @@
         "prettier-plugin-tailwindcss": "^0.7.2",
         "typescript": "~5.9.3"
     },
-    "private": true
+    "private": true,
+    "packageManager": "pnpm@11.5.2",
+    "engines": {
+        "node": ">=22"
+    }
 }

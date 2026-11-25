@@ -142,167 +142,53 @@ Ensuite, vérifiez dans **Réglages Système → Confidentialité et sécurité 
 
 ## 4. Synchronisation des versions
 
-### Le problème
+### Source unique
 
-Expo utilise `app.json` comme source de vérité pour la version et le numéro de build. Cependant, les projets natifs ont **leurs propres fichiers de configuration** qui ne se mettent pas automatiquement à jour quand vous modifiez `app.json`.
+La version ne se règle plus à la main dans `app.json` ni dans les projets natifs : **seul le champ `version` de `package.json` compte**. `app.config.ts` en dérive le reste à chaque `expo prebuild` / `expo run` :
 
-### Les fichiers concernés
-
-| Plateforme | Fichier | Champs |
+| Valeur | Calcul | Exemple pour `1.2.1` |
 |---|---|---|
-| **Source de vérité** | `app.json` | `version`, `ios.buildNumber`, `android.versionCode` |
-| **iOS** | `ios/EpiCheck/Info.plist` | `CFBundleShortVersionString`, `CFBundleVersion` |
-| **iOS** | `ios/EpiCheck.xcodeproj/project.pbxproj` | `MARKETING_VERSION`, `CURRENT_PROJECT_VERSION` |
-| **Android** | `android/app/build.gradle` | `versionName`, `versionCode` |
+| `expo.version` → `CFBundleShortVersionString`, `MARKETING_VERSION`, `versionName` | la version | `1.2.1` |
+| `ios.buildNumber` → `CFBundleVersion`, `CURRENT_PROJECT_VERSION` | `MAJ × 10000 + MIN × 100 + PATCH` | `10201` |
+| `android.versionCode` | idem | `10201` |
 
-### Correspondances
+Le plugin `withXcodeVersion` (dans `app.config.ts`) écrit aussi `MARKETING_VERSION` et `CURRENT_PROJECT_VERSION` dans `project.pbxproj` : la correction au `sed` n'est plus nécessaire.
 
-```
-app.json                        →  iOS                          →  Android
-─────────────────────────────────────────────────────────────────────────────
-version: "1.2.0"                →  MARKETING_VERSION = 1.2.0    →  versionName "1.2.0"
-                                   CFBundleShortVersionString
-ios.buildNumber: "4"            →  CURRENT_PROJECT_VERSION = 4
-                                   CFBundleVersion
-android.versionCode: 4          →                               →  versionCode 4
-```
-
-### Vérifier l'état actuel
+### Vérifier
 
 ```bash
-# app.json
-grep '"version"' app.json
-grep '"buildNumber"' app.json
-grep '"versionCode"' app.json
+pnpm run version:show                      # 1.2.1 (build 10201)
+pnpm exec expo config --type public | grep -E "version|buildNumber|versionCode"
 
-# iOS - Info.plist
+# Projets natifs, après prebuild
 plutil -p ios/EpiCheck/Info.plist | grep -E "CFBundleShortVersionString|CFBundleVersion"
-
-# iOS - project.pbxproj
 grep -E "MARKETING_VERSION|CURRENT_PROJECT_VERSION" ios/EpiCheck.xcodeproj/project.pbxproj | sort -u
-
-# Android - build.gradle
 grep -E "versionName|versionCode" android/app/build.gradle
-```
-
-### Synchroniser avec prebuild
-
-La méthode officielle pour resynchroniser `app.json` → projets natifs :
-
-```bash
-npx expo prebuild --clean
-```
-
-> **⚠️ Attention :** `--clean` **supprime et régénère** les dossiers `ios/` et `android/`. Toute modification manuelle dans ces dossiers (Signing Team, custom native code) sera perdue. Voir la section [Prebuild sans --clean](#prebuild-sans-clean) pour une alternative.
-
-### Corriger manuellement le pbxproj (si prebuild ne suffit pas)
-
-`expo prebuild` met correctement à jour `Info.plist` et `build.gradle`, mais le `project.pbxproj` conserve parfois ses valeurs par défaut (`1.0` / `1`). C'est un bug connu d'Expo.
-
-Correction rapide avec `sed` :
-
-```bash
-# Remplacer la version (adapter les valeurs)
-sed -i '' 's/MARKETING_VERSION = [^;]*/MARKETING_VERSION = 1.2.0/g' ios/EpiCheck.xcodeproj/project.pbxproj
-sed -i '' 's/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = 4/g' ios/EpiCheck.xcodeproj/project.pbxproj
-```
-
-Vérification :
-
-```bash
-grep -E "MARKETING_VERSION|CURRENT_PROJECT_VERSION" ios/EpiCheck.xcodeproj/project.pbxproj | sort -u
-# CURRENT_PROJECT_VERSION = 4;
-# MARKETING_VERSION = 1.2.0;
 ```
 
 ---
 
 ## 5. Workflow de version bump
 
-### Procédure complète
-
-Voici la procédure à suivre à chaque changement de version :
-
-#### 1. Modifier `app.json`
-
-```json
-{
-  "expo": {
-    "version": "1.2.0",
-    "ios": {
-      "buildNumber": "4"
-    },
-    "android": {
-      "versionCode": 4
-    }
-  }
-}
-```
-
-#### 2. Régénérer les projets natifs
-
 ```bash
-npx expo prebuild --clean
+pnpm run version:bump patch     # ou minor / major : met à jour package.json et proxy-server/package.json
+pnpm exec expo prebuild         # propage la version dans ios/ et android/ (sans --clean : garde le Signing)
+cd ios && pod install && cd ..  # seulement si des dépendances natives ont changé
+git commit -am "chore(release): vX.Y.Z"
+# après fusion sur main : git tag vX.Y.Z && git push origin vX.Y.Z  (déclenche la release APK)
 ```
 
-#### 3. Corriger le pbxproj si nécessaire
-
-```bash
-sed -i '' 's/MARKETING_VERSION = [^;]*/MARKETING_VERSION = 1.2.0/g' ios/EpiCheck.xcodeproj/project.pbxproj
-sed -i '' 's/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = 4/g' ios/EpiCheck.xcodeproj/project.pbxproj
-```
-
-#### 4. Vérifier la synchronisation
-
-```bash
-echo "=== app.json ===" && \
-grep -E '"version"|"buildNumber"|"versionCode"' app.json && \
-echo "" && \
-echo "=== iOS Info.plist ===" && \
-plutil -p ios/EpiCheck/Info.plist | grep -E "CFBundleShortVersionString|CFBundleVersion" && \
-echo "" && \
-echo "=== iOS pbxproj ===" && \
-grep -E "MARKETING_VERSION|CURRENT_PROJECT_VERSION" ios/EpiCheck.xcodeproj/project.pbxproj | sort -u && \
-echo "" && \
-echo "=== Android ===" && \
-grep -E "versionName|versionCode" android/app/build.gradle
-```
-
-#### 5. Reconfigurer le Signing (après prebuild --clean)
-
-```bash
-open ios/EpiCheck.xcworkspace
-# Dans Xcode : sélectionner le projet → Signing & Capabilities → choisir votre Team
-```
-
-#### 6. Réinstaller les Pods
-
-```bash
-cd ios && pod install && cd ..
-```
-
-### Prebuild sans --clean
-
-Si vous avez des modifications manuelles dans `ios/` ou `android/` que vous ne voulez pas perdre :
-
-```bash
-# Sans --clean : met à jour sans supprimer
-npx expo prebuild
-
-# Puis corriger le pbxproj manuellement si besoin
-```
-
-> **Note :** Sans `--clean`, certaines modifications de `app.json` peuvent ne pas être propagées. Dans le doute, préférez `--clean`.
+> `expo prebuild --clean` reste utile quand `ios/` ou `android/` sont incohérents, mais il supprime la Team de signature choisie dans Xcode : la resélectionner ensuite (Signing & Capabilities).
 
 ### Convention de versioning
 
 | Type de changement | Version | Exemple |
 |---|---|---|
 | Corrections de bugs | Patch (x.y.**Z**) | 1.2.0 → 1.2.1 |
-| Nouvelles fonctionnalités | Minor (x.**Y**.0) | 1.2.0 → 1.3.0 |
-| Breaking changes / refonte majeure | Major (**X**.0.0) | 1.3.0 → 2.0.0 |
+| Nouvelles fonctionnalités, changement d'infrastructure visible | Minor (x.**Y**.0) | 1.2.1 → 1.3.0 |
+| Rupture (abandon d'une plateforme, changement d'API) | Major (**X**.0.0) | 1.3.0 → 2.0.0 |
 
-Le `buildNumber` (iOS) et `versionCode` (Android) doivent être **incrémentés à chaque soumission** sur les stores, même si la version visible ne change pas.
+Le numéro de build suit la version : toute nouvelle soumission sur un store (ou nouvel APK) demande donc au moins un bump **patch**. Les tags Git s'écrivent `vX.Y.Z` (sans point après le `v`). Mineur et patch restent sous 100.
 
 ---
 
@@ -402,12 +288,9 @@ xattr <chemin_du_fichier>
 # Activer Developer Mode
 sudo DevToolsSecurity -enable
 
-# Synchroniser les versions
-npx expo prebuild --clean
-
-# Corriger le pbxproj
-sed -i '' 's/MARKETING_VERSION = [^;]*/MARKETING_VERSION = X.Y.Z/g' ios/EpiCheck.xcodeproj/project.pbxproj
-sed -i '' 's/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = N/g' ios/EpiCheck.xcodeproj/project.pbxproj
+# Version (package.json -> projets natifs)
+pnpm run version:bump patch
+pnpm exec expo prebuild
 
 # Réinstaller les Pods
 cd ios && pod install && cd ..

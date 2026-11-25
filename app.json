@@ -2,7 +2,6 @@
     "expo": {
         "name": "EpiCheck",
         "slug": "EpiCheck",
-        "version": "1.2.0",
         "orientation": "portrait",
         "icon": "./assets/icon.png",
         "userInterfaceStyle": "automatic",
@@ -15,7 +14,6 @@
             }
         },
         "ios": {
-            "buildNumber": "4",
             "supportsTablet": true,
             "bundleIdentifier": "com.hownee.epicheck.app",
             "userInterfaceStyle": "automatic",
@@ -34,7 +32,6 @@
             },
             "userInterfaceStyle": "automatic",
             "package": "com.hownee.epicheck.app",
-            "versionCode": 4,
             "permissions": [
                 "android.permission.CAMERA",
                 "android.permission.NFC"
