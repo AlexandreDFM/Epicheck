@@ -595,13 +595,25 @@ export default function SettingsScreen() {
                 {/* Jenkins Section */}
                 <View className="mx-4 my-2 border border-card-border">
                     <View className="border-b border-border p-4">
-                        <Text
-                            className="text-xl text-primary"
-                            style={{ fontFamily: "Anton" }}
-                        >
-                            JENKINS SETTINGS
-                            <Text style={{ color }}>{underscore}</Text>
-                        </Text>
+                        <View className="flex-row items-center">
+                            <Text
+                                className="flex-1 text-xl text-primary"
+                                style={{ fontFamily: "Anton" }}
+                            >
+                                JENKINS SETTINGS
+                                <Text style={{ color }}>{underscore}</Text>
+                            </Text>
+                            {hasJenkinsCredentials && (
+                                <View className="ml-2 shrink-0 justify-center border border-status-success bg-status-success/10 px-2 py-1">
+                                    <Text
+                                        className="text-center text-xs text-status-success"
+                                        style={{ fontFamily: "IBMPlexSans" }}
+                                    >
+                                        Jenkins credentials configured
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                         <Text
                             className="mt-1 text-xs text-text-tertiary"
                             style={{ fontFamily: "IBMPlexSans" }}
@@ -611,17 +623,6 @@ export default function SettingsScreen() {
                     </View>
 
                     <View className="p-4">
-                        {hasJenkinsCredentials && (
-                            <View className="mb-4 border border-status-success bg-status-success/10 px-3 py-2">
-                                <Text
-                                    className="text-xs text-status-success"
-                                    style={{ fontFamily: "IBMPlexSans" }}
-                                >
-                                    ✓ Jenkins credentials configured
-                                </Text>
-                            </View>
-                        )}
-
                         {/* Jenkins Base URL */}
                         <Text
                             className="mb-2 text-sm text-primary"
