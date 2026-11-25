@@ -1,110 +1,35 @@
-# Node modules
-node_modules/
-npm-debug.log
-yarn-error.log
-yarn.lock
-# package-lock.json - KEEP THIS for npm ci in Dockerfile
-
-# Expo
-.expo/
-.expo-shared/
-dist/
-web-build/
-
-# Build outputs
-build/
-android/app/build/
-android/build/
-ios/Pods/
-ios/build/
+# Only what the Dockerfile copies is needed: app sources, proxy sources,
+# docker/ configs. Everything else stays out of the build context.
+**/node_modules
+**/.expo
+**/dist
+**/.DS_Store
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.idea
+.vscode
+android
+ios
+old
+docs
+k8s
+kubernetes
+scripts
 *.apk
+*.aab
 *.ipa
-
-# Environment files
-.env
-.env.local
-.env.*.local
-*.env
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Testing
-coverage/
-.nyc_output/
-__tests__/
-*.test.js
-*.spec.js
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Git
-.git/
-.gitignore
-.gitattributes
-
-# Documentation
-README.md
-docs/
-*.md
-
-# CI/CD
-.github/
-.gitlab-ci.yml
-.travis.yml
-Jenkinsfile
-
-# Docker
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
-# Kubernetes
-kubernetes/
-
-# Old files and backups
-old/
-backup/
-*.bak
-*.backup
-
-# OS files
-Thumbs.db
-.DS_Store
-Desktop.ini
-
-# Certificates and keys
+*.jks
+*.keystore
+*.p8
+*.p12
 *.pem
 *.key
-*.crt
-*.cert
-*.p12
-*.keystore
-debug.keystore
-
-# Android specific
-android/gradle/
-android/gradlew
-android/gradlew.bat
-android/.gradle/
-android/app/google-services.json
-
-# iOS specific
-ios/Pods/
-ios/*.xcworkspace
-*.xcuserstate
+proxy-server/.backup
+proxy-server/src
+*.md
+Dockerfile*
+docker-compose*.yml

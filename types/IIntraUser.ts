@@ -37,5 +37,5 @@ export interface IIntraUser {
     course?: string;
     credits?: number;
     gpa?: number[];
-    groups?: Array<{ name: string }>;
+    groups?: { name: string }[];
 }

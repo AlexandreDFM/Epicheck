@@ -25,59 +25,37 @@
 # THE SOFTWARE.
 #
 
+# Production-like local stack: the image used by Kubernetes, run as its two
+# processes (proxy, and web sharing the proxy's network like a pod).
+#   docker compose up --build    then open http://localhost:8080
 services:
-  # Main application (web build)
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        EXPO_PUBLIC_PROXY_URL: http://localhost:3001/api/intra-proxy
-    container_name: epicheck-app
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      - NODE_ENV=production
-    networks:
-      - epicheck-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Proxy server (for API proxying)
   proxy:
-    build:
-      context: ./proxy-server
-      dockerfile: Dockerfile
-    container_name: epicheck-proxy
+    build: .
+    image: epicheck:local
+    restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "${WEB_PORT:-8080}:8080"
     environment:
       - NODE_ENV=production
-      - PORT=3001
-      - BACKEND_URL=http://localhost
-      - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://127.0.0.1
-    networks:
-      - epicheck-network
-    restart: unless-stopped
+      # nginx is the only reverse proxy in front of it here
+      - TRUST_PROXY=1
+    read_only: true
+    tmpfs:
+      - /tmp
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  web:
+    image: epicheck:local
+    pull_policy: never
+    restart: unless-stopped
+    command: ["nginx", "-e", "stderr", "-g", "daemon off;"]
+    network_mode: "service:proxy"
+    read_only: true
+    tmpfs:
+      - /tmp
     depends_on:
-      - app
-
-networks:
-  epicheck-network:
-    driver: bridge
-
-volumes:
-  app_data:
-    driver: local
+      - proxy

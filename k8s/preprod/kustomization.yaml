@@ -1,0 +1,17 @@
+# Preprod (epicheck.ppd.nice-tek.eu), deployed from the develop branch:
+# kubectl apply -k k8s/preprod. Same manifests as production, one pod.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: epicheck-preprod
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: epicheck
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+    includeTemplates: true
+resources:
+  - ../base
+  - ingress.yaml
+images:
+  - name: ghcr.io/epitech-nice/epicheck
+    newTag: latest

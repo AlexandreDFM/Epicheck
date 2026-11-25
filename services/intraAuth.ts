@@ -26,35 +26,10 @@
  */
 
 import axios from "axios";
-import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import storage from "./secureStorage";
 
 const INTRA_URL = "https://intra.epitech.eu";
 const INTRA_COOKIE_KEY = "intra_user_cookie";
-
-// Storage wrapper for cross-platform compatibility
-const storage = {
-    async getItem(key: string): Promise<string | null> {
-        if (Platform.OS === "web") {
-            return localStorage.getItem(key);
-        }
-        return await SecureStore.getItemAsync(key);
-    },
-    async setItem(key: string, value: string): Promise<void> {
-        if (Platform.OS === "web") {
-            localStorage.setItem(key, value);
-        } else {
-            await SecureStore.setItemAsync(key, value);
-        }
-    },
-    async removeItem(key: string): Promise<void> {
-        if (Platform.OS === "web") {
-            localStorage.removeItem(key);
-        } else {
-            await SecureStore.deleteItemAsync(key);
-        }
-    },
-};
 
 /**
  * Intranet Authentication Service
@@ -238,7 +213,7 @@ class IntraAuthService {
         try {
             await this.getIntranetUser();
             return true;
-        } catch (error) {
+        } catch {
             // Cookie is invalid, clear it
             await this.clearIntraCookie();
             return false;

@@ -44,6 +44,8 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
+!debug.keystore
 *.p8
 *.p12
 *.key
@@ -78,6 +80,9 @@ yarn-error.*
 # Android
 *.apk
 *.aab
+
+# Former Kubernetes folder (replaced by k8s/): local secrets may remain there
+kubernetes/
 
 # Temp files
 *.tmp

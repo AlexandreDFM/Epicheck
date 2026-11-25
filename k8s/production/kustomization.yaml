@@ -1,0 +1,21 @@
+# Everything the deploy workflow applies: kubectl apply -k k8s/production
+# The workflow sets images[].newTag to the deployed commit SHA.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: epicheck-prod
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: epicheck
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+    includeTemplates: true
+resources:
+  - ../base
+  - ingress.yaml
+# Two web pods in production: a pod restart does not interrupt the site
+replicas:
+  - name: epicheck-web
+    count: 2
+images:
+  - name: ghcr.io/epitech-nice/epicheck
+    newTag: latest

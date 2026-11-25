@@ -38,8 +38,6 @@ const INTRA_BASE_URL = "https://intra.epitech.eu";
 const PROXY_BASE_URL =
     process.env.EXPO_PUBLIC_PROXY_URL ||
     "http://localhost:3001/api/intra-proxy"; // For web platform
-const BACKEND_BASE_URL =
-    process.env.EXPO_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 class IntraApiService {
     private api: AxiosInstance;

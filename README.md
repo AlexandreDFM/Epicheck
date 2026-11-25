@@ -1,370 +1,97 @@
-# EpiCheck - Student Presence Management App
+# EpiCheck
 
-A React Native Expo application for managing student presence at Epitech using QR code scanning (desktop/web) and NFC card scanning (mobile).
+Mobile app (Android, iOS) for Epitech staff to take attendance and follow projects on the Epitech Intranet: scan the students' QR codes, mark presences in batch, register students on the fly, and grade follow-ups with their Jenkins build results at hand. A web version exists, with a limitation (see below).
+
+> **Status:** maintained until the Epitech Intranet it relies on is retired. The end-of-life plan lives in `END.md`; this repository then becomes an archive. To bring it back to life later, start with [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and the [version rules](docs/IOS_XCODE_TROUBLESHOOTING.md#5-workflow-de-version-bump).
 
 ## Features
 
-- 📱 **Multi-Platform Support**: Works on iOS, Android, and Web
-- 📷 **QR Code Scanning**: Scan student QR codes using device camera
-- 🔌 **NFC Support**: Scan student NFC cards on mobile devices
-- 🔐 **Epitech Authentication**: Secure login with Epitech credentials
-- 📊 **Real-time Tracking**: View scanned students in real-time
-- 🎨 **Modern UI**: Beautiful interface built with NativeWind (Tailwind CSS)
+| Screen            | What it does                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login             | Office 365 login through the Intranet in a WebView; the Intranet cookie is kept in the device's secure storage                                                                                                   |
+| Activities        | Your activities on the Intranet, in chronological order                                                                                                                                                          |
+| Presence          | QR code scanning (one code, or **several at once** with multi-scan), batch mode (queue, then send), register mode (registers the student on the module and the event first), camera on/off, success/error sounds |
+| Manual attendance | Mark students from the registered list                                                                                                                                                                           |
+| Follow-ups (RDV)  | Registered students or groups, their last Jenkins build, trigger a build, open Jenkins                                                                                                                           |
+| Grading           | Fill the grading scale (bareme) of a follow-up and save it to the Intranet                                                                                                                                       |
+| Settings          | Theme, custom sounds, Jenkins credentials (validated before saving), manual cookie                                                                                                                               |
 
-## Prerequisites
+NFC: the scanner reads the card, but it returns the card's own identifier, not the student's email, and the card-to-student mapping is not available. QR codes are the supported method.
 
-- **Node.js** (v18 or later) - [Download](https://nodejs.org/)
-- **npm** or **yarn**
-- **Expo Go** app on your mobile device (for testing)
-- **Epitech Account** with API access
+## Platforms
 
-## Installation
+| Platform     | How it talks to the Intranet                                                                                                                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android, iOS | Directly                                                                                                                                                                                                                                                  |
+| Web          | Through the CORS proxy (`proxy-server/`), because the Intranet sends no CORS headers. Outside the Epitech network the Intranet refuses requests coming from a server (anti-DDoS page), so the deployed web version is only reliable on the school network |
 
-### 1. Clone or Navigate to the Project
+## Getting started
 
-```bash
-cd /Users/alexandredfm/Documents/@Code/EpiCheck
-```
-
-### 2. Install Dependencies
-
-If you haven't already installed dependencies:
+Requirements: Node 22 (`.nvmrc`) and pnpm (`corepack enable` installs the version pinned in `package.json`). Android: JDK 17 and the Android SDK. iOS: Xcode (macOS).
 
 ```bash
-# Using nvm (recommended)
-nvm use --lts
+corepack enable
+pnpm install
 
-# Install packages
-npm install
+pnpm android        # build and run on an Android device or emulator
+pnpm ios            # build and run on the iOS simulator (pnpm ios:device for a device)
+pnpm start          # Metro only, for an installed development build
+
+# Web: the proxy and the Expo web server, in two terminals
+pnpm proxy
+pnpm web
 ```
 
-### 3. Install Expo CLI (if not already installed)
+Checks run by the CI: `pnpm exec tsc --noEmit`, `pnpm exec eslint .`, `pnpm exec expo install --check`, and `pnpm test` in `proxy-server/`.
+
+## Versions and releases
+
+`package.json` holds the only version; the Android `versionCode` and iOS build number are derived from it (1.3.0 → 10300).
 
 ```bash
-npm install -g expo-cli
+pnpm run version:bump patch    # or minor / major
+git commit -am "chore(release): vX.Y.Z"
+# after the merge on main: tag vX.Y.Z -> signed APK and AAB attached to a GitHub release
 ```
 
-## Configuration
+Details: [docs/IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md#4-synchronisation-des-versions), signing: [docs/BUILD_APK.md](docs/BUILD_APK.md).
 
-### Epitech API Setup
+## Deployment (web)
 
-The app is pre-configured to use the Epitech API at `https://my.epitech.eu/api`.
+`develop` deploys https://epicheck.ppd.nice-tek.eu (preprod) and `main` deploys https://epicheck.nice-tek.eu, on Kubernetes through GitHub Actions, with a deploy account limited to each namespace. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docker/README.md](docker/README.md).
 
-**Important**: You may need to adjust the API endpoints in `services/epitechApi.ts` based on the actual Epitech API documentation:
-
-```typescript
-// services/epitechApi.ts
-const API_BASE_URL = "https://my.epitech.eu/api";
-```
-
-### Modifying API Endpoints
-
-Based on the [Epitech API documentation](https://my.epitech.eu/api/docs), you might need to adjust these methods:
-
-- **Authentication**: `/auth/login` or similar endpoint
-- **Presence Marking**: `/presence` or module-specific endpoint
-- **Student Info**: `/students/{email}` or user lookup endpoint
-
-## Running the App
-
-### Development Mode
-
-Start the Expo development server:
-
-```bash
-npm start
-```
-
-This will open Expo DevTools in your browser. You can then:
-
-### Run on Different Platforms
-
-#### iOS (requires macOS)
-
-```bash
-npm run ios
-```
-
-#### Android
-
-```bash
-npm run android
-```
-
-#### Web (with Proxy Server)
-
-**Important**: The web platform requires a proxy server to bypass CORS restrictions.
-
-**Quick Start:**
-
-1. **Start the proxy server** (in one terminal):
-
-    ```bash
-    npm run proxy
-    ```
-
-2. **Start the web app** (in another terminal):
-
-    ```bash
-    npm run web
-    ```
-
-3. **Follow authentication steps** in the app to extract your Intranet cookie
-
-#### Web (with Docker)
-
-##### Development Mode
-
-1. **Build and run with Docker**:
-
-    ```bash
-    docker compose -f docker-compose.dev.yml -p epicheck-dev build
-    ```
-
-2. **Run the container**:
-
-    ```bash
-    docker compose -f docker-compose.dev.yml -p epicheck-dev up -d
-    ```
-
-##### Prod Mode
-
-1. **Build and run with Docker**:
-
-    ```bash
-    docker compose -f docker-compose.yml -p epicheck-prod build
-    ```
-
-2. **Run the container**:
-
-    ```bash
-    docker compose -f docker-compose.yml -p epicheck-prod up -d
-    ```
-
-📚 **Full web setup guide:** See [`docs/WEB_QUICKSTART.md`](docs/WEB_QUICKSTART.md)
-
-**Note:** For production deployment, see [`proxy-server/README.md`](proxy-server/README.md)
-
-### Using Expo Go (Mobile Testing)
-
-1. Install **Expo Go** from App Store (iOS) or Play Store (Android)
-2. Run `npm start`
-3. Scan the QR code shown in the terminal with:
-    - **iOS**: Camera app
-    - **Android**: Expo Go app
-
-## Usage Guide
-
-### 1. Login
-
-- Launch the app
-- Enter your Epitech email and password
-- Tap "Login"
-
-### 2. Scanning Modes
-
-#### QR Code Mode (Desktop/Web/Mobile)
-
-- Select "📷 QR Code" tab
-- Point camera at student's QR code
-- Presence will be marked automatically
-
-#### NFC Mode (Mobile Only)
-
-- Select "📱 NFC" tab (available only on mobile)
-- Hold student's NFC card near device
-- Presence will be marked automatically
-
-### 3. View Scan History
-
-- Scanned students appear at the bottom of the screen
-- Green = Success, Red = Error
-- Tap "Clear" to remove history
-
-### 4. Logout
-
-- Tap the "Logout" button in the top-right corner
-
-## Project Structure
+## Repository layout
 
 ```
-EpiCheck/
-├── App.tsx                      # Main app entry with navigation
-├── app.json                     # Expo configuration
-├── package.json                 # Dependencies
-├── tsconfig.json               # TypeScript configuration
-├── tailwind.config.js          # Tailwind CSS configuration
-├── metro.config.js             # Metro bundler config (NativeWind)
-├── global.css                  # Global Tailwind styles
-├── nativewind-env.d.ts         # NativeWind type declarations
-│
-├── components/
-│   ├── QRScanner.tsx           # QR code scanner component
-│   └── NFCScanner.tsx          # NFC scanner component
-│
-├── screens/
-│   ├── LoginScreen.tsx         # Authentication screen
-│   └── PresenceScreen.tsx      # Main presence marking screen
-│
-└── services/
-    └── epitechApi.ts           # Epitech API service layer
+App.tsx, index.ts      navigation and entry point
+screens/               one file per screen
+components/            QR, multi-QR and NFC scanners, text components
+services/              Intranet, Office 365, Jenkins clients; secure storage; sounds
+types/, hooks/, contexts/, utils/
+proxy-server/          CORS proxy for the web version (Express, tests with node:test)
+docker/, Dockerfile    web image: Expo web export + nginx + proxy
+k8s/                   Kubernetes manifests and deploy accounts
+.github/workflows/     ci, build, deploy, android
+docs/                  guides (below)
 ```
 
-## API Integration
+## Documentation
 
-### Authentication Flow
-
-```typescript
-import epitechApi from "./services/epitechApi";
-
-// Login
-await epitechApi.login({
-    email: "user@epitech.eu",
-    password: "password",
-});
-
-// Mark presence
-await epitechApi.markPresence("student@epitech.eu");
-
-// Logout
-epitechApi.logout();
-```
-
-### Customizing QR Code Format
-
-If your QR codes contain JSON or specific format, modify `components/QRScanner.tsx`:
-
-```typescript
-// Example: QR code contains JSON
-const handleBarCodeScanned = ({ data }) => {
-    try {
-        const parsed = JSON.parse(data);
-        const email = parsed.email || parsed.studentId + "@epitech.eu";
-        onScan(email);
-    } catch (e) {
-        // Handle plain text QR codes
-        onScan(data);
-    }
-};
-```
-
-### Customizing NFC Card Reading
-
-For specific NFC card formats, modify `components/NFCScanner.tsx`:
-
-```typescript
-// Read NDEF message or use tag ID
-// Map tag ID to student email if needed
-const tagId = "..."; // extracted from NFC tag
-const email = await lookupEmailByTagId(tagId);
-```
-
-## Building for Production
-
-### Android APK/AAB
-
-```bash
-# Build APK
-eas build --platform android --profile preview
-
-# Build for Play Store
-eas build --platform android --profile production
-```
-
-### iOS (requires Apple Developer Account)
-
-```bash
-eas build --platform ios --profile production
-```
-
-### Web
-
-```bash
-npm run web
-# Then deploy the web-build folder to your hosting
-```
-
-## Troubleshooting
-
-### Camera Permission Issues
-
-**iOS**: Check `app.json` for `NSCameraUsageDescription`
-**Android**: Ensure `CAMERA` permission is in `app.json`
-
-### NFC Not Working
-
-- **Android**: Ensure device has NFC hardware and it's enabled
-- **iOS**: Requires iPhone 7 or later with iOS 13+
-- Check `app.json` for proper NFC permissions
-
-### API Connection Errors
-
-1. Verify Epitech API endpoint is correct
-2. Check network connection
-3. Verify API credentials
-4. Check API documentation for correct endpoints
-
-### Metro Bundler Issues
-
-```bash
-# Clear cache and restart
-npm start -- --clear
-```
-
-## Development Notes
-
-### NativeWind v4
-
-This project uses NativeWind v4 for styling. Key features:
-
-- Tailwind CSS classes work directly on React Native components
-- Use `className` prop instead of `style`
-- See [NativeWind docs](https://www.nativewind.dev/) for more info
-
-### TypeScript
-
-The app is fully typed with TypeScript for better development experience.
-
-## Dependencies
-
-### Core
-
-- **expo** - React Native framework
-- **react-native** - Mobile app framework
-- **typescript** - Type safety
-
-### UI & Styling
-
-- **nativewind** - Tailwind CSS for React Native
-- **tailwindcss** - CSS framework
-- **react-native-reanimated** - Animations
-- **react-native-safe-area-context** - Safe area handling
-
-### Navigation
-
-- **@react-navigation/native** - Navigation library
-- **@react-navigation/native-stack** - Stack navigator
-- **react-native-screens** - Native navigation primitives
-
-### Features
-
-- **expo-camera** - Camera and QR code scanning
-- **react-native-nfc-manager** - NFC card reading
-- **axios** - HTTP client for API calls
-- **@expo/vector-icons** - Icon library
+| Guide                                                                                                                                                                                                                   | Topic                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md)                                                                                                                                                                                     | Kubernetes, GitHub settings, operations |
+| [BUILD_APK.md](docs/BUILD_APK.md), [BUILD_IOS.md](docs/BUILD_IOS.md)                                                                                                                                                    | Local builds, release signing           |
+| [ANDROID_QUICK_COMMANDS.md](docs/ANDROID_QUICK_COMMANDS.md), [ANDROID_APK_INSTALL_TROUBLESHOOTING.md](docs/ANDROID_APK_INSTALL_TROUBLESHOOTING.md), [ANDROID_BUILD_OPTIMIZATION.md](docs/ANDROID_BUILD_OPTIMIZATION.md) | Android                                 |
+| [IOS_XCODE_TROUBLESHOOTING.md](docs/IOS_XCODE_TROUBLESHOOTING.md)                                                                                                                                                       | Xcode, macOS 26, versions               |
+| [EXPO_BUILD_FIXES.md](docs/EXPO_BUILD_FIXES.md)                                                                                                                                                                         | Known Expo build issues                 |
+| [HYBRID_AUTH.md](docs/HYBRID_AUTH.md), [OFFICE365_SETUP.md](docs/OFFICE365_SETUP.md), [AZURE_AD_SPA_SETUP.md](docs/AZURE_AD_SPA_SETUP.md), [DEBUG_AUTH.md](docs/DEBUG_AUTH.md)                                          | Authentication                          |
+| [COOKIE_EXTRACTION_SOLUTIONS.md](docs/COOKIE_EXTRACTION_SOLUTIONS.md), [COOKIE_WORKAROUND.md](docs/COOKIE_WORKAROUND.md)                                                                                                | Intranet cookie                         |
+| [WEB_CORS_LIMITATION.md](docs/WEB_CORS_LIMITATION.md), [WEB_QUICKSTART.md](docs/WEB_QUICKSTART.md), [WEB_TESTING_CHECKLIST.md](docs/WEB_TESTING_CHECKLIST.md)                                                           | Web version                             |
+| [JENKINS_INTEGRATION.md](docs/JENKINS_INTEGRATION.md)                                                                                                                                                                   | Jenkins                                 |
+| [CUSTOM_SOUNDS.md](docs/CUSTOM_SOUNDS.md)                                                                                                                                                                               | Sounds                                  |
+| [DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md), [GIT_SETUP.md](docs/GIT_SETUP.md), [QUICKSTART.md](docs/QUICKSTART.md)                                                                                     | Development                             |
+| [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                                                                                                                                            | Contributing                            |
 
 ## License
 
-This project is for educational purposes as part of Epitech coursework.
-
-## Support
-
-For issues or questions:
-
-1. Check the Epitech API documentation
-2. Review the troubleshooting section
-3. Contact your Epitech administrator
-
----
-
-Made with ❤️ for Epitech Students
+The source files carry an MIT permission notice (© 2025 Epitech). Built as part of Epitech coursework.

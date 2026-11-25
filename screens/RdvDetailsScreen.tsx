@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import intraApi from "../services/intraApi";
 import { Ionicons } from "@expo/vector-icons";
 import Toast from "react-native-toast-message";
-import jenkinsApi from "../services/jenkinsApi";
+import jenkinsApi, { JenkinsApiError } from "../services/jenkinsApi";
 import { IIntraEvent } from "../types/IIntraEvent";
 import { useTheme } from "../contexts/ThemeContext";
 import { IActivityNote } from "../types/IActivityNote";
@@ -42,6 +42,13 @@ type RootStackParamList = {
 
 type RdvDetailsRouteProp = RouteProp<RootStackParamList>;
 type RdvDetailsNavigationProp = NavigationProp<RootStackParamList>;
+
+/** Copy of a Set without one key (for functional state updates) */
+function withoutKey<T>(set: Set<T>, key: T): Set<T> {
+    const next = new Set(set);
+    next.delete(key);
+    return next;
+}
 
 export default function RdvDetailsScreen() {
     const navigation = useNavigation<RdvDetailsNavigationProp>();
@@ -64,9 +71,6 @@ export default function RdvDetailsScreen() {
     const [jenkinsBuildInfo, setJenkinsBuildInfo] = useState<
         Record<string, any>
     >({});
-    const [jenkinsLoadingLogins, setJenkinsLoadingLogins] = useState<
-        Set<string>
-    >(new Set());
     const [jenkinsTeamBuildInfo, setJenkinsTeamBuildInfo] = useState<
         Record<string, any>
     >({});
@@ -131,11 +135,24 @@ export default function RdvDetailsScreen() {
                         "[RdvDetails] ✓ Jenkins project exists:",
                         projectPath,
                     );
-                } catch {
-                    console.log(
-                        "[RdvDetails] Jenkins project not found — disabling Jenkins features",
-                    );
-                    setJenkinsProjectExists(false);
+                } catch (error) {
+                    if (
+                        error instanceof JenkinsApiError &&
+                        error.status === 404
+                    ) {
+                        console.log(
+                            "[RdvDetails] Jenkins project not found — disabling Jenkins features",
+                        );
+                        setJenkinsProjectExists(false);
+                    } else {
+                        // 401/403 or network error: not a missing project,
+                        // keep the state unknown so a later visit retries
+                        console.warn(
+                            "[RdvDetails] Jenkins probe failed:",
+                            error instanceof Error ? error.message : error,
+                        );
+                        setJenkinsProjectExists(null);
+                    }
                     return; // Don't fetch individual builds
                 }
 
@@ -367,15 +384,6 @@ export default function RdvDetailsScreen() {
     };
 
     /**
-     * Constructs Jenkins URL for a given student login
-     * Pattern: https://jenkins.epitest.eu/view/{MODULE}/job/{MODULE}/job/{PROJECT_NAME}/job/{YEAR}/job/{INSTANCE}/job/{LOGIN}/
-     */
-    const getJenkinsUrl = (login: string): string => {
-        const jobPath = getJenkinsJobPath(login);
-        return `${jenkinsBaseUrl}${jobPath}`;
-    };
-
-    /**
      * Constructs Jenkins URL for a team with assembled member logins
      */
     const getJenkinsTeamUrl = (item: IRegistration): string => {
@@ -392,10 +400,6 @@ export default function RdvDetailsScreen() {
         }
 
         try {
-            const loadingSet = new Set(jenkinsLoadingLogins);
-            loadingSet.add(login);
-            setJenkinsLoadingLogins(loadingSet);
-
             const jobPath = getJenkinsJobPath(login);
             const buildInfo = await jenkinsApi.getLastBuild(jobPath);
 
@@ -409,20 +413,12 @@ export default function RdvDetailsScreen() {
                 buildInfo,
             );
 
-            const newSet = new Set(jenkinsLoadingLogins);
-            newSet.delete(login);
-            setJenkinsLoadingLogins(newSet);
-
             return buildInfo;
         } catch (error: any) {
             console.warn(
                 `[RdvDetails] Failed to fetch Jenkins build info for ${login}:`,
                 error.message,
             );
-
-            const newSet = new Set(jenkinsLoadingLogins);
-            newSet.delete(login);
-            setJenkinsLoadingLogins(newSet);
 
             return null;
         }
@@ -438,9 +434,7 @@ export default function RdvDetailsScreen() {
 
         try {
             const teamId = item.members.map((m) => m.login).join("_");
-            const loadingSet = new Set(jenkinsTeamLoadingIds);
-            loadingSet.add(teamId);
-            setJenkinsTeamLoadingIds(loadingSet);
+            setJenkinsTeamLoadingIds((prev) => new Set(prev).add(teamId));
 
             const jobPath = getJenkinsTeamJobPath(item);
             const buildInfo = await jenkinsApi.getLastBuild(jobPath);
@@ -455,9 +449,7 @@ export default function RdvDetailsScreen() {
                 buildInfo,
             );
 
-            const newSet = new Set(jenkinsTeamLoadingIds);
-            newSet.delete(teamId);
-            setJenkinsTeamLoadingIds(newSet);
+            setJenkinsTeamLoadingIds((prev) => withoutKey(prev, teamId));
 
             return buildInfo;
         } catch (error: any) {
@@ -466,9 +458,8 @@ export default function RdvDetailsScreen() {
                 error.message,
             );
 
-            const newSet = new Set(jenkinsTeamLoadingIds);
-            newSet.delete(item.members.map((m) => m.login).join("_"));
-            setJenkinsTeamLoadingIds(newSet);
+            const teamId = item.members.map((m) => m.login).join("_");
+            setJenkinsTeamLoadingIds((prev) => withoutKey(prev, teamId));
 
             return null;
         }
@@ -967,23 +958,6 @@ export default function RdvDetailsScreen() {
                 </SafeAreaView>
             </Modal>
         );
-    };
-
-    /**
-     * Open Jenkins in browser
-     */
-    const openJenkins = (login: string) => {
-        if (!projectName) {
-            console.warn(
-                "[RdvDetails] Cannot open Jenkins: project name not loaded",
-            );
-            return;
-        }
-        const jenkinsUrl = getJenkinsUrl(login);
-        console.log("[RdvDetails] Opening Jenkins:", jenkinsUrl);
-        Linking.openURL(jenkinsUrl).catch((err) => {
-            console.error("[RdvDetails] Failed to open Jenkins URL:", err);
-        });
     };
 
     /**

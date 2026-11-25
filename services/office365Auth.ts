@@ -25,40 +25,12 @@
  * THE SOFTWARE.
  */
 
-import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
-import * as SecureStore from "expo-secure-store";
+import storage from "./secureStorage";
 
 // Complete the authentication session properly
 WebBrowser.maybeCompleteAuthSession();
-
-// Storage wrapper that works on web and native
-const storage = {
-    async setItem(key: string, value: string): Promise<void> {
-        if (Platform.OS === "web") {
-            localStorage.setItem(key, value);
-        } else {
-            await SecureStore.setItemAsync(key, value);
-        }
-    },
-
-    async getItem(key: string): Promise<string | null> {
-        if (Platform.OS === "web") {
-            return localStorage.getItem(key);
-        } else {
-            return await SecureStore.getItemAsync(key);
-        }
-    },
-
-    async deleteItem(key: string): Promise<void> {
-        if (Platform.OS === "web") {
-            localStorage.removeItem(key);
-        } else {
-            await SecureStore.deleteItemAsync(key);
-        }
-    },
-};
 
 // Azure AD Configuration
 // IMPORTANT: Replace these with your actual Azure AD app registration values
@@ -396,10 +368,10 @@ class Office365AuthService {
      */
     async logout(): Promise<void> {
         try {
-            await storage.deleteItem(KEYS.ACCESS_TOKEN);
-            await storage.deleteItem(KEYS.REFRESH_TOKEN);
-            await storage.deleteItem(KEYS.TOKEN_EXPIRY);
-            await storage.deleteItem(KEYS.USER_INFO);
+            await storage.removeItem(KEYS.ACCESS_TOKEN);
+            await storage.removeItem(KEYS.REFRESH_TOKEN);
+            await storage.removeItem(KEYS.TOKEN_EXPIRY);
+            await storage.removeItem(KEYS.USER_INFO);
         } catch (error) {
             console.error("Error during logout:", error);
         }

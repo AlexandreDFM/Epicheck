@@ -3,8 +3,7 @@
  * Description: Service for managing Jenkins credentials and authentication
  */
 
-import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import storage from "./secureStorage";
 
 export const JENKINS_DEFAULT_BASE_URL = "https://jenkins.epitest.eu";
 
@@ -12,29 +11,20 @@ const JENKINS_USERNAME_KEY = "jenkins_username";
 const JENKINS_TOKEN_KEY = "jenkins_token";
 const JENKINS_BASE_URL_KEY = "jenkins_base_url";
 
-// Storage wrapper for cross-platform compatibility
-const storage = {
-    async getItem(key: string): Promise<string | null> {
-        if (Platform.OS === "web") {
-            return localStorage.getItem(key);
-        }
-        return await SecureStore.getItemAsync(key);
-    },
-    async setItem(key: string, value: string): Promise<void> {
-        if (Platform.OS === "web") {
-            localStorage.setItem(key, value);
-        } else {
-            await SecureStore.setItemAsync(key, value);
-        }
-    },
-    async removeItem(key: string): Promise<void> {
-        if (Platform.OS === "web") {
-            localStorage.removeItem(key);
-        } else {
-            await SecureStore.deleteItemAsync(key);
-        }
-    },
-};
+/** Result of a credentials check against Jenkins */
+export type JenkinsCredentialStatus = "valid" | "invalid" | "unreachable";
+
+/**
+ * Trim the Jenkins URL and refuse anything that is not https: the API token
+ * travels in a Basic Authorization header.
+ */
+export function normalizeJenkinsBaseUrl(url: string): string {
+    const trimmed = url.trim().replace(/\/+$/, "");
+    if (!/^https:\/\/[^\s/?#]+/i.test(trimmed)) {
+        throw new Error("The Jenkins URL must start with https://");
+    }
+    return trimmed;
+}
 
 class JenkinsService {
     private jenkinsUsername: string | null = null;
@@ -53,6 +43,7 @@ class JenkinsService {
             if (!username || !token) {
                 throw new Error("Username and token are required");
             }
+            baseUrl = normalizeJenkinsBaseUrl(baseUrl);
 
             await storage.setItem(JENKINS_USERNAME_KEY, username);
             await storage.setItem(JENKINS_TOKEN_KEY, token);
@@ -174,39 +165,56 @@ class JenkinsService {
     }
 
     /**
-     * Validate Jenkins credentials by making a test API call
+     * Check credentials against Jenkins without storing them.
+     * "invalid" means Jenkins answered 401/403; "unreachable" covers network
+     * errors and any other status.
      */
-    async validateCredentials(): Promise<boolean> {
+    async checkCredentials(
+        username: string,
+        token: string,
+        baseUrl: string,
+    ): Promise<JenkinsCredentialStatus> {
         try {
-            const { username, token, baseUrl } = await this.getCredentials();
-
-            if (!username || !token) {
-                return false;
-            }
-
-            const credentials = `${username}:${token}`;
-            const encodedCredentials = btoa(credentials);
-
-            const response = await fetch(`${baseUrl}/api/json`, {
-                method: "GET",
-                headers: {
-                    Authorization: `Basic ${encodedCredentials}`,
-                    "Content-Type": "application/json",
+            const response = await fetch(
+                `${normalizeJenkinsBaseUrl(baseUrl)}/api/json`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Basic ${btoa(`${username}:${token}`)}`,
+                        "Content-Type": "application/json",
+                    },
                 },
-            });
+            );
 
             console.log(
                 "[JenkinsService] Validation response status:",
                 response.status,
             );
-            return response.status === 200;
+            if (response.status === 200) return "valid";
+            if (response.status === 401 || response.status === 403) {
+                return "invalid";
+            }
+            return "unreachable";
         } catch (error) {
             console.error(
                 "[JenkinsService] Credentials validation failed:",
                 error,
             );
+            return "unreachable";
+        }
+    }
+
+    /**
+     * Validate the stored Jenkins credentials
+     */
+    async validateCredentials(): Promise<boolean> {
+        const { username, token, baseUrl } = await this.getCredentials();
+        if (!username || !token) {
             return false;
         }
+        return (
+            (await this.checkCredentials(username, token, baseUrl)) === "valid"
+        );
     }
 }
 

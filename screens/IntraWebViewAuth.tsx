@@ -218,7 +218,10 @@ function MobileAuthComponent({ onSuccess, onCancel, authUrl, isDark }: any) {
         try {
             const parsed = JSON.parse(data);
             if (parsed.cookie !== undefined) {
-                console.log("[Mobile] Cookie from JS:", parsed.cookie);
+                console.log(
+                    "[Mobile] Cookie string from JS, length:",
+                    String(parsed.cookie).length,
+                );
                 const userCookie = parseCookieString(parsed.cookie);
                 if (userCookie) {
                     hasCalledSuccessRef.current = true;
@@ -419,7 +422,6 @@ function WebAuthComponent({ onCancel, onSuccess, isDark }: any) {
     );
     const { openIntranet } = useOpenIntranet();
     const [manualCookie, setManualCookie] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
 
     const validateAndSaveCookie = async () => {
         if (!manualCookie.trim()) {
@@ -635,8 +637,7 @@ function WebAuthComponent({ onCancel, onSuccess, isDark }: any) {
                             Validation Failed
                         </Text>
                         <Text className="mb-6 text-center text-sm text-text-secondary">
-                            {errorMessage ||
-                                "The cookie is invalid or expired."}
+                            The cookie is invalid or expired.
                         </Text>
                         <View className="w-full flex-row gap-3">
                             <TouchableOpacity

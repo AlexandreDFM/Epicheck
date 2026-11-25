@@ -1,0 +1,142 @@
+# EpiCheck web pod, one image and two containers:
+# - web: nginx serves the Expo web export and proxies /api to 127.0.0.1:3001
+# - proxy: Node, CORS proxy to the Epitech Intranet (stateless)
+# Each container has its own probes, so Kubernetes restarts whichever dies.
+# Several replicas are safe: no state is kept, only the proxy rate limit is
+# counted per pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: epicheck-web
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: epicheck
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: epicheck
+        app.kubernetes.io/component: web
+    spec:
+      terminationGracePeriodSeconds: 30
+      # Created by the workflow, empty for a public image; ignored when missing
+      imagePullSecrets:
+        - name: github-container-registry
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ghcr.io/epitech-nice/epicheck:latest   # tag replaced by the commit SHA on deploy
+          # Tags are commit SHAs (immutable): no need to pull again
+          imagePullPolicy: IfNotPresent
+          command: ["nginx", "-e", "stderr", "-g", "daemon off;"]
+          # Read-only image: nginx writes only its pid and temp files under
+          # /tmp; its logs go to the container output
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: web-tmp
+              mountPath: /tmp
+          # Leave time for the ingress to stop sending requests before nginx
+          # stops (no cut connection during a rollout)
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          ports:
+            - name: http
+              containerPort: 8080
+          # nginx itself; the proxy is checked by its own container
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+        - name: proxy
+          image: ghcr.io/epitech-nice/epicheck:latest   # tag replaced by the commit SHA on deploy
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: epicheck-config        # constants, in git
+            - configMapRef:
+                name: epicheck-app-config    # GitHub Variables
+                optional: true
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: proxy-tmp
+              mountPath: /tmp
+          # nginx stops sending /api requests first (see the web container)
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          ports:
+            - name: proxy
+              containerPort: 3001
+          # /health does not call the Intranet: an Intranet outage must not
+          # restart the pod
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: proxy
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: proxy
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 300m
+              memory: 192Mi
+      volumes:
+        - name: web-tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: proxy-tmp
+          emptyDir:
+            sizeLimit: 16Mi

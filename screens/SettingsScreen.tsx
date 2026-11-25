@@ -43,6 +43,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import * as DocumentPicker from "expo-document-picker";
 import jenkinsService, {
     JENKINS_DEFAULT_BASE_URL,
+    normalizeJenkinsBaseUrl,
 } from "../services/jenkinsService";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -281,19 +282,42 @@ export default function SettingsScreen() {
         try {
             setIsValidatingJenkins(true);
 
-            const finalBaseUrl =
-                jenkinsBaseUrl.trim() || JENKINS_DEFAULT_BASE_URL;
+            const username = jenkinsUsername.trim();
+            const token = jenkinsToken.trim();
+            const finalBaseUrl = normalizeJenkinsBaseUrl(
+                jenkinsBaseUrl.trim() || JENKINS_DEFAULT_BASE_URL,
+            );
 
-            // Save credentials
-            await jenkinsService.setCredentials(
-                jenkinsUsername.trim(),
-                jenkinsToken.trim(),
+            // Validate before saving, so that valid stored credentials are
+            // not replaced by rejected ones
+            const status = await jenkinsService.checkCredentials(
+                username,
+                token,
                 finalBaseUrl,
             );
 
-            // Validate credentials using the dedicated service method
-            await jenkinsService.validateCredentials();
+            if (status === "invalid") {
+                Toast.show({
+                    type: "error",
+                    text1: "Invalid credentials",
+                    text2: "Jenkins rejected this username or API token. Nothing was saved.",
+                    position: "top",
+                });
+                return;
+            }
+
+            await jenkinsService.setCredentials(username, token, finalBaseUrl);
             setHasJenkinsCredentials(true);
+
+            if (status === "unreachable") {
+                Toast.show({
+                    type: "info",
+                    text1: "Saved without validation",
+                    text2: `Could not reach ${finalBaseUrl} to check the credentials.`,
+                    position: "top",
+                });
+                return;
+            }
 
             Toast.show({
                 type: "success",
@@ -595,13 +619,25 @@ export default function SettingsScreen() {
                 {/* Jenkins Section */}
                 <View className="mx-4 my-2 border border-card-border">
                     <View className="border-b border-border p-4">
-                        <Text
-                            className="text-xl text-primary"
-                            style={{ fontFamily: "Anton" }}
-                        >
-                            JENKINS SETTINGS
-                            <Text style={{ color }}>{underscore}</Text>
-                        </Text>
+                        <View className="flex-row items-center">
+                            <Text
+                                className="flex-1 text-xl text-primary"
+                                style={{ fontFamily: "Anton" }}
+                            >
+                                JENKINS SETTINGS
+                                <Text style={{ color }}>{underscore}</Text>
+                            </Text>
+                            {hasJenkinsCredentials && (
+                                <View className="ml-2 shrink-0 justify-center border border-status-success bg-status-success/10 px-2 py-1">
+                                    <Text
+                                        className="text-center text-xs text-status-success"
+                                        style={{ fontFamily: "IBMPlexSans" }}
+                                    >
+                                        Jenkins credentials configured
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                         <Text
                             className="mt-1 text-xs text-text-tertiary"
                             style={{ fontFamily: "IBMPlexSans" }}
@@ -611,17 +647,6 @@ export default function SettingsScreen() {
                     </View>
 
                     <View className="p-4">
-                        {hasJenkinsCredentials && (
-                            <View className="mb-4 border border-status-success bg-status-success/10 px-3 py-2">
-                                <Text
-                                    className="text-xs text-status-success"
-                                    style={{ fontFamily: "IBMPlexSans" }}
-                                >
-                                    ✓ Jenkins credentials configured
-                                </Text>
-                            </View>
-                        )}
-
                         {/* Jenkins Base URL */}
                         <Text
                             className="mb-2 text-sm text-primary"

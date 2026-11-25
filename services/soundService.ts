@@ -27,8 +27,7 @@
  * THE SOFTWARE.
  */
 
-// eslint-disable-next-line import/no-unresolved
-// @ts-ignore - expo-file-system/legacy is the correct import path for deprecated API compatibility
+// The legacy API (documentDirectory, getInfoAsync...) lives under /legacy since SDK 54
 import * as FileSystem from "expo-file-system/legacy";
 
 // Default sounds
