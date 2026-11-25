@@ -1,0 +1,65 @@
+# Account used by the GitHub deploy workflow. It can only manage the
+# resources EpiCheck uses, in the epicheck-preprod namespace (no delete, no
+# exec, nothing cluster-wide). Applied once by a cluster admin, then:
+#   NAMESPACE=epicheck-preprod ./k8s/rbac/make-kubeconfig.sh https://<api-server>:6443
+# prints the PPD_KUBE_CONFIG repository secret.
+# Same Role as deployer.yaml (production).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-deployer
+  namespace: epicheck-preprod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-deployer
+  namespace: epicheck-preprod
+rules:
+  - apiGroups: [""]
+    resources: [configmaps, secrets, services]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [""]
+    resources: [pods, pods/log, events]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch, create, update, patch]
+  # Routing: Kubernetes Ingress (TLS through cert-manager) and Traefik middlewares
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [traefik.io]
+    resources: [middlewares]
+    verbs: [get, list, watch, create, update, patch]
+  # TLS status only: cert-manager creates the certificate from the Ingress annotation
+  - apiGroups: [cert-manager.io]
+    resources: [certificates, certificaterequests]
+    verbs: [get, list, watch]
+  - apiGroups: [acme.cert-manager.io]
+    resources: [orders, challenges]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-deployer
+  namespace: epicheck-preprod
+subjects:
+  - kind: ServiceAccount
+    name: github-deployer
+    namespace: epicheck-preprod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-deployer
+---
+# Long-lived token of the account, read by make-kubeconfig.sh
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-deployer-token
+  namespace: epicheck-preprod
+  annotations:
+    kubernetes.io/service-account.name: github-deployer
+type: kubernetes.io/service-account-token

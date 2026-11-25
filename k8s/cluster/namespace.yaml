@@ -1,0 +1,14 @@
+# Applied once by a cluster admin (the deploy accounts have no cluster-wide rights)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: epicheck-prod
+  labels:
+    app.kubernetes.io/part-of: epicheck
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: epicheck-preprod
+  labels:
+    app.kubernetes.io/part-of: epicheck

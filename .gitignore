@@ -79,6 +79,9 @@ yarn-error.*
 *.apk
 *.aab
 
+# Former Kubernetes folder (replaced by k8s/): local secrets may remain there
+kubernetes/
+
 # Temp files
 *.tmp
 *.old
