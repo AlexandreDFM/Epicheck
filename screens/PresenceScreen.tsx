@@ -42,10 +42,15 @@ import Toast from "react-native-toast-message";
 import epitechApi from "../services/epitechApi";
 import QRScanner from "../components/QRScanner";
 import NFCScanner from "../components/NFCScanner";
+import MultiQRScanner from "../components/MultiQRScanner";
 import { useTheme } from "../contexts/ThemeContext";
 import soundService from "../services/soundService";
 import type { IIntraEvent } from "../types/IIntraEvent";
-import { AntDesign, Ionicons } from "@expo/vector-icons";
+import {
+    AntDesign,
+    Ionicons,
+    MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useColoredUnderscore } from "../hooks/useColoredUnderscore";
@@ -75,6 +80,7 @@ export default function PresenceScreen() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isRegisterMode, setIsRegisterMode] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
+    const [isMultiScan, setIsMultiScan] = useState(false);
     const [scanMode, setScanMode] = useState<"qr" | "nfc">("qr");
     const [scannedStudents, setScannedStudents] = useState<Student[]>([]);
 
@@ -302,6 +308,111 @@ export default function PresenceScreen() {
         }
     };
 
+    /**
+     * Codes validated together in the multi-QR scanner. Batch mode queues
+     * them like single scans; one-by-one mode sends them at once.
+     */
+    const handleMultiScanValidate = async (emails: string[]) => {
+        if (!event) {
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "No event selected. Please go back and select an activity first.",
+                position: "top",
+            });
+            return;
+        }
+
+        const alreadyListed = new Set(
+            scannedStudents
+                .filter((s) => s.status === "pending" || s.status === "success")
+                .map((s) => s.email),
+        );
+        const valid = [...new Set(emails)].filter((e) => e.includes("@"));
+        const fresh = valid.filter((e) => !alreadyListed.has(e));
+        const skipped = emails.length - fresh.length;
+
+        if (fresh.length === 0) {
+            soundService.playErrorSound();
+            Toast.show({
+                type: "info",
+                text1: "Nothing new",
+                text2: "These students are already in the list",
+                position: "top",
+            });
+            return;
+        }
+
+        const now = () => new Date().toLocaleTimeString();
+
+        if (isBatchMode) {
+            soundService.playSuccessSound();
+            setScannedStudents((prev) => [
+                ...fresh.map(
+                    (email): Student => ({
+                        email,
+                        timestamp: now(),
+                        status: "pending",
+                    }),
+                ),
+                ...prev,
+            ]);
+            Toast.show({
+                type: "success",
+                text1: `${fresh.length} added to the queue`,
+                text2:
+                    skipped > 0
+                        ? `${skipped} skipped (duplicate or invalid)`
+                        : undefined,
+                position: "top",
+            });
+            return;
+        }
+
+        if (isProcessing) return;
+        setIsProcessing(true);
+        try {
+            const results = await epitechApi.markPresenceBatch(fresh, event, {
+                registerMode: isRegisterMode,
+            });
+            setScannedStudents((prev) => [
+                ...results.map(
+                    (r): Student => ({
+                        email: r.email,
+                        timestamp: now(),
+                        status: r.success ? "success" : "error",
+                    }),
+                ),
+                ...prev,
+            ]);
+            const errorCount = results.filter((r) => !r.success).length;
+            if (errorCount === 0) {
+                soundService.playSuccessSound();
+            } else {
+                soundService.playErrorSound();
+            }
+            Toast.show({
+                type: errorCount === 0 ? "success" : "error",
+                text1: `${results.length - errorCount} marked present, ${errorCount} failed`,
+                text2:
+                    errorCount > 0
+                        ? "Check the scan list for details"
+                        : undefined,
+                position: "top",
+            });
+        } catch (error: any) {
+            soundService.playErrorSound();
+            Toast.show({
+                type: "error",
+                text1: "Multi-scan failed",
+                text2: error.message || "Failed to mark presence",
+                position: "top",
+            });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const clearHistory = () => {
         setScannedStudents([]);
         Toast.show({
@@ -371,6 +482,20 @@ export default function PresenceScreen() {
                             )}
                         </View>
                     </View>
+                    <TouchableOpacity
+                        onPress={() => setIsMultiScan((prev) => !prev)}
+                        className={`ml-2 border px-4 py-2 ${
+                            isMultiScan
+                                ? "border-green-400 bg-green-500/30"
+                                : "border-white/30 bg-white/20"
+                        }`}
+                    >
+                        <MaterialCommunityIcons
+                            name="qrcode-scan"
+                            size={24}
+                            color={isMultiScan ? "#4ade80" : "white"}
+                        />
+                    </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => handleRegisterModeToggle()}
                         className={`ml-2 border px-2 py-2 ${isRegisterMode ? "border-purple-400/50 bg-purple-500/30" : "border-yellow-500/50 bg-yellow-500/30"}`}
@@ -493,9 +618,31 @@ export default function PresenceScreen() {
                 </View>
             </View>
 
+            {/* Multi-scan indicator */}
+            {isMultiScan && scanMode === "qr" && (
+                <View className="flex-row items-center justify-center bg-green-500/20 py-1.5">
+                    <MaterialCommunityIcons
+                        name="qrcode-scan"
+                        size={14}
+                        color="#4ade80"
+                    />
+                    <Text
+                        className="ml-2 text-xs text-green-400"
+                        style={{ fontFamily: "IBMPlexSansSemiBold" }}
+                    >
+                        MULTI-SCAN ACTIVE — Point at multiple QR codes
+                    </Text>
+                </View>
+            )}
+
             {/* Scanner */}
             <View className="flex-1 bg-black">
-                {scanMode === "qr" ? (
+                {isMultiScan && scanMode === "qr" ? (
+                    <MultiQRScanner
+                        onValidate={handleMultiScanValidate}
+                        isActive={isCameraActive && !isProcessing}
+                    />
+                ) : scanMode === "qr" ? (
                     <QRScanner
                         onScan={handleScan}
                         isActive={isCameraActive && !isProcessing}
@@ -530,10 +677,14 @@ export default function PresenceScreen() {
                     </View>
                     <View className="flex-row items-center gap-2">
                         <TouchableOpacity
-                            disabled={isProcessing || !(isBatchMode && pendingCount > 0)}
+                            disabled={
+                                isProcessing ||
+                                !(isBatchMode && pendingCount > 0)
+                            }
                             onPress={handleBatchSend}
                             className={`border px-4 py-1.5 ${
-                                isProcessing || !(isBatchMode && pendingCount > 0)
+                                isProcessing ||
+                                !(isBatchMode && pendingCount > 0)
                                     ? "border-text-disabled bg-text-disabled"
                                     : "border-status-success bg-status-success"
                             }`}
@@ -588,40 +739,40 @@ export default function PresenceScreen() {
                                 key={`${student.email}-${student.timestamp}`}
                                 className={`mb-2 border p-3.5 ${
                                     student.status === "success"
-                                    ? "border-status-success"
-                                    : student.status === "pending"
-                                    ? "border-status-warning"
-                                    : "border-status-error"
-                                    }`}
-                                    >
+                                        ? "border-status-success"
+                                        : student.status === "pending"
+                                          ? "border-status-warning"
+                                          : "border-status-error"
+                                }`}
+                            >
                                 <View className="flex-row items-center justify-between">
                                     <View className="mr-2 flex-1">
                                         <View className="flex-row items-center">
                                             <View
                                                 className={`mr-2 h-2 w-2 ${
                                                     student.status === "success"
-                                                    ? "bg-status-success"
-                                                    : student.status ===
-                                                    "pending"
-                                                    ? "bg-status-warning"
-                                                    : "bg-status-error"
-                                                    }`}
-                                                    />
+                                                        ? "bg-status-success"
+                                                        : student.status ===
+                                                            "pending"
+                                                          ? "bg-status-warning"
+                                                          : "bg-status-error"
+                                                }`}
+                                            />
                                             <Text
                                                 className={`text-sm ${
                                                     student.status === "success"
-                                                    ? "text-status-success"
-                                                    : student.status ===
-                                                    "pending"
-                                                    ? "text-status-warning"
-                                                    : "text-status-error"
-                                                    }`}
-                                                    numberOfLines={1}
-                                                    style={{
-                                                        fontFamily:
+                                                        ? "text-status-success"
+                                                        : student.status ===
+                                                            "pending"
+                                                          ? "text-status-warning"
+                                                          : "text-status-error"
+                                                }`}
+                                                numberOfLines={1}
+                                                style={{
+                                                    fontFamily:
                                                         "IBMPlexSansSemiBold",
-                                                    }}
-                                                    >
+                                                }}
+                                            >
                                                 {student.email}
                                             </Text>
                                         </View>
