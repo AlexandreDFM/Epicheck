@@ -81,7 +81,13 @@ class JenkinsService {
 
             const baseUrl = await storage.getItem(JENKINS_BASE_URL_KEY);
             if (baseUrl) {
-                this.jenkinsBaseUrl = baseUrl;
+                // A URL saved before https was required falls back to the
+                // default instance rather than sending the token in clear
+                try {
+                    this.jenkinsBaseUrl = normalizeJenkinsBaseUrl(baseUrl);
+                } catch {
+                    this.jenkinsBaseUrl = JENKINS_DEFAULT_BASE_URL;
+                }
             }
 
             return {

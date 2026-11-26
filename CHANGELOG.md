@@ -28,6 +28,7 @@ The section of a version is used as the notes of its GitHub release (`.github/wo
 ### Fixed
 
 - Local Android release builds on macOS: `libworklets.so` is now provided where react-native-reanimated links it.
+- Jenkins: the token is not sent to protocol-relative URLs (`//host/…`) either, and a Jenkins URL saved before https was required falls back to the default instance.
 
 ### Security
 
