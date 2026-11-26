@@ -1,6 +1,6 @@
 #
 # File Name: Dockerfile
-# Author: Alexandre Kévin DE FREITAS MARTINS
+# Author: Alexandre DE FREITAS MARTINS
 # Creation Date: 5/12/2025
 # Description: Production Dockerfile for EpiCheck
 #              Multi-stage build for optimized production deployment

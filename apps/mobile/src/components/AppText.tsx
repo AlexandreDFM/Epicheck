@@ -1,6 +1,6 @@
 /**
  * File Name: AppText.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 2/12/2025
  * Description: This is the AppText.tsx
  * Copyright (c) 2025 Epitech

@@ -1,6 +1,6 @@
 /**
  * File Name: ThemeContext.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 5/11/2025
  * Description: This is the ThemeContext.tsx
  * Copyright (c) 2025 Epitech

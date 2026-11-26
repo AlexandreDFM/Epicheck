@@ -1,6 +1,6 @@
 /**
  * File Name: IntraWebViewAuth.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 29/10/2025
  * Description: Platform-specific authentication for Epitech Intranet
  *     - Mobile (iOS/Android): Uses WebView with automatic cookie extraction

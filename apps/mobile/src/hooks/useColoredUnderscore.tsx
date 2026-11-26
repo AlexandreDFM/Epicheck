@@ -1,6 +1,6 @@
 /**
  * File Name: useColoredUnderscore.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 28/11/2025
  * Description: This is the useColoredUnderscore.tsx
  * Copyright (c) 2025 Epitech

@@ -1,6 +1,6 @@
 /**
  * File Name: ManualAttendanceScreen.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 04/11/2025
  * Description: Manual attendance screen with student list, search, and manual marking
  * Copyright (c) 2025 Epitech

@@ -107,4 +107,4 @@ The guides are grouped by topic in [docs/](docs/README.md): deployment, developm
 
 ## License
 
-Written by Alexandre Kévin DE FREITAS MARTINS for Epitech. The source files carry an MIT permission notice in Epitech's name (© 2025 Epitech), granted by the author.
+Written by Alexandre DE FREITAS MARTINS for Epitech. Released under the [MIT License](LICENSE) (© 2025 Epitech).
