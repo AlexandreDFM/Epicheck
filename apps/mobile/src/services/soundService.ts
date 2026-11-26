@@ -1,6 +1,6 @@
 /**
  * File Name: soundService.ts
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 29/10/2025
  * Description: Sound Service
  *              Manages audio playback for app feedback

@@ -1,6 +1,6 @@
 /**
  * File Name: MultiQRScanner.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 10/02/2026
  * Description: Multi-QR code scanner component that can detect and process
  *              multiple QR codes simultaneously with visual overlays.

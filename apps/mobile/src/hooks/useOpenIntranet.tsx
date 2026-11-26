@@ -1,6 +1,6 @@
 /**
  * File Name: useOpenIntranet.tsx
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 5/12/2025
  * Description: This is the useOpenIntranet.tsx
  * Copyright (c) 2025 Epitech

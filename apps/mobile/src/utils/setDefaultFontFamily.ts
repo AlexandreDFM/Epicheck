@@ -1,6 +1,6 @@
 /**
  * File Name: setDefaultFontFamily.ts
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 01/12/2025
  * Description: Set default font family for all Text components
  * Copyright (c) 2025 Epitech
