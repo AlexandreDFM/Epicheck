@@ -1,6 +1,6 @@
 /**
  * File Name: app.ts
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 5/12/2025
  * Description: CORS Proxy for Epitech Intranet
  *              This proxy forwards requests to intra.epitech.eu with the user's cookie

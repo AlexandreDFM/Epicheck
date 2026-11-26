@@ -1,6 +1,6 @@
 /**
  * File Name: IIIntraModuleInfo.ts
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 4/11/2025
  * Description: This is the IIIntraModuleInfo.ts
  * Copyright (c) 2025 Epitech

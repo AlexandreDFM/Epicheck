@@ -1,6 +1,6 @@
 /**
  * File Name: intraAuth.ts
- * Author: Alexandre Kévin DE FREITAS MARTINS
+ * Author: Alexandre DE FREITAS MARTINS
  * Creation Date: 29/10/2025
  * Description: This is the intraAuth.ts
  * Copyright (c) 2025 Epitech
