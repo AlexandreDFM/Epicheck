@@ -66,10 +66,26 @@ Not tagged: released together with 1.3.0.
 
 ### Added
 
-- Jenkins integration: credentials in Settings, last build per student or group, trigger a build, open Jenkins.
-- Follow-up grading (bareme) saved to the Intranet.
-- Batch mode for presence scanning and batch actions in manual attendance.
-- Camera on/off toggle.
+- Jenkins integration: credentials stored with SecureStore and set in Settings, last build per student or group in follow-ups, trigger a build, open Jenkins ([#22](https://github.com/AlexandreDFM/Epicheck/pull/22)).
+- Follow-up grading screen (`RdvMarkScreen`): criteria of the grading scale (bareme) loaded from and saved to the Intranet, grader shown in the details.
+- Batch mode for presence scanning (queue, then send) and "mark all present / absent" in manual attendance ([#17](https://github.com/AlexandreDFM/Epicheck/pull/17)).
+- Camera on/off toggle on the presence screen ([#19](https://github.com/AlexandreDFM/Epicheck/pull/19)).
+- Contribution guide, code of conduct, issue and pull request templates, CODEOWNERS ([#20](https://github.com/AlexandreDFM/Epicheck/pull/20), [#21](https://github.com/AlexandreDFM/Epicheck/pull/21)).
+- Secondary and tertiary colour tokens, in both themes.
+- Android build scripts (`android:clean`, `android:wipe`) and `.nvmrc`.
+
+### Fixed
+
+- Follow-up title fallback when the Intranet gives none.
+- Unique keys for follow-up registrations (no more duplicate-key warnings).
+- Single axios instance in the Jenkins client (interceptors were added twice).
+- Consistent URL encoding of grading submissions.
+- Guarded access to the first member of follow-up groups.
+- Student e-mail and timestamp as scan identifier.
+- Development logs limited to development builds.
+- Empty or missing activity lists.
+- Opening Jenkins links.
+- Android Gradle configuration conflicts.
 
 Earlier versions: see the Git history.
 
