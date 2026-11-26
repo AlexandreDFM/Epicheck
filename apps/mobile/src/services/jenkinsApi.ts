@@ -53,9 +53,13 @@ function toJenkinsError(action: string, error: any): JenkinsApiError {
     );
 }
 
-/** scheme://host[:port] of an absolute URL, or null for a relative one */
-function originOf(url: string): string | null {
-    const match = /^(https?:\/\/[^/?#]+)/i.exec(url);
+/**
+ * scheme://host[:port] of an absolute URL, or null for a relative path.
+ * A protocol-relative URL ("//host/...") is absolute for axios: it keeps its
+ * "//host" form, so that it never matches the Jenkins origin.
+ */
+export function originOf(url: string): string | null {
+    const match = /^((?:https?:)?\/\/[^/?#]+)/i.exec(url);
     return match ? match[1].toLowerCase() : null;
 }
 
