@@ -4,7 +4,7 @@ name: Android
 # - tag vX.Y.Z: build, then attach EpiCheck-X.Y.Z.apk/.aab to a GitHub release
 # - manual run (Actions tab), or a pull request touching the native config
 # Signing: secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
-# ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD (docs/android/BUILD.md). Without them
+# ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD (docs/development/RELEASES.md). Without them
 # the build uses the debug key and no release is published.
 on:
   push:
