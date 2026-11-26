@@ -3,7 +3,7 @@ build
 coverage
 dist
 .expo
-apps/old
+apps/e-token-plus
 apps/mobile/android
 apps/mobile/ios
 pnpm-lock.yaml

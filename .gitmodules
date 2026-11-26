@@ -1,0 +1,3 @@
+[submodule "apps/e-token-plus"]
+	path = apps/e-token-plus
+	url = https://github.com/AlexandreDFM/E-Token-Plus.git
