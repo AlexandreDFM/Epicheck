@@ -27,5 +27,7 @@ eslint.config.js @AlexandreDFM
 # Docker and deployment
 Dockerfile* @AlexandreDFM
 docker-compose*.yml @AlexandreDFM
-/kubernetes/ @AlexandreDFM
-/proxy-server/ @AlexandreDFM
+/k8s/ @AlexandreDFM
+/docker/ @AlexandreDFM
+/.github/workflows/ @AlexandreDFM
+/apps/proxy/ @AlexandreDFM

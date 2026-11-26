@@ -1,0 +1,17 @@
+# Only nginx is exposed: the proxy is reached through it (/api)
+apiVersion: v1
+kind: Service
+metadata:
+  name: epicheck-web
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

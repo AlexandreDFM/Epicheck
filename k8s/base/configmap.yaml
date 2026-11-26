@@ -1,0 +1,19 @@
+# Constants that belong to the code. Settings that may change per deployment
+# come from GitHub Variables (ConfigMap epicheck-app-config, created by the
+# workflow). EpiCheck needs no secret: the user's Intranet cookie only
+# passes through the proxy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: epicheck-config
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  # Traefik, then nginx in the pod: the rate limit reads the client address
+  # two hops back in X-Forwarded-For
+  TRUST_PROXY: "2"
+  # Requests per minute and per client on /api/ (per pod)
+  RATE_LIMIT_PER_MINUTE: "120"

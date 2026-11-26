@@ -25,49 +25,45 @@
 # THE SOFTWARE.
 #
 
+# Development: Expo web dev server and the proxy with reload, from the
+# sources (no image to build). On the host, `pnpm web` and `pnpm proxy` do
+# the same without Docker.
+#   docker compose -f docker-compose.dev.yml up    then open http://localhost:8081
 services:
-  # Main Expo development server
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    container_name: epicheck-dev
+    image: node:22.21-alpine
+    working_dir: /repo
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter mobile exec expo start --web --port 8081"
     ports:
-      - "19000:19000"  # Expo DevTools
-      - "19001:19001"  # Expo DevTools websocket
-      - "19002:19002"  # Expo Metro Bundler
-      - "8081:8081"    # React Native packager
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.expo
+      - "8081:8081"
     environment:
       - NODE_ENV=development
-      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
-      - REACT_NATIVE_PACKAGER_HOSTNAME=0.0.0.0
-    networks:
-      - epicheck-network
-    stdin_open: true
-    tty: true
-    command: pnpm start
+      - EXPO_PUBLIC_PROXY_URL=http://localhost:3001/api/intra-proxy
+      - CI=1
+    volumes:
+      - .:/repo
+      # Linux dependencies stay in the containers, not in the host folders
+      - /repo/node_modules
+      - /repo/apps/mobile/node_modules
+      - /repo/apps/proxy/node_modules
+      - /repo/apps/mobile/.expo
+      - /repo/.pnpm-store
+    depends_on:
+      - proxy
 
-  # Proxy server for web CORS bypass
   proxy:
-    build:
-      context: ./proxy-server
-      dockerfile: Dockerfile.dev
-    container_name: epicheck-proxy-dev
+    image: node:22.21-alpine
+    working_dir: /repo
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile --filter proxy... && pnpm --filter proxy dev"
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=development
       - PORT=3001
+      - ALLOWED_ORIGINS=http://localhost:8081
     volumes:
-      - ./proxy-server/app.ts:/app/app.ts
-      - /app/node_modules
-    networks:
-      - epicheck-network
-
-networks:
-  epicheck-network:
-    driver: bridge
+      - .:/repo
+      - /repo/node_modules
+      - /repo/apps/mobile/node_modules
+      - /repo/apps/proxy/node_modules
+      - /repo/.pnpm-store

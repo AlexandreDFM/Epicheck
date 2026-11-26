@@ -1,0 +1,73 @@
+# epicheck.nice-tek.eu, TLS by cert-manager (Let's Encrypt HTTP-01) from the
+# annotation. The certificate also covers www, which redirects to the apex.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epicheck-web
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: epicheck-prod-redirect-https@kubernetescrd,epicheck-prod-security-headers@kubernetescrd,epicheck-prod-rate-limit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - epicheck.nice-tek.eu
+        - www.epicheck.nice-tek.eu
+      secretName: epicheck-tls-cert
+  rules:
+    - host: epicheck.nice-tek.eu
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: epicheck-web
+                port:
+                  name: http
+---
+# www.epicheck.nice-tek.eu -> https://epicheck.nice-tek.eu (same certificate)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epicheck-web-www
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: epicheck-prod-redirect-www@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - www.epicheck.nice-tek.eu
+      secretName: epicheck-tls-cert
+  rules:
+    - host: www.epicheck.nice-tek.eu
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: epicheck-web
+                port:
+                  name: http
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-www
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+spec:
+  redirectRegex:
+    regex: ^https?://www\.epicheck\.nice-tek\.eu(:[0-9]+)?/(.*)
+    replacement: https://epicheck.nice-tek.eu/${2}
+    permanent: true

@@ -29,10 +29,10 @@
 
 # dependencies
 node_modules/
+# pnpm store created inside the repository by containers mounting it
+.pnpm-store/
 
 # Proxy server
-proxy-server/node_modules/
-proxy-server/.env
 
 # Expo
 .expo/
@@ -44,6 +44,8 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
+!debug.keystore
 *.p8
 *.p12
 *.key
@@ -61,15 +63,20 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# local env files (secrets): only the examples are versioned
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo
 
-# generated native folders
+# generated native folders (expo prebuild); /ios and /android are those of
+# the layout before apps/
 /ios
 /android
+apps/mobile/ios/
+apps/mobile/android/
 
 # IDE
 .vscode/
@@ -79,7 +86,11 @@ yarn-error.*
 *.apk
 *.aab
 
-# Temp files
+# Former Kubernetes folder (replaced by k8s/): local secrets may remain there
+kubernetes/
+
+# Temp files (tmp/: local files to sort by hand, never versioned)
+tmp/
 *.tmp
 *.old
 *.backup

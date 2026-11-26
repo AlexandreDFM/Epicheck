@@ -1,0 +1,8 @@
+# Shared by k8s/production and k8s/preprod
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - configmap.yaml
+  - web-deployment.yaml
+  - web-service.yaml
+  - middlewares.yaml

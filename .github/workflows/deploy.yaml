@@ -1,0 +1,184 @@
+name: Deploy to Kubernetes
+
+# Called by build.yaml once the image of the commit is pushed.
+# Secrets and Variables belong to the GitHub environment of the deployment
+# (production or preprod): KUBE_CONFIG, PUBLIC_SITE_URL... have the same
+# name in both, and only a job running in that environment can read them.
+# EpiCheck has no application secret: the only secret is the kubeconfig of
+# the namespace-scoped deploy account.
+# One-time setup (namespaces, deploy accounts, Secrets and Variables):
+# docs/DEPLOYMENT.md
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub environment (production or preprod)
+        required: true
+        type: string
+      namespace:
+        description: Kubernetes namespace
+        required: true
+        type: string
+      manifests:
+        description: Kustomize folder
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  APP: epicheck
+  NAMESPACE: ${{ inputs.namespace }}
+  MANIFESTS: ${{ inputs.manifests }}
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.PUBLIC_SITE_URL }}
+    # One deployment at a time per environment; a newer one waits
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Connect to the cluster
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -z "$KUBE_CONFIG" ]; then
+            echo "::error::Secret KUBE_CONFIG of the ${{ inputs.environment }} environment is missing (k8s/rbac/make-kubeconfig.sh)"
+            exit 1
+          fi
+          kubeconfig="$RUNNER_TEMP/kubeconfig"
+          printf '%s' "$KUBE_CONFIG" | base64 --decode > "$kubeconfig"
+          chmod 600 "$kubeconfig"
+          echo "KUBECONFIG=$kubeconfig" >> "$GITHUB_ENV"
+          KUBECONFIG="$kubeconfig" kubectl -n "$NAMESPACE" auth can-i create deployments.apps \
+            || { echo "::error::The deploy account cannot deploy in $NAMESPACE (k8s/rbac/deployer*.yaml)"; exit 1; }
+
+      - name: Check the one-time setup
+        run: |
+          # Every kind the manifests use must be allowed to the deploy account,
+          # or apply fails half-way. The TLS certificate is created by cert-manager.
+          missing=0
+          for kind in services configmaps secrets deployments.apps \
+                      ingresses.networking.k8s.io middlewares.traefik.io; do
+            if ! kubectl -n "$NAMESPACE" auth can-i patch "$kind" > /dev/null; then
+              echo "::error::The deploy account cannot manage $kind in $NAMESPACE (k8s/rbac/)"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Registry access (private package only)
+        env:
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+          GHCR_PULL_USER: ${{ secrets.GHCR_PULL_USER || github.repository_owner }}
+        run: |
+          # The pull secret must outlive the run: the kubelet pulls again when a
+          # pod is recreated, and GITHUB_TOKEN expires with the job
+          if [ -n "$GHCR_PULL_TOKEN" ]; then
+            kubectl -n "$NAMESPACE" create secret docker-registry github-container-registry \
+              --docker-server=ghcr.io \
+              --docker-username="$GHCR_PULL_USER" \
+              --docker-password="$GHCR_PULL_TOKEN" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          else
+            echo "::warning::GHCR_PULL_TOKEN is not set: the image must be public (it is private by default)."
+            # Stale credentials would make GHCR answer 403 even for a public image
+            kubectl -n "$NAMESPACE" create secret generic github-container-registry \
+              --type=kubernetes.io/dockerconfigjson \
+              --from-literal=.dockerconfigjson='{"auths":{}}' \
+              --dry-run=client -o yaml | kubectl apply -f -
+          fi
+
+      - name: Application settings (GitHub Variables)
+        env:
+          PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+          RATE_LIMIT_PER_MINUTE: ${{ vars.RATE_LIMIT_PER_MINUTE }}
+        run: |
+          # Only the Variables that are set: the defaults of k8s/base apply otherwise
+          args=()
+          for name in PUBLIC_SITE_URL RATE_LIMIT_PER_MINUTE; do
+            if [ -n "${!name}" ]; then
+              args+=(--from-literal="$name=${!name}")
+            fi
+          done
+          kubectl -n "$NAMESPACE" create configmap "$APP-app-config" "${args[@]}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy
+        env:
+          TAG: ${{ github.sha }}
+        run: |
+          # Image of the deployed commit (portable sed: same syntax on Linux and macOS).
+          # Quoted: a SHA made of digits (or like "8e1234...") would otherwise be read as a number.
+          sed "s/^\([[:space:]]*newTag:\).*/\1 \"${TAG}\"/" "$MANIFESTS/kustomization.yaml" > "$RUNNER_TEMP/kustomization.yaml"
+          mv "$RUNNER_TEMP/kustomization.yaml" "$MANIFESTS/kustomization.yaml"
+          kubectl apply -k "$MANIFESTS"
+          kubectl -n "$NAMESPACE" rollout status "deployment/$APP-web" --timeout=600s
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl -n "$NAMESPACE" get deployments,pods,services,ingress || true
+          kubectl -n "$NAMESPACE" describe pods -l app.kubernetes.io/name=epicheck || true
+          for container in web proxy; do
+            echo "--- logs: $container"
+            kubectl -n "$NAMESPACE" logs -l app.kubernetes.io/component=web -c "$container" --tail=100 || true
+          done
+          kubectl -n "$NAMESPACE" get certificates,challenges 2>/dev/null || true
+          kubectl -n "$NAMESPACE" get events --sort-by=.lastTimestamp | tail -30 || true
+
+      - name: Smoke tests on the public site
+        env:
+          SITE: ${{ vars.PUBLIC_SITE_URL }}
+        run: |
+          if [ -z "$SITE" ]; then
+            echo "::warning::Variable PUBLIC_SITE_URL of the ${{ inputs.environment }} environment is not set: no smoke tests"
+            exit 0
+          fi
+          # Through the ingress, like a visitor: DNS, TLS, nginx, proxy
+          for attempt in $(seq 1 12); do
+            if curl -fsS --max-time 10 -o /dev/null "$SITE/api/health"; then
+              break
+            fi
+            [ "$attempt" = 12 ] && { echo "::error::$SITE/api/health does not answer"; exit 1; }
+            sleep 10
+          done
+          fail=0
+          # Each check retries: right after a rollout, the ingress may still send a
+          # request to the old pod while it stops
+          check() {
+            code=000
+            for attempt in 1 2 3 4 5; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${@:3}" "$SITE$1" || true)
+              [ "$code" = "$2" ] && break
+              sleep 3
+            done
+            if [ "$code" = "$2" ]; then
+              echo "✅ $1 -> $code"
+            else
+              echo "::error::$1 answered $code, expected $2"
+              fail=1
+            fi
+          }
+          check / 200
+          check /health 200
+          check /api/health 200
+          # The proxy refuses a target outside the Intranet (never calls it)
+          check /api/intra-proxy 400 -X POST -H 'Content-Type: application/json' \
+            --data '{"endpoint":"@example.com/","cookie":"x"}'
+          headers=$(curl -sI --max-time 10 "$SITE/")
+          for header in strict-transport-security content-security-policy; do
+            if ! printf '%s' "$headers" | grep -qi "^$header:"; then
+              echo "::error::$header header missing"
+              fail=1
+            fi
+          done
+          exit "$fail"

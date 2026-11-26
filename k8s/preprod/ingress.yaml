@@ -1,0 +1,29 @@
+# epicheck.ppd.nice-tek.eu, TLS by cert-manager (Let's Encrypt HTTP-01)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: epicheck-web
+  labels:
+    app.kubernetes.io/name: epicheck
+    app.kubernetes.io/component: web
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.middlewares: epicheck-preprod-redirect-https@kubernetescrd,epicheck-preprod-security-headers@kubernetescrd,epicheck-preprod-rate-limit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - epicheck.ppd.nice-tek.eu
+      secretName: epicheck-tls-cert
+  rules:
+    - host: epicheck.ppd.nice-tek.eu
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: epicheck-web
+                port:
+                  name: http
