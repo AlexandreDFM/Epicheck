@@ -73,6 +73,7 @@ apps/
                        contexts/, types/, utils/   (imported as @/…)
     assets/            fonts, images, sounds
   proxy/               CORS proxy for the web version (Express, tests with node:test)
+  e-token-plus/        git submodule: E-Token, the app that inspired EpiCheck (private archive)
 docker/                image (Expo web export + nginx + proxy), nginx config
 k8s/                   Kubernetes manifests and deploy accounts
 scripts/               version.mjs, ci/ helpers
@@ -86,6 +87,13 @@ Run a command in one project with `pnpm --filter mobile …` or `pnpm --filter p
 
 The guides are grouped by topic in [docs/](docs/README.md): deployment, development (conventions, versions), Android, iOS, authentication and the Intranet cookie, web version, features (Jenkins, sounds). See also [apps/proxy/README.md](apps/proxy/README.md), [docker/README.md](docker/README.md), [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
+## Credits
+
+- Developed by [@AlexandreDFM](https://github.com/AlexandreDFM).
+- Thanks to [@xJundo](https://github.com/xJundo) (Gianni TUERO) for the follow-up (RDV) view and the date selection of activities (December 2025).
+- Inspired by E-Token, the former Epitech attendance app by Mickaël Leclerc ([@MickaToast](https://github.com/MickaToast)) and Enguerrand Allamel ([@AEnguerrand](https://github.com/AEnguerrand)), property of Epitech. EpiCheck is a complete rewrite and reuses none of its code; E-Token is kept as a submodule for reference (`apps/e-token-plus`, private).
+- Preceded by EpiTIG (2023), a first Flutter attempt for the pedagogical team with Corentin Levet ([@clevetdev](https://github.com/clevetdev)), whose unfinished state led to bringing EpiCheck to completion.
+
 ## License
 
-The source files carry an MIT permission notice (© 2025 Epitech). Built as part of Epitech coursework.
+Written by Alexandre Kévin DE FREITAS MARTINS for Epitech. The source files carry an MIT permission notice in Epitech's name (© 2025 Epitech), granted by the author.
