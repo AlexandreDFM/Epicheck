@@ -18,6 +18,17 @@ Mobile app (Android, iOS) for Epitech staff to take attendance and follow projec
 
 NFC: the scanner reads the card, but it returns the card's own identifier, not the student's email, and the card-to-student mapping is not available. QR codes are the supported method.
 
+## Screenshots
+
+Names, photos, e-mails and grading details of real students and staff are pixelated.
+
+<table>
+<tr><td align="center"><img src="docs/screenshots/login-light.png" alt="Login" width="240"><br><sub>Login</sub></td><td align="center"><img src="docs/screenshots/activities-dark.png" alt="Activities of the day" width="240"><br><sub>Activities of the day</sub></td><td align="center"><img src="docs/screenshots/followup-dark.png" alt="Follow-up with Jenkins and grades" width="240"><br><sub>Follow-up with Jenkins and grades</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/grading-dark.png" alt="Grading scale" width="240"><br><sub>Grading scale</sub></td><td align="center"><img src="docs/screenshots/manual-list-dark.png" alt="Manual attendance" width="240"><br><sub>Manual attendance</sub></td><td align="center"><img src="docs/screenshots/manual-entry-dark.png" alt="Manual entry" width="240"><br><sub>Manual entry</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/scanner-idle-light.png" alt="QR scanner" width="240"><br><sub>QR scanner</sub></td><td align="center"><img src="docs/screenshots/multiscan-light.png" alt="Multi-QR scanning" width="240"><br><sub>Multi-QR scanning</sub></td><td align="center"><img src="docs/screenshots/settings-dark.png" alt="Settings, dark theme" width="240"><br><sub>Settings, dark theme</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/settings-light.png" alt="Settings, light theme" width="240"><br><sub>Settings, light theme</sub></td></tr>
+</table>
+
 ## Platforms
 
 | Platform     | How it talks to the Intranet                                                                                                                                                                                                                            |
