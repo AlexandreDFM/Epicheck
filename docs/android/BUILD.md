@@ -97,17 +97,7 @@ Check the signature: `$ANDROID_HOME/build-tools/<version>/apksigner verify --pri
 
 ### CI signed build (`.github/workflows/android.yaml`)
 
-Store the key as repository secrets of `epitech-nice/EpiCheck` without displaying them:
-
-```bash
-R=epitech-nice/EpiCheck
-base64 -i "$HOME/keys/epicheck-upload.jks" | tr -d '\n' | gh secret set ANDROID_KEYSTORE_BASE64 --repo $R
-gh secret set ANDROID_KEYSTORE_PASSWORD --repo $R    # prompts for the value
-gh secret set ANDROID_KEY_ALIAS --repo $R
-gh secret set ANDROID_KEY_PASSWORD --repo $R
-```
-
-Then a `vX.Y.Z` tag (matching `package.json`) builds the signed APK and AAB and attaches them, with their SHA-256, to a GitHub release. A manual run (Actions → Android → Run workflow) builds them as an artifact only.
+The release key is given to the CI as four repository secrets (`ANDROID_KEYSTORE_*`); a `vX.Y.Z` tag then builds the signed APK and AAB and attaches them to a GitHub release. How to check the key, store the secrets, verify the CI signature, replace a lost key and publish on Google Play: [../development/RELEASES.md](../development/RELEASES.md).
 
 ### New keystore (only if none exists)
 

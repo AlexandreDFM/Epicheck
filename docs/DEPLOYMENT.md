@@ -89,11 +89,11 @@ gh variable set PUBLIC_SITE_URL --env preprod --body https://epicheck.ppd.nice-t
 
 ### Repository secrets
 
-| Secret                                                                                              | Required             | Use                                                                                                                                                                                 |
-| --------------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GHCR_PULL_TOKEN`                                                                                   | yes                  | Classic PAT with **only** `read:packages`, dedicated to EpiCheck: the cluster pulls the private image with it (pull secret `github-container-registry`, rewritten on each deploy)   |
-| `GHCR_PULL_USER`                                                                                    | no                   | Owner of that PAT, if not `epitech-nice` (the repository owner)                                                                                                                     |
-| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | for Android releases | Release key of the mobile app ([android/BUILD.md](android/BUILD.md)); repository-level because the Android workflow runs on tags and pull requests, outside the deploy environments |
+| Secret                                                                                              | Required             | Use                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GHCR_PULL_TOKEN`                                                                                   | yes                  | Classic PAT with **only** `read:packages`, dedicated to EpiCheck: the cluster pulls the private image with it (pull secret `github-container-registry`, rewritten on each deploy)                 |
+| `GHCR_PULL_USER`                                                                                    | no                   | Owner of that PAT, if not `epitech-nice` (the repository owner)                                                                                                                                   |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | for Android releases | Release key of the mobile app ([development/RELEASES.md](development/RELEASES.md)); repository-level because the Android workflow runs on tags and pull requests, outside the deploy environments |
 
 ### Variables
 

@@ -56,7 +56,7 @@ git commit -am "chore(release): vX.Y.Z"
 # after the merge on main: tag vX.Y.Z -> signed APK and AAB attached to a GitHub release
 ```
 
-Details: [docs/development/VERSIONING.md](docs/development/VERSIONING.md), signing: [docs/android/BUILD.md](docs/android/BUILD.md).
+Details: [docs/development/VERSIONING.md](docs/development/VERSIONING.md); signing keys, store publishing and the secrets they need: [docs/development/RELEASES.md](docs/development/RELEASES.md).
 
 ## Deployment (web)
 
