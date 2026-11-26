@@ -89,7 +89,8 @@ apps/mobile/android/
 # Former Kubernetes folder (replaced by k8s/): local secrets may remain there
 kubernetes/
 
-# Temp files
+# Temp files (tmp/: local files to sort by hand, never versioned)
+tmp/
 *.tmp
 *.old
 *.backup
